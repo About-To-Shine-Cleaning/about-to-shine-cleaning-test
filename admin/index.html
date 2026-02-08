@@ -6,19 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
 
-  <!-- Favicons (must be in HEAD) -->
+  <!-- Favicons (must be inside HEAD) -->
   <link rel="icon" type="image/png" href="/assets/images/logo-v2.png">
   <link rel="apple-touch-icon" href="/assets/images/logo-v2.png">
 
   <style>
     :root{
       /* Brand */
-      --purple:#5b2aa8;       /* true purple */
-      --purple2:#3f1c83;      /* darker purple */
+      --purple:#5b2aa8;
+      --purple2:#3f1c83;
       --yellow:#FFD700;
 
       /* UI */
-      --ink:#111827;
       --muted:rgba(255,255,255,.86);
       --card:rgba(255,255,255,.10);
       --border:rgba(255,255,255,.18);
@@ -37,7 +36,6 @@
 
     body{
       margin:0;
-      /* Match site typography feel (clean + modern, still safe) */
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
       color:#fff;
       background: linear-gradient(135deg, var(--purple), var(--purple2));
@@ -56,7 +54,6 @@
     }
     .brand{ display:flex; align-items:center; gap:12px; }
 
-    /* Replace the emoji container with your logo (keeps same layout) */
     .brand-logo{
       width:44px;
       height:44px;
@@ -97,7 +94,7 @@
     }
 
     .accentline{
-      height: 6px; /* slightly thicker */
+      height: 6px;
       background: var(--yellow);
       border-radius: 999px;
       margin: 0 18px;
@@ -110,6 +107,7 @@
       padding: 18px;
     }
 
+    /* ===== Status box ===== */
     .status{
       margin: 16px 0 18px;
       padding: 14px 14px;
@@ -119,10 +117,26 @@
       color:#fff;
       font-size: 14px;
       white-space: pre-wrap;
+      line-height: 1.45;
       box-shadow: var(--shadow);
     }
 
-    /* ===== Grid ===== */
+    .status.is-loading{
+      border-color: rgba(255,255,255,.22);
+      background: rgba(255,255,255,.10);
+    }
+    .status.is-success{
+      border-color: rgba(34,197,94,.45);
+      background: rgba(34,197,94,.14);
+      box-shadow: 0 14px 34px rgba(0,0,0,.22);
+    }
+    .status.is-error{
+      border-color: rgba(239,68,68,.45);
+      background: rgba(239,68,68,.14);
+      box-shadow: 0 14px 34px rgba(0,0,0,.22);
+    }
+
+    /* ===== Grid/cards ===== */
     .grid{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
@@ -155,15 +169,14 @@
       line-height: 1.55;
     }
 
-    /* ===== Buttons (bigger tap targets for iPhone) ===== */
+    /* ===== Buttons (bigger tap targets) ===== */
     .btn{
       display:inline-flex;
       align-items:center;
       justify-content:center;
       width:100%;
-      text-align:center;
-      padding: 14px 14px;     /* bigger */
-      min-height: 48px;       /* iOS tap target */
+      padding: 14px 14px;
+      min-height: 48px;
       border-radius: var(--r-sm);
       background: var(--yellow);
       color: #111;
@@ -205,7 +218,7 @@
     .input{
       flex:1;
       min-width:220px;
-      padding: 13px 12px; /* slightly bigger */
+      padding: 13px 12px;
       border-radius: var(--r-sm);
       border: 1px solid var(--border);
       background: rgba(0,0,0,.15);
@@ -230,6 +243,7 @@
       .wrap{ padding: 14px; }
       .card{ padding: 18px; box-shadow: var(--shadow2); }
       .accentline{ margin: 0 14px; }
+      .status{ font-size: 15px; padding: 16px 14px; }
     }
   </style>
 </head>
@@ -251,7 +265,7 @@
   <div class="accentline"></div>
 
   <div class="wrap">
-    <div class="status" id="status">Loading secure access…</div>
+    <div class="status is-loading" id="status">Loading secure access…</div>
 
     <!-- ✅ Desktop sign-in (Option A) -->
     <div class="card hidden" id="desktopLogin">
