@@ -42,28 +42,6 @@ li {
 a {
   color: inherit;
   text-decoration: none;
-
-
-/* Link styling for in-page links (keeps nav/buttons untouched) */
-a.text-link{
-  color: var(--ats-purple2);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  font-weight: 700;
-}
-a.text-link:hover{ opacity: .85; }
-
-/* Callout tagline */
-.tagline-callout{
-  display: inline-block;
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border-left: 6px solid var(--ats-divider);
-  background: rgba(255, 215, 0, 0.15);
-  color: var(--ats-purple2);
-  font-weight: 900;
-  font-size: 1.15rem;
 }
 
 /* Mobile type scaling */
@@ -531,4 +509,97 @@ body {
   width: 28px;
   height: 28px;
   display: block;
+}
+
+
+/* ========================
+   FOOTER (MASTER)
+======================== */
+.site-footer{
+  background: var(--brand-purple);
+  color:#fff;
+  border-top: 6px solid var(--brand-yellow);
+}
+.site-footer .footer-inner{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 18px;
+}
+.footer-grid{
+  display:grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  gap: 22px;
+  align-items:start;
+}
+.footer-col h3{
+  margin:0 0 10px;
+  font-size: 14px;
+  letter-spacing:.2px;
+}
+.footer-links{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+.footer-links li{ margin: 8px 0; }
+.site-footer a{
+  color: rgba(255,255,255,.95);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+.site-footer a:hover{
+  color:#fff;
+}
+.footer-socials{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin: 6px 0 14px;
+}
+.footer-socials .social{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.footer-socials img{
+  display:block;
+}
+.footer-callout{
+  display:inline-block;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.18);
+  font-weight: 800;
+}
+.footer-bottom{
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.18);
+  text-align:center;
+}
+.footer-bottom p{
+  margin:0;
+  color: rgba(255,255,255,.90);
+  font-weight: 600;
+  font-size: 13px;
+}
+@media (max-width: 900px){
+  .footer-grid{ grid-template-columns: 1fr; }
+  .site-footer .footer-inner{ padding: 22px 16px 16px; }
+  .footer-socials .social{ width:44px; height:44px; border-radius: 14px; }
+}
+
+
+/* Callout emphasis */
+.callout{
+  margin-top: 16px;
+  font-size: 1.15rem;
 }
