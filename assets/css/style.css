@@ -1,30 +1,7 @@
 /* =================================================
-   RESET / SAFETY
-================================================= */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html, body {
-  width: 100%;
-  overflow-x: hidden;
-  margin: 0;
-}
-
-/* =================================================
    BRAND VARIABLES
+   (Single source of truth in assets/css/site-brand.css)
 ================================================= */
-:root {
-  --brand-yellow: #FFD700;
-  --brand-black: #000;
-  --text-dark: #333;
-
-  /* TRUE PURPLE (no blue) */
-  --ats-purple: #5A189A;
-}
-
 /* =================================================
    BASE TYPOGRAPHY
 ================================================= */
@@ -93,8 +70,8 @@ section {
    HEADER / NAV (PURPLE + YELLOW DIVIDER)
 ================================================= */
 .site-header {
-  background: var(--ats-purple);
-  border-bottom: 5px solid var(--brand-yellow); /* slightly thicker yellow */
+  background: var(--ats-header-bg);
+  border-bottom: 5px solid var(--ats-divider); /* slightly thicker yellow */
   position: relative;
 }
 
@@ -123,7 +100,7 @@ section {
 }
 
 .main-nav a.cta {
-  background: var(--brand-yellow);
+  background: var(--ats-divider);
   color: #111;
   padding: 8px 14px;
   border-radius: 12px;
@@ -160,7 +137,7 @@ section {
     flex-direction: column;
     align-items: center;
     padding: 20px 0;
-    border-bottom: 5px solid var(--brand-yellow);
+    border-bottom: 5px solid var(--ats-divider);
   }
 
   .main-nav.open {
@@ -177,8 +154,8 @@ section {
 ================================================= */
 .button {
   display: inline-block;
-  background: var(--brand-black);
-  color: var(--brand-yellow);
+  background: var(--ats-button-bg);
+  color: var(--ats-button-text);
   padding: 12px 25px;
   border-radius: 6px;
   font-weight: bold;
@@ -229,8 +206,8 @@ section {
 
 .quote-form button {
   grid-column: 1 / -1;
-  background: var(--brand-black);
-  color: var(--brand-yellow);
+  background: var(--ats-button-bg);
+  color: var(--ats-button-text);
   padding: 12px 22px;
   border: none;
   border-radius: 6px;
@@ -285,10 +262,10 @@ section {
    FOOTER (PURPLE + YELLOW DIVIDER)
 ================================================= */
 footer {
-  background: var(--ats-purple);
-  color: #ffffff;
+  background: var(--ats-footer-bg);
+color: #ffffff;
   text-align: center;
-  border-top: 5px solid var(--brand-yellow); /* slightly thicker yellow */
+  border-top: 5px solid var(--ats-divider); /* slightly thicker yellow */
 }
 
 .footer-inner {
@@ -318,7 +295,7 @@ footer p {
   z-index: 999;
 
   background: var(--ats-purple);
-  border-top: 5px solid var(--brand-yellow);
+  border-top: 5px solid var(--ats-divider);
 }
 
 .call-btn,
@@ -375,4 +352,54 @@ body {
 
 .footer-links a:hover {
   opacity: 0.9;
+}
+
+/* =================================================
+   BEFORE & AFTER (PAIRED) + CITY PAGE GALLERY CTA
+================================================= */
+.ba-pair-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin: 18px 0 34px;
+}
+.ba-pair{
+  background:#fff;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+}
+.ba-labels{
+  display:flex;
+  justify-content:space-between;
+  padding: 12px 14px;
+  font-weight:700;
+  color: var(--brand-black);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.ba-row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.ba-col a, .ba-col img{
+  display:block;
+  width:100%;
+}
+.ba-col img{
+  width:100%;
+  height:auto;
+}
+.gallery-cta{
+  margin-top: 34px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.10);
+}
+.gallery-cta h2{
+  margin-top: 0;
+}
+@media (max-width: 700px){
+  .ba-row{ grid-template-columns: 1fr; }
 }
