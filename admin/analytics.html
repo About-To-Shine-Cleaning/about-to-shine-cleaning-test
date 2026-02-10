@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>ATS Site Report</title>
+  <link rel="stylesheet" href="/admin/admin-layout.css" />
+  
+</head>
+<body>
+  <header class="ats-header">
+    <div class="inner">
+      <div class="ats-brand">
+        <a href="/admin/"><img src="/assets/images/logo.png" alt="About To Shine Cleaning logo"></a>
+      </div>
+      <nav class="ats-nav">
+        <a href="/admin/">Admin</a>
+        <a href="/admin/estimator/">Estimator</a>
+        <a href="/admin/payroll/">Payroll</a>
+        <a href="/admin/analytics.html">Site Report</a>
+      </nav>
+    </div>
+    <div class="ats-divider"></div>
+  </header>
+
+  <main class="ats-wrap">
+    
+<section class="ats-card">
+  <h2 style="margin:0 0 6px">Site Report</h2>
+  <div class="small">GA4 overview pulled via Apps Script (JSONP). Set your GA reporting Web App URL below.</div>
+  <div style="height:12px"></div>
+
+  <div class="ats-grid">
+    <div class="ats-card">
+      <div class="small">New vs Returning (Active Users)</div>
+      <div id="newReturning" style="font-size:22px;font-weight:800">Loading…</div>
+    </div>
+    <div class="ats-card">
+      <div class="small">Totals (Last 30 days)</div>
+      <div id="totals" style="font-size:22px;font-weight:800">Loading…</div>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+  <div class="ats-card">
+    <div class="small">Sessions by Source / Medium</div>
+    <div style="height:10px"></div>
+    <table>
+      <thead><tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Active Users</th></tr></thead>
+      <tbody id="srcTable"></tbody>
+    </table>
+  </div>
+
+  <p class="small" style="margin-top:12px">
+    Setup: edit <code>/admin/analytics.html</code> and paste your GA reporting Apps Script Web App URL into <code>GA_API_URL</code>.
+  </p>
+</section>
+
+<script>
+  const GA_API_URL = "PASTE_YOUR_GA_REPORTING_WEBAPP_URL_HERE"; // https://script.google.com/macros/s/XXXX/exec
+  const KEY = ""; // optional: if your script requires &key=
+
+  function jsonp(url){
+    return new Promise((resolve,reject)=>{
+      const cb="cb_"+Math.random().toString(36).slice(2);
+      window[cb]=(data)=>{ resolve(data); delete window[cb]; s.remove(); };
+      const s=document.createElement("script");
+      s.src=url+(url.includes("?")?"&":"?")+"callback="+cb;
+      s.onerror=()=>reject(new Error("JSONP failed"));
+      document.body.appendChild(s);
+    });
+  }
+  function gaUrl(route){
+    const p=new URLSearchParams();
+    p.set("route",route);
+    p.set("range","30daysAgo");
+    if(KEY) p.set("key",KEY);
+    return GA_API_URL+"?"+p.toString();
+  }
+  function fmt(n){ return Number(n||0).toLocaleString(); }
+
+  async function load(){
+    if(!GA_API_URL || GA_API_URL.includes("PASTE_")){
+      document.getElementById("newReturning").textContent="Paste GA_API_URL to enable.";
+      document.getElementById("totals").textContent="—";
+      return;
+    }
+
+    const nr = await jsonp(gaUrl("ga_new_returning"));
+    const rows = nr?.res?.rows || [];
+    const map = {};
+    rows.forEach(r=>{
+      const k=r.dimensionValues?.[0]?.value || "unknown";
+      map[k]=Number(r.metricValues?.[0]?.value || 0);
+    });
+    document.getElementById("newReturning").textContent = `New: ${fmt(map.new)} • Returning: ${fmt(map.returning)}`;
+
+    const daily = await jsonp(gaUrl("ga_overview_daily"));
+    const drows = daily?.res?.rows || [];
+    let users=0,sessions=0,views=0;
+    drows.forEach(r=>{
+      users += Number(r.metricValues?.[0]?.value||0);
+      sessions += Number(r.metricValues?.[1]?.value||0);
+      views += Number(r.metricValues?.[2]?.value||0);
+    });
+    document.getElementById("totals").textContent = `Users: ${fmt(users)} • Sessions: ${fmt(sessions)} • Views: ${fmt(views)}`;
+
+    const sm = await jsonp(gaUrl("ga_source_medium"));
+    const srows = sm?.res?.rows || [];
+    const tbody=document.getElementById("srcTable");
+    tbody.innerHTML="";
+    srows.forEach(r=>{
+      const source=r.dimensionValues?.[0]?.value||"";
+      const medium=r.dimensionValues?.[1]?.value||"";
+      const sessions=r.metricValues?.[0]?.value||"0";
+      const active=r.metricValues?.[1]?.value||"0";
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${source}</td><td>${medium}</td><td>${fmt(sessions)}</td><td>${fmt(active)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  load().catch(err=>{
+    console.error(err);
+    document.getElementById("newReturning").textContent="Load failed (check GA script URL/permissions).";
+  });
+</script>
+
+  </main>
+
+  <footer class="ats-footer">
+    <div class="ats-divider"></div>
+    <div class="inner">
+      About To Shine Cleaning • Internal Admin • Test Environment
+    </div>
+  </footer>
+</body>
+</html>
