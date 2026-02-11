@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <title>ATS Site Report</title>
   <link rel="stylesheet" href="/admin/admin-layout.css" />
-  
 </head>
+
 <body>
   <header class="ats-header">
     <div class="inner">
@@ -18,113 +18,133 @@
         <a href="/admin/">Admin</a>
         <a href="/admin/estimator/">Estimator</a>
         <a href="/admin/payroll/">Payroll</a>
-        <a href="/admin/analytics.html">Site Report</a>
+        <a href="/admin/analytics.html" aria-current="page">Site Report</a>
       </nav>
     </div>
     <div class="ats-divider"></div>
   </header>
 
   <main class="ats-wrap">
-    
-<section class="ats-card">
-  <h2 style="margin:0 0 6px">Site Report</h2>
-  <div class="small">GA4 overview pulled via Apps Script (JSONP). Set your GA reporting Web App URL below.</div>
-  <div style="height:12px"></div>
 
-  <div class="ats-grid">
-    <div class="ats-card">
-      <div class="small">New vs Returning (Active Users)</div>
-      <div id="newReturning" style="font-size:22px;font-weight:800">Loading…</div>
-    </div>
-    <div class="ats-card">
-      <div class="small">Totals (Last 30 days)</div>
-      <div id="totals" style="font-size:22px;font-weight:800">Loading…</div>
-    </div>
-  </div>
+    <section class="ats-card">
+      <h2 style="margin:0 0 6px">Site Report</h2>
+      <div class="small">GA4 overview pulled via Apps Script (JSONP). Paste your Apps Script Web App <code>/exec</code> URL below.</div>
+      <div style="height:12px"></div>
 
-  <div style="height:14px"></div>
-  <div class="ats-card">
-    <div class="small">Sessions by Source / Medium</div>
-    <div style="height:10px"></div>
-    <table>
-      <thead><tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Active Users</th></tr></thead>
-      <tbody id="srcTable"></tbody>
-    </table>
-  </div>
+      <div class="ats-grid">
+        <div class="ats-card">
+          <div class="small">New vs Returning (Active Users)</div>
+          <div id="newReturning" style="font-size:22px;font-weight:800">Loading…</div>
+        </div>
 
-  <p class="small" style="margin-top:12px">
-    Setup: edit <code>/admin/analytics.html</code> and paste your GA reporting Apps Script Web App URL into <code>GA_API_URL</code>.
-  </p>
-</section>
+        <div class="ats-card">
+          <div class="small">Totals (Last 30 days)</div>
+          <div id="totals" style="font-size:22px;font-weight:800">Loading…</div>
+        </div>
+      </div>
 
-<script>
-  const GA_API_URL = "https://script.google.com/macros/s/AKfycbxqZa8aVRZWWwKjRHvcIrb1ywWPlHDdGb0tX9yYVgX0plZwAHQFPq9uO0gqM8yY0XqwwQ/exec"; // https://script.google.com/macros/s/XXXX/exec
-  const KEY = ""; // optional: if your script requires &key=
+      <div style="height:14px"></div>
 
-  function jsonp(url){
-    return new Promise((resolve,reject)=>{
-      const cb="cb_"+Math.random().toString(36).slice(2);
-      window[cb]=(data)=>{ resolve(data); delete window[cb]; s.remove(); };
-      const s=document.createElement("script");
-      s.src=url+(url.includes("?")?"&":"?")+"callback="+cb;
-      s.onerror=()=>reject(new Error("JSONP failed"));
-      document.body.appendChild(s);
-    });
-  }
-  function gaUrl(route){
-    const p=new URLSearchParams();
-    p.set("route",route);
-    p.set("range","30daysAgo");
-    if(KEY) p.set("key",KEY);
-    return GA_API_URL+"?"+p.toString();
-  }
-  function fmt(n){ return Number(n||0).toLocaleString(); }
+      <div class="ats-card">
+        <div class="small">Sessions by Source / Medium</div>
+        <div style="height:10px"></div>
+        <table>
+          <thead>
+            <tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Active Users</th></tr>
+          </thead>
+          <tbody id="srcTable"></tbody>
+        </table>
+      </div>
 
-  async function load(){
-    if(!GA_API_URL || GA_API_URL.includes("PASTE_")){
-      document.getElementById("newReturning").textContent="https://script.google.com/macros/s/AKfycbzA5BwoDDNMIFOW_kOcpGKlDIEixb4OyzfWZO91XH61EloWF5ClXYxYd2IogAIJ-opOyg/exec
-      document.getElementById("totals").textContent="—";
-      return;
-    }
+      <p class="small" style="margin-top:12px">
+        Setup: edit <code>/admin/analytics.html</code> and paste your Apps Script Web App URL into <code>GA_API_URL</code>.
+      </p>
+    </section>
 
-    const nr = await jsonp(gaUrl("ga_new_returning"));
-    const rows = nr?.res?.rows || [];
-    const map = {};
-    rows.forEach(r=>{
-      const k=r.dimensionValues?.[0]?.value || "unknown";
-      map[k]=Number(r.metricValues?.[0]?.value || 0);
-    });
-    document.getElementById("newReturning").textContent = `New: ${fmt(map.new)} • Returning: ${fmt(map.returning)}`;
+    <script>
+      // ✅ MUST be your Apps Script Web App URL that ends in /exec
+      const GA_API_URL = "https://script.google.com/macros/s/AKfycbxqZa8aVRZWWwKjRHvcIrb1ywWPlHDdGb0tX9yYVgX0plZwAHQFPq9uO0gqM8yY0XqwwQ/exec";
 
-    const daily = await jsonp(gaUrl("ga_overview_daily"));
-    const drows = daily?.res?.rows || [];
-    let users=0,sessions=0,views=0;
-    drows.forEach(r=>{
-      users += Number(r.metricValues?.[0]?.value||0);
-      sessions += Number(r.metricValues?.[1]?.value||0);
-      views += Number(r.metricValues?.[2]?.value||0);
-    });
-    document.getElementById("totals").textContent = `Users: ${fmt(users)} • Sessions: ${fmt(sessions)} • Views: ${fmt(views)}`;
+      function jsonp(url){
+        return new Promise((resolve,reject)=>{
+          const cb="cb_"+Math.random().toString(36).slice(2);
+          const s=document.createElement("script");
+          window[cb]=(data)=>{ 
+            try { resolve(data); } finally { 
+              try { delete window[cb]; } catch(e) {}
+              try { s.remove(); } catch(e) {}
+            }
+          };
+          s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+          s.onerror = () => {
+            try { delete window[cb]; } catch(e) {}
+            try { s.remove(); } catch(e) {}
+            reject(new Error("JSONP failed"));
+          };
+          document.body.appendChild(s);
+        });
+      }
 
-    const sm = await jsonp(gaUrl("ga_source_medium"));
-    const srows = sm?.res?.rows || [];
-    const tbody=document.getElementById("srcTable");
-    tbody.innerHTML="";
-    srows.forEach(r=>{
-      const source=r.dimensionValues?.[0]?.value||"";
-      const medium=r.dimensionValues?.[1]?.value||"";
-      const sessions=r.metricValues?.[0]?.value||"0";
-      const active=r.metricValues?.[1]?.value||"0";
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${source}</td><td>${medium}</td><td>${fmt(sessions)}</td><td>${fmt(active)}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
-  load().catch(err=>{
-    console.error(err);
-    document.getElementById("newReturning").textContent="Load failed (check GA script URL/permissions).";
-  });
-</script>
+      function apiUrl(action){
+        const p = new URLSearchParams();
+        p.set("action", action);
+        return GA_API_URL + "?" + p.toString();
+      }
+
+      function fmt(n){ return Number(n||0).toLocaleString(); }
+
+      async function load(){
+        const nrEl = document.getElementById("newReturning");
+        const totalsEl = document.getElementById("totals");
+        const tbody = document.getElementById("srcTable");
+
+        if(!GA_API_URL || GA_API_URL.includes("PASTE_")){
+          nrEl.textContent = "Missing GA_API_URL";
+          totalsEl.textContent = "—";
+          return;
+        }
+
+        // 1) Overview (totals + new vs returning)
+        const ov = await jsonp(apiUrl("overview"));
+        if(!ov || !ov.ok){
+          throw new Error(ov?.error || "Overview failed");
+        }
+
+        const breakdown = ov.newVsReturning || [];
+        const map = {};
+        breakdown.forEach(x => map[(x.label||"").toLowerCase()] = Number(x.activeUsers||0));
+
+        nrEl.textContent = `New: ${fmt(map["new"])} • Returning: ${fmt(map["returning"])}`;
+
+        const t = ov.totals || {};
+        totalsEl.textContent = `Users: ${fmt(t.activeUsers)} • Sessions: ${fmt(t.sessions)} • Views: ${fmt(t.pageViews)}`;
+
+        // 2) Source/Medium table
+        const sm = await jsonp(apiUrl("sourceMedium"));
+        if(!sm || !sm.ok){
+          throw new Error(sm?.error || "Source/Medium failed");
+        }
+
+        tbody.innerHTML = "";
+        (sm.rows || []).forEach(r=>{
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${r.source||""}</td><td>${r.medium||""}</td><td>${fmt(r.sessions)}</td><td>${fmt(r.activeUsers)}</td>`;
+          tbody.appendChild(tr);
+        });
+
+        if((sm.rows||[]).length === 0){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="4" class="small">No data returned yet.</td>`;
+          tbody.appendChild(tr);
+        }
+      }
+
+      load().catch(err=>{
+        console.error(err);
+        document.getElementById("newReturning").textContent = "Load failed (check Apps Script URL + permissions).";
+        document.getElementById("totals").textContent = "—";
+      });
+    </script>
 
   </main>
 
