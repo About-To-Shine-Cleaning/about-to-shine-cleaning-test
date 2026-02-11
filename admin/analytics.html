@@ -28,7 +28,9 @@
 
     <section class="ats-card">
       <h2 style="margin:0 0 6px">Site Report</h2>
-      <div class="small">GA4 overview pulled via Apps Script (JSONP). Paste your Apps Script Web App <code>/exec</code> URL below.</div>
+      <div class="small">
+        GA4 overview pulled via Apps Script (JSONP). Uses <code>route=...</code> endpoints.
+      </div>
       <div style="height:12px"></div>
 
       <div class="ats-grid">
@@ -59,35 +61,42 @@
       <p class="small" style="margin-top:12px">
         Setup: edit <code>/admin/analytics.html</code> and paste your Apps Script Web App URL into <code>GA_API_URL</code>.
       </p>
+
+      <p class="small" id="debugLine" style="margin-top:8px;opacity:.85"></p>
     </section>
 
     <script>
       // ✅ MUST be your Apps Script Web App URL that ends in /exec
       const GA_API_URL = "https://script.google.com/macros/s/AKfycbwebnc7k-OlEuOKLc_WgGalVeFISPfsTniFdSIhfhi7vra-ALZcbNGZcj7Qti3nFklH/exec";
+      const RANGE = "30daysAgo"; // matches your Code.gs supported range format
 
       function jsonp(url){
         return new Promise((resolve,reject)=>{
           const cb="cb_"+Math.random().toString(36).slice(2);
           const s=document.createElement("script");
+
           window[cb]=(data)=>{ 
             try { resolve(data); } finally { 
               try { delete window[cb]; } catch(e) {}
               try { s.remove(); } catch(e) {}
             }
           };
+
           s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
           s.onerror = () => {
             try { delete window[cb]; } catch(e) {}
             try { s.remove(); } catch(e) {}
-            reject(new Error("JSONP failed"));
+            reject(new Error("JSONP failed: " + url));
           };
+
           document.body.appendChild(s);
         });
       }
 
-      function apiUrl(action){
+      function routeUrl(route){
         const p = new URLSearchParams();
-        p.set("action", action);
+        p.set("route", route);
+        p.set("range", RANGE);
         return GA_API_URL + "?" + p.toString();
       }
 
@@ -97,6 +106,7 @@
         const nrEl = document.getElementById("newReturning");
         const totalsEl = document.getElementById("totals");
         const tbody = document.getElementById("srcTable");
+        const dbg = document.getElementById("debugLine");
 
         if(!GA_API_URL || GA_API_URL.includes("PASTE_")){
           nrEl.textContent = "Missing GA_API_URL";
@@ -104,35 +114,59 @@
           return;
         }
 
-        // 1) Overview (totals + new vs returning)
-        const ov = await jsonp(apiUrl("overview"));
-        if(!ov || !ov.ok){
-          throw new Error(ov?.error || "Overview failed");
+        if (dbg) dbg.textContent = "Loading from: " + GA_API_URL;
+
+        // 1) New vs Returning
+        const nr = await jsonp(routeUrl("ga_new_returning"));
+        if(!nr || !nr.ok){
+          throw new Error(nr?.error || "ga_new_returning failed");
         }
 
-        const breakdown = ov.newVsReturning || [];
-        const map = {};
-        breakdown.forEach(x => map[(x.label||"").toLowerCase()] = Number(x.activeUsers||0));
+        const nrRows = nr?.res?.rows || [];
+        const map = { new: 0, returning: 0 };
+        nrRows.forEach(r=>{
+          const k = (r?.dimensionValues?.[0]?.value || "").toLowerCase();
+          const v = Number(r?.metricValues?.[0]?.value || 0);
+          if (k === "new") map.new = v;
+          if (k === "returning") map.returning = v;
+        });
+        nrEl.textContent = `New: ${fmt(map.new)} • Returning: ${fmt(map.returning)}`;
 
-        nrEl.textContent = `New: ${fmt(map["new"])} • Returning: ${fmt(map["returning"])}`;
+        // 2) Totals (sum daily)
+        const daily = await jsonp(routeUrl("ga_overview_daily"));
+        if(!daily || !daily.ok){
+          throw new Error(daily?.error || "ga_overview_daily failed");
+        }
 
-        const t = ov.totals || {};
-        totalsEl.textContent = `Users: ${fmt(t.activeUsers)} • Sessions: ${fmt(t.sessions)} • Views: ${fmt(t.pageViews)}`;
+        const drows = daily?.res?.rows || [];
+        let users=0, sessions=0, views=0;
+        drows.forEach(r=>{
+          users += Number(r?.metricValues?.[0]?.value || 0);
+          sessions += Number(r?.metricValues?.[1]?.value || 0);
+          views += Number(r?.metricValues?.[2]?.value || 0);
+        });
+        totalsEl.textContent = `Users: ${fmt(users)} • Sessions: ${fmt(sessions)} • Views: ${fmt(views)}`;
 
-        // 2) Source/Medium table
-        const sm = await jsonp(apiUrl("sourceMedium"));
+        // 3) Source / Medium
+        const sm = await jsonp(routeUrl("ga_source_medium"));
         if(!sm || !sm.ok){
-          throw new Error(sm?.error || "Source/Medium failed");
+          throw new Error(sm?.error || "ga_source_medium failed");
         }
 
+        const srows = sm?.res?.rows || [];
         tbody.innerHTML = "";
-        (sm.rows || []).forEach(r=>{
+
+        srows.forEach(r=>{
+          const source = r?.dimensionValues?.[0]?.value || "";
+          const medium = r?.dimensionValues?.[1]?.value || "";
+          const sess = Number(r?.metricValues?.[0]?.value || 0);
+          const au = Number(r?.metricValues?.[1]?.value || 0);
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${r.source||""}</td><td>${r.medium||""}</td><td>${fmt(r.sessions)}</td><td>${fmt(r.activeUsers)}</td>`;
+          tr.innerHTML = `<td>${source}</td><td>${medium}</td><td>${fmt(sess)}</td><td>${fmt(au)}</td>`;
           tbody.appendChild(tr);
         });
 
-        if((sm.rows||[]).length === 0){
+        if (srows.length === 0){
           const tr = document.createElement("tr");
           tr.innerHTML = `<td colspan="4" class="small">No data returned yet.</td>`;
           tbody.appendChild(tr);
