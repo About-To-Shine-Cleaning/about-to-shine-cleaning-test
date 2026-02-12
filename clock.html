@@ -15,7 +15,28 @@
   <link rel="stylesheet" href="/admin/admin-layout.css" />
   <script defer src="/admin/admin-nav.js"></script>
 </head>
-<body class="ats-admin">
+<body class="ats-admin ats-light">
+
+  <!-- Clock page needs a light body for readability (visual only) -->
+  <style>
+    body.ats-admin.ats-light{
+      background:#ffffff;
+      color:#111827;
+    }
+    body.ats-admin.ats-light a{color:#1b2a6d}
+    /* Re-assert light form controls on the clock page (admin-layout.css styles inputs globally) */
+    body.ats-admin.ats-light input,
+    body.ats-admin.ats-light select,
+    body.ats-admin.ats-light textarea{
+      background:#ffffff;
+      color:#111827;
+      border:1px solid rgba(17,24,39,.18);
+    }
+    body.ats-admin.ats-light .ats-card,
+    body.ats-admin.ats-light .page-container{
+      color:#111827;
+    }
+  </style>
 
 <header class="ats-header">
   <div class="ats-header-inner">

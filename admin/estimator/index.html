@@ -79,6 +79,34 @@
 
   <link rel="stylesheet" href="/admin/admin-layout.css" />
   <script defer src="/admin/admin-nav.js"></script>
+
+  <!-- ATS Admin theme overrides for estimator UI (visual only) -->
+  <style>
+    /* Keep estimator's structure, but make it readable on the ATS dark theme */
+    .letterhead{margin:0 0 14px; border-radius: var(--ats-r-lg); border:1px solid var(--ats-border); box-shadow: var(--ats-shadow);}
+    .wrap{max-width:var(--ats-container); margin:0 auto; padding:0}
+    .card{background: var(--ats-card); border:1px solid var(--ats-border); color: var(--ats-text); box-shadow: var(--ats-shadow);}
+    label{color: var(--ats-muted);} 
+    h2,h3,.brand,.modalTitle{color: var(--ats-text);} 
+    .subtitle{color: rgba(255,255,255,.86);}
+    .pill{background: rgba(255,215,0,.14); color: var(--ats-text); border-color: rgba(255,215,0,.45);} 
+    a.back{color: var(--ats-text);} 
+
+    .task{background: rgba(0,0,0,.14); border:1px solid var(--ats-border);} 
+    .task .meta{color: var(--ats-muted);} 
+    .box{border-color: rgba(255,215,0,.70); color: rgba(255,215,0,.95);} 
+    .box.on{background: rgba(255,215,0,.18);} 
+
+    .sticky{background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.30)); border-top:1px solid var(--ats-border); border-radius: var(--ats-r-lg); margin-top:14px;}
+    button.save{border:1px solid rgba(255,215,0,.70); background: rgba(255,215,0,.18); color: var(--ats-text);} 
+    button.save:hover{background: rgba(255,215,0,.24);} 
+    button.ghost{border:1px solid var(--ats-border); background: rgba(255,255,255,.08); color: var(--ats-text);} 
+
+    .Row{background: rgba(0,0,0,.14); border:1px solid var(--ats-border); color: var(--ats-text);} 
+
+    .modalCard{background: linear-gradient(180deg, rgba(63,28,131,.96), rgba(11,16,32,.98)); border:1px solid var(--ats-border); color: var(--ats-text);} 
+    .note{color: var(--ats-muted);} 
+  </style>
 </head>
 
 <body class="ats-admin">
