@@ -66,6 +66,36 @@
     </section>
 
     <script>
+      // 🔒 Require Admin Panel auth (set by /admin/admin.js)
+      const AUTH_STORAGE  = "ats_admin_auth_v1";        // sessionStorage JSON
+      const TOKEN_STORAGE = "ats_admin_token_v1";       // sessionStorage token
+      const TOKEN_LOCAL   = "ats_admin_token_local_v1"; // localStorage token
+
+      function readJson_(k){
+        try{ return JSON.parse(sessionStorage.getItem(k) || ""); }catch(e){ return null; }
+      }
+      function loadAnyToken_(){
+        try{ const s=(sessionStorage.getItem(TOKEN_STORAGE)||"").trim(); if(s) return s; }catch(e){}
+        try{ const l=(localStorage.getItem(TOKEN_LOCAL)||"").trim(); if(l) return l; }catch(e){}
+        return "";
+      }
+      function requireAdminAuth_(){
+        const statusEl = document.getElementById("status");
+        const whoEl = document.getElementById("who");
+        const auth = readJson_(AUTH_STORAGE);
+        const token = loadAnyToken_();
+
+        if (!auth || auth.ok !== true || !auth.employeeId || !token) {
+          if (statusEl) statusEl.textContent = "Admin sign-in required. Redirecting to /admin/…";
+          setTimeout(() => { window.location.href = "/admin/"; }, 600);
+          return null;
+        }
+
+        if (whoEl) whoEl.textContent = `${auth.employeeId} • ${auth.employeeName || auth.employeeId}`;
+        return auth;
+      }
+
+      const _AUTH = requireAdminAuth_();
       // ✅ MUST be your Apps Script Web App URL that ends in /exec
       const GA_API_URL = "https://script.google.com/macros/s/AKfycbwebnc7k-OlEuOKLc_WgGalVeFISPfsTniFdSIhfhi7vra-ALZcbNGZcj7Qti3nFklH/exec";
       const RANGE = "30daysAgo"; // matches your Code.gs supported range format
@@ -173,11 +203,13 @@
         }
       }
 
-      load().catch(err=>{
-        console.error(err);
-        document.getElementById("newReturning").textContent = "Load failed (check Apps Script URL + permissions).";
-        document.getElementById("totals").textContent = "—";
-      });
+      if (_AUTH) {
+        load().catch(err=>{
+          console.error(err);
+          document.getElementById("newReturning").textContent = "Load failed (check Apps Script URL + permissions).";
+          document.getElementById("totals").textContent = "—";
+        });
+      }
     </script>
 
   </main>
