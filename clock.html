@@ -15,29 +15,7 @@
   <link rel="stylesheet" href="/admin/admin-layout.css" />
   <script defer src="/admin/admin-nav.js"></script>
 </head>
-<body class="ats-admin ats-light">
-
-  <!-- Clock page needs a light body for readability (visual only) -->
-  <style>
-    body.ats-admin.ats-light{
-      background:#ffffff;
-      color:#111827;
-    }
-    body.ats-admin.ats-light a{color:#1b2a6d}
-    /* Re-assert light form controls on the clock page (admin-layout.css styles inputs globally) */
-    body.ats-admin.ats-light input,
-    body.ats-admin.ats-light select,
-    body.ats-admin.ats-light textarea{
-      background:#ffffff;
-      color:#111827;
-      border:1px solid rgba(17,24,39,.18);
-    }
-    body.ats-admin.ats-light .ats-card,
-    body.ats-admin.ats-light .page-container{
-      color:#111827;
-    }
-  </style>
-
+<body class="ats-admin ats-clock">
 <header class="ats-header">
   <div class="ats-header-inner">
     <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
@@ -54,14 +32,8 @@
 </header>
 
 <main class="ats-main"><div class="ats-container">
-<header class="site-header">
-<div class="header-inner">
-<a class="logo" href="index.html">
-<img alt="About To Shine Cleaning Logo" src="assets/images/logo-v2.png"/>
-</a>
-</div>
-</header>
-<main class="page-container">
+<section class="ats-card ats-card--light">
+
 <h2>Employee Time Clock</h2>
 <p id="employee-display"></p>
 <!-- No pop-up alerts; we show status here -->
@@ -92,7 +64,7 @@
 <a class="button" href="tel:13477292829">Call Matt</a>
 </div>
 </section>
-</main>
+</section>
 <footer class="site-footer">
 <div class="footer-inner">
 <div class="footer-grid">

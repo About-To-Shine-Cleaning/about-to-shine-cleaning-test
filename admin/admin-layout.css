@@ -243,3 +243,28 @@ textarea{min-height:96px}
   .ats-brand img{height:40px}
   .ats-main{padding-top: 14px}
 }
+
+
+/* ===== Clock: Light content card (keeps global admin gradient/nav) ===== */
+.ats-card--light{
+  background:#ffffff;
+  color:#111827;
+  border:1px solid rgba(17,24,39,.10);
+  box-shadow: 0 18px 60px rgba(0,0,0,.28);
+}
+.ats-card--light h1,.ats-card--light h2,.ats-card--light h3,.ats-card--light h4{
+  color:#0f172a;
+}
+.ats-card--light label{ color:#111827; }
+.ats-card--light input,
+.ats-card--light select,
+.ats-card--light textarea{
+  background:#ffffff;
+  color:#111827;
+  border:1px solid rgba(17,24,39,.18);
+}
+.ats-card--light input::placeholder,
+.ats-card--light textarea::placeholder{
+  color: rgba(17,24,39,.55);
+}
+.ats-card--light a{ color:#1b2a6d; }
