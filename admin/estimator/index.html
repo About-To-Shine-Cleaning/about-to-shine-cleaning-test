@@ -106,6 +106,17 @@
 
     .modalCard{background: linear-gradient(180deg, rgba(63,28,131,.96), rgba(11,16,32,.98)); border:1px solid var(--ats-border); color: var(--ats-text);} 
     .note{color: var(--ats-muted);} 
+
+    /* Fix invisible text in estimator form controls (estimator's base CSS sets light backgrounds) */
+    .card input, .card select, .card textarea{
+      background: rgba(0,0,0,.20) !important;
+      color: var(--ats-text) !important;
+      border: 1px solid var(--ats-border) !important;
+    }
+    .card input::placeholder, .card textarea::placeholder{
+      color: rgba(255,255,255,.70) !important;
+    }
+    .card select option{ color: #0b1020; }
   </style>
 </head>
 
