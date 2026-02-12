@@ -1,71 +1,346 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta charset="UTF-8" />
   <title>ATS Site Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="/assets/images/logo-v2.png">
+  <link rel="apple-touch-icon" href="/assets/images/logo-v2.png">
+
+  <style>
+
+    :root{
+      /* Brand */
+      --purple:#5b2aa8;
+      --purple2:#3f1c83;
+      --yellow:#FFD700;
+
+      /* UI */
+      --muted:rgba(255,255,255,.86);
+      --card:rgba(255,255,255,.10);
+      --border:rgba(255,255,255,.18);
+
+      /* Shadows */
+      --shadow: 0 12px 30px rgba(0,0,0,.22);
+      --shadow2: 0 18px 44px rgba(0,0,0,.28);
+
+      /* Radius */
+      --r-lg: 18px;
+      --r-md: 14px;
+      --r-sm: 12px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color:#fff;
+      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      min-height:100vh;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* ===== Top bar ===== */
+    .topbar{
+      padding: 18px 18px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{ display:flex; align-items:center; gap:12px; }
+
+    .brand-logo{
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.12);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex: 0 0 auto;
+    }
+    .brand-logo img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .title{
+      font-weight: 800;
+      letter-spacing: .2px;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+    .sub{
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+    #who{
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .accentline{
+      height: 6px;
+      background: var(--yellow);
+      border-radius: 999px;
+      margin: 0 18px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    }
+
+    .wrap{
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    /* ===== Status box ===== */
+    .status{
+      margin: 16px 0 18px;
+      padding: 14px 14px;
+      border-radius: var(--r-md);
+      background: rgba(255,255,255,.10);
+      border: 1px solid var(--border);
+      color:#fff;
+      font-size: 14px;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      box-shadow: var(--shadow);
+    }
+
+    .status.is-loading{
+      border-color: rgba(255,255,255,.22);
+      background: rgba(255,255,255,.10);
+    }
+    .status.is-success{
+      border-color: rgba(34,197,94,.45);
+      background: rgba(34,197,94,.14);
+      box-shadow: 0 14px 34px rgba(0,0,0,.22);
+    }
+    .status.is-error{
+      border-color: rgba(239,68,68,.45);
+      background: rgba(239,68,68,.14);
+      box-shadow: 0 14px 34px rgba(0,0,0,.22);
+    }
+
+    /* ===== Grid/cards ===== */
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:14px;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+    }
+
+    .card h3{
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    .card p{
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    /* ===== Buttons (bigger tap targets) ===== */
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      padding: 14px 14px;
+      min-height: 48px;
+      border-radius: var(--r-sm);
+      background: var(--yellow);
+      color: #111;
+      font-weight: 800;
+      text-decoration:none;
+      border:0;
+      cursor:pointer;
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+      transition: transform .06s ease, filter .12s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .btn:active{ transform: scale(.985); }
+
+    .btn.secondary{
+      background: rgba(0,0,0,.22);
+      color:#fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 22px rgba(0,0,0,.14);
+    }
+
+    .small{
+      font-size:12px;
+      color: rgba(255,255,255,.80);
+      margin-top: 10px;
+      word-break: break-word;
+      line-height: 1.45;
+    }
+
+    .hidden{ display:none; }
+
+    /* ===== Desktop login ===== */
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .input{
+      flex:1;
+      min-width:220px;
+      padding: 13px 12px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      color:#fff;
+      outline:none;
+      font-size:14px;
+    }
+    .input::placeholder{ color: rgba(255,255,255,.60); }
+
+    label.chk{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color: rgba(255,255,255,.85);
+      user-select:none;
+    }
+
+    /* ===== iPhone spacing polish ===== */
+    @media (max-width: 520px){
+      .topbar{ padding: 16px 14px 12px; }
+      .wrap{ padding: 14px; }
+      .card{ padding: 18px; box-shadow: var(--shadow2); }
+      .accentline{ margin: 0 14px; }
+      .status{ font-size: 15px; padding: 16px 14px; }
+    }
+  
+  /* Small tweaks for tables on this page */
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ padding:10px 10px; border-bottom:1px solid rgba(255,255,255,.14); font-size:13px; }
+  th{ text-align:left; color: rgba(255,255,255,.90); font-weight:800; }
+  td{ color: rgba(255,255,255,.86); }
+  code{ background: rgba(0,0,0,.20); padding:2px 6px; border-radius:10px; }
+  .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.10); font-size:12px; }
+  </style>
+
   <link rel="stylesheet" href="/admin/admin-layout.css" />
+  <script defer src="/admin/admin-nav.js"></script>
 </head>
 
-<body>
-  <header class="ats-header">
-    <div class="inner">
-      <div class="ats-brand">
-        <a href="/admin/"><img src="/assets/images/logo.png" alt="About To Shine Cleaning logo"></a>
-      </div>
-      <nav class="ats-nav">
-        <a href="/admin/">Admin</a>
-        <a href="/admin/estimator/">Estimator</a>
-        <a href="/admin/payroll/">Payroll</a>
-        <a href="/admin/analytics.html" aria-current="page">Site Report</a>
-      </nav>
+<body class="ats-admin">
+  
+<header class="ats-header">
+  <div class="ats-header-inner">
+    <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
+      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
+    </a>
+
+    <div class="ats-header-actions">
+      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
-    <div class="ats-divider"></div>
-  </header>
+  </div>
+</header>
 
-  <main class="ats-wrap">
-
-    <section class="ats-card">
-      <h2 style="margin:0 0 6px">Site Report</h2>
-      <div class="small">
-        GA4 overview pulled via Apps Script (JSONP). Uses <code>route=...</code> endpoints.
+<main class="ats-main"><div class="ats-container">
+<div class="topbar">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <img src="/assets/images/logo-v2.png" alt="">
       </div>
-      <div style="height:12px"></div>
+      <div>
+        <div class="title">About To Shine Cleaning</div>
+        <div class="sub">Site Report (GA4)</div>
+      </div>
+    </div>
 
-      <div class="ats-grid">
-        <div class="ats-card">
-          <div class="small">New vs Returning (Active Users)</div>
-          <div id="newReturning" style="font-size:22px;font-weight:800">Loading…</div>
-        </div>
+    <div class="sub" style="text-align:right;">
+      <a href="/admin/" style="color: rgba(255,255,255,.86); text-decoration:none; font-weight:800;">← Back to Admin</a>
+    </div>
+  </div>
 
-        <div class="ats-card">
-          <div class="small">Totals (Last 30 days)</div>
-          <div id="totals" style="font-size:22px;font-weight:800">Loading…</div>
-        </div>
+  <div class="accentline"></div>
+
+  <div class="wrap">
+    <div class="status is-loading" id="status">Loading GA4 report…</div>
+
+    <div class="grid" style="grid-template-columns: repeat(2, 1fr);" id="reportGrid">
+      <div class="card">
+        <h3>New vs Returning</h3>
+        <p>Active users and sessions split by new vs returning visitors.</p>
+        <div class="small" id="newReturning">—</div>
       </div>
 
-      <div style="height:14px"></div>
-
-      <div class="ats-card">
-        <div class="small">Sessions by Source / Medium</div>
+      <div class="card">
+        <h3>Totals (Last 30 Days)</h3>
+        <p>Sessions and active users (overview).</p>
+        <div class="small"><span class="pill">Range</span> <code>30daysAgo → today</code></div>
         <div style="height:10px"></div>
-        <table>
-          <thead>
-            <tr><th>Source</th><th>Medium</th><th>Sessions</th><th>Active Users</th></tr>
-          </thead>
-          <tbody id="srcTable"></tbody>
-        </table>
+        <div class="small" id="totals">—</div>
       </div>
 
-      <p class="small" style="margin-top:12px">
-        Setup: edit <code>/admin/analytics.html</code> and paste your Apps Script Web App URL into <code>GA_API_URL</code>.
-      </p>
+      <div class="card" style="grid-column: 1 / -1;">
+        <h3>Top Sources</h3>
+        <p>Sessions by source / medium.</p>
+        <div style="height:8px"></div>
+        <div class="small" style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Medium</th>
+                <th>Sessions</th>
+                <th>Active Users</th>
+              </tr>
+            </thead>
+            <tbody id="srcTable">
+              <tr><td colspan="4">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-      <p class="small" id="debugLine" style="margin-top:8px;opacity:.85"></p>
-    </section>
+    <div class="small" id="debugLine" style="margin-top:12px;"></div>
+  </div>
 
-    <script>
+  <script>
+
       // 🔒 Require Admin Panel auth (set by /admin/admin.js)
       const AUTH_STORAGE  = "ats_admin_auth_v1";        // sessionStorage JSON
       const TOKEN_STORAGE = "ats_admin_token_v1";       // sessionStorage token
@@ -82,11 +357,17 @@
       function requireAdminAuth_(){
         const statusEl = document.getElementById("status");
         const whoEl = document.getElementById("who");
+
         const auth = readJson_(AUTH_STORAGE);
         const token = loadAnyToken_();
 
         if (!auth || auth.ok !== true || !auth.employeeId || !token) {
-          if (statusEl) statusEl.textContent = "Admin sign-in required. Redirecting to /admin/…";
+          if (statusEl) {
+            statusEl.textContent = "Admin sign-in required. Redirecting to /admin/…";
+            statusEl.classList.remove("is-success");
+            statusEl.classList.add("is-loading");
+          }
+          // Send them back to the protected entry point
           setTimeout(() => { window.location.href = "/admin/"; }, 600);
           return null;
         }
@@ -95,7 +376,10 @@
         return auth;
       }
 
+      // Stop here if not signed in
       const _AUTH = requireAdminAuth_();
+      if (!_AUTH) { /* redirect scheduled */ }
+
       // ✅ MUST be your Apps Script Web App URL that ends in /exec
       const GA_API_URL = "https://script.google.com/macros/s/AKfycbwebnc7k-OlEuOKLc_WgGalVeFISPfsTniFdSIhfhi7vra-ALZcbNGZcj7Qti3nFklH/exec";
       const RANGE = "30daysAgo"; // matches your Code.gs supported range format
@@ -210,15 +494,8 @@
           document.getElementById("totals").textContent = "—";
         });
       }
-    </script>
-
-  </main>
-
-  <footer class="ats-footer">
-    <div class="ats-divider"></div>
-    <div class="inner">
-      About To Shine Cleaning • Internal Admin • Test Environment
-    </div>
-  </footer>
+    
+  </script>
+</div></main>
 </body>
 </html>
