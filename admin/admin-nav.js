@@ -10,6 +10,24 @@
     { label: "Legacy Pricing", href: "/admin/legacy/" }
   ];
 
+// Preserve emp=... across tool links (Clock auth context)
+function getEmpQuery() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const emp = p.get("emp");
+    return emp ? `emp=${encodeURIComponent(emp)}` : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function withEmp(href) {
+  const empQ = getEmpQuery();
+  if (!empQ) return href;
+  return href.includes("?") ? `${href}&${empQ}` : `${href}?${empQ}`;
+}
+
+
   function normalizePath(p) {
     try {
       // keep only pathname
@@ -73,7 +91,7 @@
     TOOLS.forEach(t => {
       const a = document.createElement("a");
       a.className = "ats-nav-item";
-      a.href = t.href;
+      a.href = withEmp(t.href);
       a.textContent = t.label;
 
       if (isActive(t.href, curPath)) {

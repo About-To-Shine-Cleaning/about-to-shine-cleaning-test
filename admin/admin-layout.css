@@ -268,3 +268,67 @@ textarea{min-height:96px}
   color: rgba(17,24,39,.55);
 }
 .ats-card--light a{ color:#1b2a6d; }
+
+/* ===== Compatibility layer for legacy tool markup (Estimator/Payroll) ===== */
+.ats-admin .letterhead{display:none !important;}
+.ats-admin .wrap{
+  max-width: var(--ats-container);
+  margin: 0 auto;
+  padding: 18px;
+}
+.ats-admin .top{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+.ats-admin .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background: rgba(255,255,255,.10);
+  border:1px solid var(--ats-border);
+  color: var(--ats-text);
+}
+.ats-admin .card{
+  background: rgba(255,255,255,.10) !important;
+  border: 1px solid var(--ats-border) !important;
+  border-radius: var(--ats-r-lg) !important;
+  padding: 16px !important;
+  box-shadow: var(--ats-shadow) !important;
+  color: var(--ats-text) !important;
+}
+.ats-admin .card h1,
+.ats-admin .card h2,
+.ats-admin .card h3,
+.ats-admin .card h4{
+  color: var(--ats-text) !important;
+}
+.ats-admin .card label{
+  color: var(--ats-muted) !important;
+}
+.ats-admin .btn{
+  border-radius: 999px !important;
+  border: 1px solid var(--ats-border) !important;
+  background: rgba(255,255,255,.10) !important;
+  color: var(--ats-text) !important;
+  padding: 11px 14px !important;
+  cursor:pointer;
+  font-weight: 650;
+}
+.ats-admin .btn:hover{ background: rgba(255,255,255,.14) !important; }
+.ats-admin .btn.primary{
+  border-color: rgba(255,215,0,.70) !important;
+  background: rgba(255,215,0,.18) !important;
+}
+.ats-admin .btn.primary:hover{ background: rgba(255,215,0,.24) !important; }
+.ats-admin .btn.secondary{
+  background: rgba(255,255,255,.08) !important;
+}
+.ats-admin .btn:disabled{
+  opacity: .65 !important;
+  cursor:not-allowed !important;
+}
