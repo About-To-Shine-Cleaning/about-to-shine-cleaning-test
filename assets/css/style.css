@@ -722,18 +722,24 @@ body {
    Contact: honeycomb socials
    ========================= */
 .social-honeycomb{
-  display: grid;
-  grid-template-columns: repeat(5, 56px);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  justify-content: start;
-  align-items: center;
   margin-top: 12px;
 }
-@media (max-width: 700px){
-  .social-honeycomb{ grid-template-columns: repeat(5, 52px); }
+.honey-row{
+  display: flex;
+  gap: 12px;
+}
+.honey-row.offset{
+  padding-left: 34px; /* stagger the second row for honeycomb look */
+}
+@media (max-width: 900px){
+  .honey-row.offset{ padding-left: 26px; }
 }
 @media (max-width: 460px){
-  .social-honeycomb{ grid-template-columns: repeat(3, 56px); }
+  .honey-row{ justify-content: flex-start; }
+  .honey-row.offset{ padding-left: 22px; }
 }
 .honey{
   width: 56px;
@@ -742,15 +748,17 @@ body {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: #fff;
   font-weight: 900;
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.18);
+  background: var(--ats-purple2);
+  color: var(--brand-yellow);
+  border: 2px solid var(--brand-yellow);
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.14);
 }
-.honey:hover{ background: rgba(255,255,255,.16); }
+.honey:hover{ filter: brightness(1.05); }
 
 .contact-section{
+
   margin-top: 28px;
 }
 .contact-map iframe{
