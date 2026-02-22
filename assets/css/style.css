@@ -755,6 +755,12 @@ body {
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
   box-shadow: 0 10px 22px rgba(0,0,0,0.14);
 }
+
+.honey img{
+  width: 28px;
+  height: 28px;
+  display: block;
+}
 .honey:hover{ filter: brightness(1.05); }
 
 .contact-section{
