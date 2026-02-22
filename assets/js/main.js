@@ -6,7 +6,28 @@ document.addEventListener("DOMContentLoaded", () => {
   if (toggle && nav) {
     toggle.addEventListener("click", () => {
       nav.classList.toggle("open");
+    
+  // About page: Read More / Read Less toggle (keeps original formatting)
+  document.querySelectorAll(".bio-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-target");
+      const bio = id ? document.getElementById(id) : null;
+      if (!bio) return;
+
+      const isExpanded = btn.getAttribute("aria-expanded") === "true";
+      if (isExpanded) {
+        bio.classList.add("bio-collapsed");
+        btn.setAttribute("aria-expanded", "false");
+        btn.textContent = "Read More";
+      } else {
+        bio.classList.remove("bio-collapsed");
+        btn.setAttribute("aria-expanded", "true");
+        btn.textContent = "Read Less";
+      }
     });
+  });
+
+});
   }
 
   // Text button (iOS-friendly)
