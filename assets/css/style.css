@@ -695,6 +695,30 @@ body {
 }
 
 /* =========================
+   Contact Us: split layout
+   ========================= */
+.contact-split{
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap: 28px;
+  align-items: start;
+}
+.contact-split .form-wrapper{ justify-content: flex-start; }
+.contact-split .quote-form{ max-width: none; }
+
+.contact-right{
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+}
+
+@media (max-width: 900px){
+  .contact-split{ grid-template-columns: 1fr; }
+}
+
+/* =========================
    Contact: honeycomb socials
    ========================= */
 .social-honeycomb{

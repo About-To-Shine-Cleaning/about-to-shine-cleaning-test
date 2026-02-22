@@ -6,7 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (toggle && nav) {
     toggle.addEventListener("click", () => {
       nav.classList.toggle("open");
-    
+    });
+  }
+
   // About page: Read More / Read Less toggle (keeps original formatting)
   document.querySelectorAll(".bio-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -26,9 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-
-});
-  }
 
   // Text button (iOS-friendly)
   window.handleTextClick = function () {
