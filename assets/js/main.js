@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Normalize bio whitespace so extra blank lines don't create huge gaps.
+  document.querySelectorAll(".bio-text").forEach((el) => {
+    const raw = (el.textContent || "").replace(/\r\n/g, "\n");
+    const normalized = raw.replace(/\n{3,}/g, "\n\n").trim();
+    el.textContent = normalized;
+  });
+
   // Mobile nav toggle
   const toggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".main-nav");
