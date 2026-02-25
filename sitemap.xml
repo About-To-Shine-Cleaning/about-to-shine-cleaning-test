@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://abouttoshinecleaning.com/about.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/allentown-cleaning.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/commercial.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/contact.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/emmaus-cleaning.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/gallery.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/index.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/lehigh-valley-cleaning.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/macungie-cleaning.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/residential.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/services.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/thank-you.html</loc></url>
-  <url><loc>https://abouttoshinecleaning.com/tips.html</loc></url>
-</urlset>
+<?xml version='1.0' encoding='utf-8'?>
+<ns0:urlset xmlns:ns0="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/about.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/allentown-cleaning.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/commercial.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/contact.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/emmaus-cleaning.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/gallery.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/index.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/lehigh-valley-cleaning.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/macungie-cleaning.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/residential.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/services.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/thank-you.html</ns0:loc></ns0:url>
+  <ns0:url><ns0:loc>https://abouttoshinecleaning.com/tips.html</ns0:loc></ns0:url>
+<ns0:url><ns0:loc>https://abouttoshinecleaning.com/emmaus-residential-cleaning/</ns0:loc></ns0:url><ns0:url><ns0:loc>https://abouttoshinecleaning.com/emmaus-commercial-cleaning/</ns0:loc></ns0:url></ns0:urlset>
