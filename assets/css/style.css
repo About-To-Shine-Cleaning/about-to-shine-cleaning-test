@@ -867,6 +867,24 @@ body {
   z-index: 999;
 }
 
+
+
+/* Ensure dropdown text is readable (dropdown has white background) */
+.dropdown-menu a,
+.dropdown-menu .submenu-title{
+  color:#1b1b1b;
+}
+.dropdown-menu a{ text-decoration:none; }
+.dropdown-menu a:hover{ background:#f3f3f6; }
+.dropdown-sep{
+  height:1px;
+  background:#e7e7ee;
+  margin:8px 0;
+}
+
+/* Mobile: click-to-open dropdowns */
+.nav-item.dropdown.open .dropdown-menu{ display:block; }
+
 .nav-item.dropdown:hover .dropdown-menu,
 .nav-item.dropdown:focus-within .dropdown-menu{
   display: block;

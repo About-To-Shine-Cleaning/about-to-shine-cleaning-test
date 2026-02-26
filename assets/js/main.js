@@ -56,3 +56,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 });
+
+
+// ATS dropdown (mobile click)
+(function () {
+  function isMobileNav() {
+    return window.matchMedia("(max-width: 900px)").matches;
+  }
+
+  const dropdownBtns = document.querySelectorAll(".nav-item.dropdown > .dropbtn");
+  dropdownBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      if (!isMobileNav()) return; // desktop uses hover
+      e.preventDefault();
+      const parent = btn.closest(".nav-item.dropdown");
+      if (!parent) return;
+
+      // close other dropdowns
+      document.querySelectorAll(".nav-item.dropdown.open").forEach((el) => {
+        if (el !== parent) el.classList.remove("open");
+      });
+
+      parent.classList.toggle("open");
+    });
+  });
+
+  // Close if clicking outside
+  document.addEventListener("click", (e) => {
+    if (!isMobileNav()) return;
+    const inside = e.target.closest(".nav-item.dropdown");
+    if (!inside) {
+      document.querySelectorAll(".nav-item.dropdown.open").forEach((el) => el.classList.remove("open"));
+    }
+  });
+
+  // Close dropdowns on resize up to desktop
+  window.addEventListener("resize", () => {
+    if (!isMobileNav()) {
+      document.querySelectorAll(".nav-item.dropdown.open").forEach((el) => el.classList.remove("open"));
+    }
+  });
+})();
