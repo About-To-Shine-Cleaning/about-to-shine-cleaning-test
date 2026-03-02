@@ -1,12 +1,19 @@
-<!DOCTYPE html>
+<!-- ✅ Replace THIS file: /admin/legacy/index.html -->
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>ATS Legacy Pricing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
+
   <link rel="icon" type="image/png" href="/assets/images/logo-v2.png">
   <link rel="apple-touch-icon" href="/assets/images/logo-v2.png">
+
+  <!-- Admin shell (header + hamburger) -->
+  <link rel="stylesheet" href="/admin/admin-layout.css" />
+  <script defer src="/admin/admin-nav.js"></script>
+
   <style>
     :root{
       --purple:#5b2aa8;
@@ -28,49 +35,30 @@
       background: linear-gradient(135deg, var(--purple), var(--purple2));
       min-height:100vh;
     }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px; }
     .topbar{
-      padding:18px;
+      padding: 18px 0 10px;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
     }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
+    .brand{ display:flex; align-items:center; gap:12px; }
     .brand-logo{
       width:44px;height:44px;border-radius:14px;border:1px solid var(--border);
       background: rgba(255,255,255,.12);
       box-shadow: var(--shadow);
       overflow:hidden;display:flex;align-items:center;justify-content:center;
     }
-    .brand-logo img{
-      width:100%;height:100%;object-fit:cover;display:block;
-    }
+    .brand-logo img{ width:100%;height:100%;object-fit:cover;display:block; }
     .title{ font-weight:800; font-size:18px; }
-    .sub{
-      font-size:12px;
-      color: rgba(255,255,255,.86);
-      margin-top:4px;
-    }
-    #who{
-      font-size:12px;
-      color: rgba(255,255,255,.86);
-      text-align:right;
-      white-space:nowrap;
-    }
-    .accentline{
-      height:6px;background:var(--yellow);border-radius:999px;margin:0 18px;
-    }
-    .wrap{
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 18px;
-    }
+    .sub{ font-size:12px; color: rgba(255,255,255,.86); margin-top:4px; }
+    #who{ font-size:12px; color: rgba(255,255,255,.86); text-align:right; white-space:nowrap; }
+
+    .accentline{ height:6px;background:var(--yellow);border-radius:999px;margin:0 0 16px; }
+
     .status{
-      margin: 16px 0 18px;
+      margin: 0 0 14px;
       padding: 14px;
       border-radius: var(--r-md);
       background: rgba(255,255,255,.10);
@@ -80,15 +68,10 @@
       line-height:1.45;
       box-shadow: var(--shadow);
     }
-    .status.is-loading{ opacity: .9; }
-    .status.is-success{
-      border-color: rgba(34,197,94,.45);
-      background: rgba(34,197,94,.14);
-    }
-    .status.is-error{
-      border-color: rgba(239,68,68,.45);
-      background: rgba(239,68,68,.14);
-    }
+    .status.is-loading{ opacity: .92; }
+    .status.is-success{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.14); }
+    .status.is-error{ border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.14); }
+
     .card{
       background: var(--card);
       border: 1px solid var(--border);
@@ -97,23 +80,10 @@
       box-shadow: var(--shadow);
       margin-bottom: 14px;
     }
-    .card h3{
-      margin:0 0 8px;
-      font-size:16px;
-      font-weight:800;
-    }
-    .card p{
-      margin:0 0 14px;
-      color: var(--muted);
-      font-size:13px;
-      line-height:1.55;
-    }
-    label{
-      display:block;
-      font-size:12px;
-      color: rgba(255,255,255,.85);
-      margin: 10px 0 6px;
-    }
+    .card h3{ margin:0 0 8px; font-size:16px; font-weight:800; }
+    .card p{ margin:0 0 14px; color: var(--muted); font-size:13px; line-height:1.55; }
+
+    label{ display:block; font-size:12px; color: rgba(255,255,255,.85); margin: 10px 0 6px; }
     input, select{
       width:100%;
       padding: 13px 12px;
@@ -140,22 +110,13 @@
       color:#fff;
       border:1px solid var(--border);
     }
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 800px){
-      .row{ grid-template-columns: 1fr; }
-    }
-    .outgrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 800px){
-      .outgrid{ grid-template-columns: 1fr; }
-    }
+
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px){ .row{ grid-template-columns: 1fr; } }
+
+    .outgrid{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px){ .outgrid{ grid-template-columns: 1fr; } }
+
     .kv{
       display:flex;
       justify-content:space-between;
@@ -166,23 +127,18 @@
       background: rgba(0,0,0,.12);
     }
     .kv b{ font-weight:800; }
-    .links a{
-      color: var(--yellow);
-      font-weight: 800;
-      text-decoration: none;
-    }
+    .links a{ color: var(--yellow); font-weight: 800; text-decoration: none; }
   </style>
-
-  <link rel="stylesheet" href="/admin/admin-layout.css" />
-  <script defer src="/admin/admin-nav.js"></script>
 </head>
 
 <body class="ats-admin">
+  <!-- ✅ Admin header + hamburger (standard) -->
   <header class="ats-header">
     <div class="ats-header-inner">
       <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
         <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
       </a>
+
       <div class="ats-header-actions">
         <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
         <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
@@ -194,21 +150,21 @@
 
   <main class="ats-main">
     <div class="ats-container">
-
-      <div class="topbar">
-        <div class="brand">
-          <div class="brand-logo"><img src="/assets/images/logo-v2.png" alt=""></div>
-          <div>
-            <div class="title">About To Shine Cleaning</div>
-            <div class="sub">Legacy Pricing (Admin)</div>
-          </div>
-        </div>
-        <div class="sub" id="who"></div>
-      </div>
-
-      <div class="accentline"></div>
-
       <div class="wrap">
+
+        <div class="topbar">
+          <div class="brand">
+            <div class="brand-logo"><img src="/assets/images/logo-v2.png" alt=""></div>
+            <div>
+              <div class="title">About To Shine Cleaning</div>
+              <div class="sub">Legacy Pricing (Admin)</div>
+            </div>
+          </div>
+          <div class="sub" id="who"></div>
+        </div>
+
+        <div class="accentline"></div>
+
         <div class="status is-loading" id="status">Loading…</div>
 
         <div class="card">
@@ -216,7 +172,7 @@
           <p>Tap <b>Adjust</b> to preview. Then <b>Save + Generate PDF</b> to log + create Doc/PDF in Drive.</p>
 
           <label for="saveAs">Save As (required for PDF)</label>
-          <input id="saveAs" placeholder='Example:"RL Reppert increase"' />
+          <input id="saveAs" placeholder='Example: "RL Reppert increase"' />
 
           <label for="clientName">Client name (optional)</label>
           <input id="clientName" placeholder="Legacy Client" />
@@ -300,16 +256,9 @@
 
           <div style="margin-top:14px;"></div>
 
-          <!-- ✅ FIX: type="button" -->
-          <button class="btn" id="btnAdjust" type="button">Adjust</button>
-
+          <button class="btn" id="btnAdjust">Adjust</button>
           <div style="height:10px;"></div>
-
-          <!-- ✅ FIX: type="button" -->
-          <button class="btn secondary" id="btnExport" type="button">Save + Generate PDF</button>
-
-          <!-- ✅ FIX: hide API display (still set in JS, not shown) -->
-          <div class="sub" style="margin-top:10px; display:none;">API: <span id="apiHint"></span></div>
+          <button class="btn secondary" id="btnExport">Save + Generate PDF</button>
         </div>
 
         <div class="card" id="outputsCard" style="display:none;">
@@ -329,210 +278,205 @@
 
           <div class="sub links" id="links" style="margin-top:10px;"></div>
         </div>
+
       </div>
+    </div>
+  </main>
 
-      <script>
-        // Uses your Admin Panel sessionStorage sign-in
-        const AUTH_STORAGE = "ats_admin_auth_v1";
-        const TOKEN_STORAGE = "ats_admin_token_v1";
-        const TOKEN_LOCAL   = "ats_admin_token_local_v1";
+  <script>
+    // ✅ Requires Admin Panel sign-in (same as other tools)
+    const AUTH_STORAGE  = "ats_admin_auth_v1";
+    const TOKEN_STORAGE = "ats_admin_token_v1";
+    const TOKEN_LOCAL   = "ats_admin_token_local_v1";
 
-        // ✅ FIX: updated to your current working Admin /exec URL
-        const LEGACY_API_URL = "https://script.google.com/macros/s/AKfycbxZdZi2eojV04LBbXikTIrg60WKvX21BGijgpqLdBdwjPiJquC_GzBudMvXgcu0oMGd/exec";
+    // ✅ Your route-based JSONP /exec URL
+    const LEGACY_API_URL = "https://script.google.com/macros/s/AKfycbxxlswMSBSpXO9KqptzOULfDFCOmiu0dqGmMDDIY4IX-3EHqMkauIvAfNrUq0_rsbrN/exec";
 
-        const el = (id) => document.getElementById(id);
-        const statusEl = el("status");
-        const whoEl = el("who");
-        const apiHint = el("apiHint");
+    const el = (id) => document.getElementById(id);
+    const statusEl = el("status");
+    const whoEl = el("who");
 
-        function setStatus(msg, state){
-          statusEl.textContent = msg || "";
-          statusEl.classList.remove("is-loading","is-success","is-error");
-          if (state === "loading") statusEl.classList.add("is-loading");
-          if (state === "success") statusEl.classList.add("is-success");
-          if (state === "error")   statusEl.classList.add("is-error");
-        }
+    function setStatus(msg, state){
+      statusEl.textContent = msg || "";
+      statusEl.classList.remove("is-loading","is-success","is-error");
+      if (state === "loading") statusEl.classList.add("is-loading");
+      if (state === "success") statusEl.classList.add("is-success");
+      if (state === "error")   statusEl.classList.add("is-error");
+    }
 
-        function readJson_(k){
-          try{ return JSON.parse(sessionStorage.getItem(k) || ""); }
-          catch(e){ return null; }
-        }
+    function readJson_(k){
+      try { return JSON.parse(sessionStorage.getItem(k) || ""); }
+      catch(e){ return null; }
+    }
 
-        function loadAnyToken_(){
-          try{
-            const s = (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
-            if (s) return s;
-          }catch(e){}
-          try{
-            const l = (localStorage.getItem(TOKEN_LOCAL) || "").trim();
-            if (l) return l;
-          }catch(e){}
-          return "";
-        }
+    function loadAnyToken_(){
+      try{
+        const s = (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
+        if (s) return s;
+      }catch(e){}
+      try{
+        const l = (localStorage.getItem(TOKEN_LOCAL) || "").trim();
+        if (l) return l;
+      }catch(e){}
+      return "";
+    }
 
-        function jsonp_(url){
-          return new Promise((resolve, reject) => {
-            const cb = "cb_" + Math.random().toString(36).slice(2);
-            const s = document.createElement("script");
-            s.async = true;
+    function jsonp_(url){
+      return new Promise((resolve, reject) => {
+        const cb = "cb_" + Math.random().toString(36).slice(2);
+        const s = document.createElement("script");
+        s.async = true;
 
-            const cleanup = () => {
-              try{ delete window[cb]; }catch(e){}
-              try{ s.remove(); }catch(e){}
-            };
+        const cleanup = () => {
+          try{ delete window[cb]; }catch(e){}
+          try{ s.remove(); }catch(e){}
+        };
 
-            window[cb] = (data) => {
-              try{ resolve(data); }
-              finally{ cleanup(); }
-            };
+        window[cb] = (data) => {
+          try{ resolve(data); } finally{ cleanup(); }
+        };
 
-            s.onerror = () => {
-              cleanup();
-              reject(new Error("JSONP failed to load"));
-            };
+        s.onerror = () => { cleanup(); reject(new Error("JSONP failed to load")); };
 
-            s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
-            document.body.appendChild(s);
-          });
-        }
+        s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + encodeURIComponent(cb);
+        document.body.appendChild(s);
+      });
+    }
 
-        function b64_(obj){
-          const json = JSON.stringify(obj || {});
-          return btoa(unescape(encodeURIComponent(json)));
-        }
+    function b64_(obj){
+      const json = JSON.stringify(obj || {});
+      return btoa(unescape(encodeURIComponent(json)));
+    }
 
-        function getPayload_(){
-          return {
-            saveAs: (el("saveAs").value || "").trim(),
-            clientName: (el("clientName").value || "").trim(),
-            billingMethod: el("billingMethod").value,
-            currentAmount: Number(el("currentAmount").value || 0),
-            weeksPerMonth: Number(el("weeksPerMonth").value || 0),
-            taxRate: Number(el("taxRate").value || 0),
-            strategy: el("strategy").value,
-            addPerWeek: Number(el("addPerWeek").value || 0),
-            addPerMonth: Number(el("addPerMonth").value || 0),
-            clientTaxShare: Number(el("clientTaxShare").value || 0),
-            targetNetPct: Number(el("targetNetPct").value || 1)
-          };
-        }
+    function getPayload_(){
+      return {
+        saveAs: (el("saveAs").value || "").trim(),
+        clientName: (el("clientName").value || "").trim(),
+        billingMethod: el("billingMethod").value,
+        currentAmount: Number(el("currentAmount").value || 0),
+        weeksPerMonth: Number(el("weeksPerMonth").value || 0),
+        taxRate: Number(el("taxRate").value || 0),
+        strategy: el("strategy").value,
+        addPerWeek: Number(el("addPerWeek").value || 0),
+        addPerMonth: Number(el("addPerMonth").value || 0),
+        clientTaxShare: Number(el("clientTaxShare").value || 0),
+        targetNetPct: Number(el("targetNetPct").value || 1)
+      };
+    }
 
-        function explain_(computed){
-          const inp = computed?.inputs || {};
-          const disp = computed?.display || {};
-          if (!inp.strategy) return "";
-          if (inp.strategy === "Client pays % of tax (split)"){
-            return `Splitting sales tax — client pays ${disp.clientTaxShare || ""} of pass-through tax at ${disp.taxRate || ""}.`;
-          }
-          if (inp.strategy === "Keep client total same (absorb tax)"){
-            return `Keeping total the same — business absorbs sales tax at ${disp.taxRate || ""}.`;
-          }
-          if (inp.strategy === "Add $ per week") return "Adding a fixed increase per week.";
-          if (inp.strategy === "Add $ per month") return "Adding a fixed increase per month.";
-          if (inp.strategy === "Target my net revenue % (after tax)") return `Targeting net revenue at ${disp.targetNetPct || ""} after tax.`;
-          return "";
-        }
+    function explain_(computed){
+      const inp = computed?.inputs || {};
+      const disp = computed?.display || {};
+      if (!inp.strategy) return "";
+      if (inp.strategy === "Client pays % of tax (split)"){
+        return `Splitting sales tax — client pays ${disp.clientTaxShare || ""} of pass-through tax at ${disp.taxRate || ""}.`;
+      }
+      if (inp.strategy === "Keep client total same (absorb tax)"){
+        return `Keeping total the same — business absorbs sales tax at ${disp.taxRate || ""}.`;
+      }
+      if (inp.strategy === "Add $ per week") return "Adding a fixed increase per week.";
+      if (inp.strategy === "Add $ per month") return "Adding a fixed increase per month.";
+      if (inp.strategy === "Target my net revenue % (after tax)"){
+        return `Targeting net revenue at ${disp.targetNetPct || ""} after tax.`;
+      }
+      return "";
+    }
 
-        function render_(computed, links){
-          const disp = computed.display;
-          el("outputsCard").style.display = "";
-          el("explain").textContent = explain_(computed);
-          el("o_base").textContent = disp.newBaseTaxable;
-          el("o_tax").textContent = disp.salesTaxLine;
-          el("o_total").textContent = disp.newTotal;
-          el("o_weekly").textContent = disp.weeklyTotal;
-          el("o_old").textContent = disp.oldBase;
-          el("o_pass").textContent = disp.passThroughIncrease;
-          el("o_clientabs").textContent = disp.clientAbsorbs;
-          el("o_bizabs").textContent = disp.businessAbsorbs;
+    function render_(computed, links){
+      const disp = computed.display || {};
+      el("outputsCard").style.display = "";
+      el("explain").textContent = explain_(computed);
 
-          const linksEl = el("links");
-          if (links && (links.pdfUrl || links.docUrl)){
-            const parts = [];
-            if (links.pdfUrl) parts.push(`<a href="${links.pdfUrl}" target="_blank" rel="noopener">Open PDF</a>`);
-            if (links.docUrl) parts.push(`<a href="${links.docUrl}" target="_blank" rel="noopener">Open Doc</a>`);
-            linksEl.innerHTML = "Links:" + parts.join(" ·");
-          } else {
-            linksEl.innerHTML = "";
-          }
-        }
+      el("o_base").textContent = disp.newBaseTaxable || "";
+      el("o_tax").textContent = disp.salesTaxLine || "";
+      el("o_total").textContent = disp.newTotal || "";
+      el("o_weekly").textContent = disp.weeklyTotal || "";
+      el("o_old").textContent = disp.oldBase || "";
+      el("o_pass").textContent = disp.passThroughIncrease || "";
+      el("o_clientabs").textContent = disp.clientAbsorbs || "";
+      el("o_bizabs").textContent = disp.businessAbsorbs || "";
 
-        async function call_(route, payload){
-          const p64 = b64_(payload);
-          const url = `${LEGACY_API_URL}?route=${encodeURIComponent(route)}&payload64=${encodeURIComponent(p64)}`;
-          return jsonp_(url);
-        }
+      const linksEl = el("links");
+      if (links && (links.pdfUrl || links.docUrl)){
+        const parts = [];
+        if (links.pdfUrl) parts.push(`<a href="${links.pdfUrl}" target="_blank" rel="noopener">Open PDF</a>`);
+        if (links.docUrl) parts.push(`<a href="${links.docUrl}" target="_blank" rel="noopener">Open Doc</a>`);
+        linksEl.innerHTML = "Links: " + parts.join(" · ");
+      } else {
+        linksEl.innerHTML = "";
+      }
+    }
 
-        function boot_(){
-          // API kept for internal use (display hidden)
-          apiHint.textContent = LEGACY_API_URL;
+    // ✅ IMPORTANT: Your backend expects route=legacy_adjust / route=legacy_export
+    async function callRoute_(routeName, payload){
+      const p64 = b64_(payload);
+      const url =
+        `${LEGACY_API_URL}?route=${encodeURIComponent(routeName)}` +
+        `&payload64=${encodeURIComponent(p64)}`;
+      return jsonp_(url);
+    }
 
-          // still require Admin Panel sign-in
-          const auth = readJson_(AUTH_STORAGE);
-          const token = loadAnyToken_();
+    function boot_(){
+      // Require Admin sign-in
+      const auth = readJson_(AUTH_STORAGE);
+      const token = loadAnyToken_();
 
-          if (!auth || !auth.ok || !token){
-            setStatus("Admin sign-in required. Redirecting…", "error");
-            setTimeout(() => window.location.href = "/admin/", 700);
+      if (!auth || !auth.ok || !token){
+        setStatus("Admin sign-in required. Redirecting…", "error");
+        setTimeout(() => window.location.href = "/admin/", 700);
+        return;
+      }
+
+      whoEl.textContent = `${auth.employeeId} • ${auth.employeeName || ""}`;
+      setStatus("Ready.", "success");
+
+      el("btnAdjust").onclick = async () => {
+        try{
+          setStatus("Calculating…", "loading");
+          const payload = getPayload_();
+          const res = await callRoute_("legacy_adjust", payload);
+
+          if (!res || !res.ok){
+            setStatus(`Error: ${res?.error || "adjust failed"}`, "error");
             return;
           }
 
-          whoEl.textContent = `${auth.employeeId} • ${auth.employeeName || ""}`;
-          setStatus("Ready.", "success");
-
-          // ✅ FIX: preventDefault on both handlers
-          el("btnAdjust").onclick = async (ev) => {
-            try{
-              if (ev) ev.preventDefault();
-              setStatus("Calculating…", "loading");
-              const payload = getPayload_();
-              const res = await call_("legacy_adjust", payload);
-
-              if (!res || !res.ok){
-                setStatus(`Error: ${res?.error || "adjust failed"}`, "error");
-                return;
-              }
-              render_(res.computed);
-              setStatus("Adjusted ✅", "success");
-            }catch(e){
-              setStatus(String(e?.message || e), "error");
-            }
-          };
-
-          el("btnExport").onclick = async (ev) => {
-            try{
-              if (ev) ev.preventDefault();
-              const payload = getPayload_();
-
-              if (!payload.saveAs){
-                alert("Save As is required to generate the PDF.");
-                return;
-              }
-
-              setStatus("Saving + generating Doc/PDF…", "loading");
-              const res = await call_("legacy_export", payload);
-
-              if (!res || !res.ok){
-                setStatus(`Error: ${res?.error || "export failed"}`, "error");
-                return;
-              }
-
-              render_(res.computed, { pdfUrl: res.pdfUrl, docUrl: res.docUrl });
-              setStatus("Saved + PDF generated ✅", "success");
-            }catch(e){
-              setStatus(String(e?.message || e), "error");
-            }
-          };
+          render_(res.computed);
+          setStatus("Adjusted ✅", "success");
+        }catch(e){
+          setStatus(String(e?.message || e), "error");
         }
+      };
 
-        if (document.readyState === "loading"){
-          document.addEventListener("DOMContentLoaded", boot_);
-        } else {
-          boot_();
+      el("btnExport").onclick = async () => {
+        try{
+          const payload = getPayload_();
+          if (!payload.saveAs){
+            alert("Save As is required to generate the PDF.");
+            return;
+          }
+
+          setStatus("Saving + generating Doc/PDF…", "loading");
+          const res = await callRoute_("legacy_export", payload);
+
+          if (!res || !res.ok){
+            setStatus(`Error: ${res?.error || "export failed"}`, "error");
+            return;
+          }
+
+          render_(res.computed, { pdfUrl: res.pdfUrl, docUrl: res.docUrl });
+          setStatus("Saved + PDF generated ✅", "success");
+        }catch(e){
+          setStatus(String(e?.message || e), "error");
         }
-      </script>
+      };
+    }
 
-    </div>
-  </main>
+    if (document.readyState === "loading"){
+      document.addEventListener("DOMContentLoaded", boot_);
+    } else {
+      boot_;
+    }
+  </script>
 </body>
 </html>
