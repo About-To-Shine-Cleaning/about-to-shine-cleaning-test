@@ -40,6 +40,26 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function getAdminToken() {
+  return (
+    localStorage.getItem("ats_admin_token") ||
+    sessionStorage.getItem("ats_admin_token") ||
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken") ||
+    ""
+  );
+}
+
+function getDeviceKey() {
+  return (
+    localStorage.getItem("ats_device_key") ||
+    sessionStorage.getItem("ats_device_key") ||
+    localStorage.getItem("deviceKey") ||
+    sessionStorage.getItem("deviceKey") ||
+    ""
+  );
+}
+
 function ensureDaysMount() {
   let mount = $("scheduleDays");
   if (mount) return mount;
@@ -346,8 +366,19 @@ function injectSchedulerStyles() {
 }
 
 /* ================================
-   JSONP HELPER
+   API HELPERS
 ================================ */
+
+function buildAuthParams(extra = {}) {
+  const t = getAdminToken();
+  const d = getDeviceKey();
+
+  return {
+    ...extra,
+    t,
+    d
+  };
+}
 
 function api(action, params = {}) {
   return new Promise((resolve, reject) => {
@@ -355,22 +386,24 @@ function api(action, params = {}) {
     const script = document.createElement("script");
 
     window[cb] = function(data) {
-      try { delete window[cb]; } catch(e) {}
+      try { delete window[cb]; } catch (e) {}
       script.remove();
       resolve(data);
     };
 
     script.onerror = function() {
-      try { delete window[cb]; } catch(e) {}
+      try { delete window[cb]; } catch (e) {}
       script.remove();
       reject(new Error("API load failed"));
     };
 
-    const query = new URLSearchParams({
-      action,
-      callback: cb,
-      ...params
-    });
+    const query = new URLSearchParams(
+      buildAuthParams({
+        action,
+        callback: cb,
+        ...params
+      })
+    );
 
     script.src = ATS_API + "?" + query.toString();
     document.body.appendChild(script);
@@ -378,12 +411,36 @@ function api(action, params = {}) {
 }
 
 async function postApi(action, payload = {}) {
-  const res = await fetch(ATS_API + "?action=" + encodeURIComponent(action), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  return await res.json();
+  const t = getAdminToken();
+  const d = getDeviceKey();
+
+  const res = await fetch(
+    ATS_API +
+      "?action=" + encodeURIComponent(action) +
+      "&t=" + encodeURIComponent(t) +
+      "&d=" + encodeURIComponent(d),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    return { ok: false, error: "Invalid JSON response", raw: text };
+  }
+}
+
+function ensureAuthPresent() {
+  const token = getAdminToken();
+  const deviceKey = getDeviceKey();
+
+  if (!token || !deviceKey) {
+    throw new Error("Missing admin token or device key in browser storage.");
+  }
 }
 
 /* ================================
@@ -464,7 +521,14 @@ function renderDays() {
               <div class="schedule-item-client">${escapeHtml(item.client || "")}</div>
               <div class="schedule-item-cleaner">${escapeHtml(item.cleaner || "")}</div>
             </div>
-            <button type="button" class="schedule-item-btn" data-day="${day}" data-client="${escapeAttr(item.client || "")}" data-client-id="${escapeAttr(item.clientId || "")}" data-cleaner="${escapeAttr(item.cleaner || "")}" data-service-date="${escapeAttr(item.serviceDate || "")}">
+            <button
+              type="button"
+              class="schedule-item-btn"
+              data-day="${day}"
+              data-client="${escapeAttr(item.client || "")}"
+              data-client-id="${escapeAttr(item.clientId || "")}"
+              data-cleaner="${escapeAttr(item.cleaner || "")}"
+              data-service-date="${escapeAttr(item.serviceDate || "")}">
               Edit
             </button>
           </div>
@@ -568,9 +632,33 @@ function openDayModal(day, item = null) {
           <div class="schedule-existing-main">${escapeHtml(row.client || "")}</div>
           <div class="schedule-existing-sub">${escapeHtml(row.cleaner || "")}</div>
           <div class="schedule-existing-actions">
-            <button type="button" class="schedule-action-btn" data-replace="${escapeAttr(row.client || "")}" data-client-id="${escapeAttr(row.clientId || "")}" data-cleaner="${escapeAttr(row.cleaner || "")}" data-service-date="${escapeAttr(row.serviceDate || "")}">Replace Cleaner</button>
-            <button type="button" class="schedule-action-btn" data-reschedule="${escapeAttr(row.client || "")}" data-client-id="${escapeAttr(row.clientId || "")}" data-cleaner="${escapeAttr(row.cleaner || "")}" data-service-date="${escapeAttr(row.serviceDate || "")}">Temp Reschedule</button>
-            <button type="button" class="schedule-action-btn" data-remove="${escapeAttr(row.client || "")}" data-client-id="${escapeAttr(row.clientId || "")}" data-cleaner="${escapeAttr(row.cleaner || "")}" data-service-date="${escapeAttr(row.serviceDate || "")}">Remove</button>
+            <button
+              type="button"
+              class="schedule-action-btn"
+              data-replace="${escapeAttr(row.client || "")}"
+              data-client-id="${escapeAttr(row.clientId || "")}"
+              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-service-date="${escapeAttr(row.serviceDate || "")}">
+              Replace Cleaner
+            </button>
+            <button
+              type="button"
+              class="schedule-action-btn"
+              data-reschedule="${escapeAttr(row.client || "")}"
+              data-client-id="${escapeAttr(row.clientId || "")}"
+              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-service-date="${escapeAttr(row.serviceDate || "")}">
+              Temp Reschedule
+            </button>
+            <button
+              type="button"
+              class="schedule-action-btn"
+              data-remove="${escapeAttr(row.client || "")}"
+              data-client-id="${escapeAttr(row.clientId || "")}"
+              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-service-date="${escapeAttr(row.serviceDate || "")}">
+              Remove
+            </button>
           </div>
         </div>
       `).join("")
@@ -731,9 +819,17 @@ function bindWeekButtons() {
   const nextWeekBtn = $("nextWeekBtn");
   const prevBtn = $("prevWeekBtn");
   const nextBtn = $("nextWeekNavBtn");
+  const thisWeekBtnSecondary = $("thisWeekBtnSecondary");
 
   if (thisWeekBtn) {
     thisWeekBtn.addEventListener("click", async () => {
+      currentWeek = "this";
+      await loadSchedule();
+    });
+  }
+
+  if (thisWeekBtnSecondary) {
+    thisWeekBtnSecondary.addEventListener("click", async () => {
       currentWeek = "this";
       await loadSchedule();
     });
@@ -788,6 +884,7 @@ async function initScheduler() {
   bindWeekButtons();
 
   try {
+    ensureAuthPresent();
     await loadCleaners();
     await loadClients();
     await loadSchedule();
