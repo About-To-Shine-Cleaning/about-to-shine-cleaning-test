@@ -332,3 +332,6 @@ textarea{min-height:96px}
   opacity: .65 !important;
   cursor:not-allowed !important;
 }
+
+.ats-nav-backdrop.open{opacity:1;pointer-events:auto}
+.ats-nav-drawer.open{transform:translateX(0)}

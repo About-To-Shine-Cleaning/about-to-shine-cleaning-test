@@ -1,161 +1,112 @@
-/* ATS Admin Nav v1 — visual-only global navigation (hamburger + drawer)
-   Does NOT alter auth, tokens, routes, or storage behavior. */
+/* ATS Admin Nav v2 — visual-only global navigation (hamburger + drawer)
+   Keeps existing admin look and preserves emp=... when present. */
 (function () {
   const TOOLS = [
     { label: "Admin Home", href: "/admin/" },
     { label: "Clock", href: "/clock.html" },
     { label: "Estimator", href: "/admin/estimator/" },
     { label: "Payroll", href: "/admin/payroll/" },
-    { label: "Site Report / Analytics", href: "/admin/analytics.html" },
-    { label: "Legacy Pricing", href: "/admin/legacy/" }
+    { label: "Legacy Pricing", href: "/admin/legacy/" },
+    { label: "Schedule", href: "/admin/schedule/" },
+    { label: "Admin Tools", href: "/admin/tools/" },
+    { label: "Site Report", href: "/admin/tools/site-report/" }
   ];
 
-// Preserve emp=... across tool links (Clock auth context)
-function getEmpQuery() {
-  try {
-    const p = new URLSearchParams(window.location.search);
-    const emp = p.get("emp");
-    return emp ? `emp=${encodeURIComponent(emp)}` : "";
-  } catch (e) {
-    return "";
+  function getEmpQuery() {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const emp = p.get("emp");
+      return emp ? `emp=${encodeURIComponent(emp)}` : "";
+    } catch (e) {
+      return "";
+    }
   }
-}
 
-function withEmp(href) {
-  const empQ = getEmpQuery();
-  if (!empQ) return href;
-  return href.includes("?") ? `${href}&${empQ}` : `${href}?${empQ}`;
-}
-
+  function withEmp(href) {
+    const empQ = getEmpQuery();
+    if (!empQ) return href;
+    return href.includes("?") ? `${href}&${empQ}` : `${href}?${empQ}`;
+  }
 
   function normalizePath(p) {
     try {
-      // keep only pathname
       const u = new URL(p, window.location.origin);
       p = u.pathname;
     } catch (e) {}
     if (!p) return "/";
-    // ensure trailing slash normalization for folder routes
-    return p.endsWith("/") ? p : p;
+    if (p.length > 1 && p.endsWith("index.html")) p = p.slice(0, -10);
+    if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+    return p;
   }
 
-  function isActive(toolHref, currentPath) {
-    const toolPath = normalizePath(toolHref);
-    const cur = normalizePath(currentPath);
-
-    // exact match
-    if (toolPath === cur) return true;
-
-    // treat /admin/estimator/ active for /admin/estimator/index.html
-    if (toolPath.endsWith("/") && cur === (toolPath + "index.html")) return true;
-
-    // treat /admin/ active for /admin/index.html
-    if (toolPath === "/admin/" && cur === "/admin/index.html") return true;
-
-    // treat /admin/payroll/ active for /admin/payroll/index.html etc.
-    if (toolPath.endsWith("/") && cur.startsWith(toolPath)) return true;
-
-    return false;
-  }
-
-  function buildDrawer() {
+  function mount() {
     if (document.getElementById("atsNavDrawer")) return;
+    const current = normalizePath(window.location.pathname);
 
     const backdrop = document.createElement("div");
     backdrop.className = "ats-nav-backdrop";
     backdrop.id = "atsNavBackdrop";
 
-    const drawer = document.createElement("div");
+    const drawer = document.createElement("aside");
     drawer.className = "ats-nav-drawer";
     drawer.id = "atsNavDrawer";
     drawer.setAttribute("role", "dialog");
     drawer.setAttribute("aria-modal", "true");
-    drawer.setAttribute("aria-label", "Admin menu");
+    drawer.setAttribute("aria-label", "Admin navigation");
 
-    const header = document.createElement("header");
-    const h2 = document.createElement("h2");
-    h2.textContent = "Menu";
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "ats-nav-close";
-    closeBtn.setAttribute("aria-label", "Close menu");
-    closeBtn.textContent = "✕";
-    header.appendChild(h2);
-    header.appendChild(closeBtn);
+    drawer.innerHTML = `
+      <header>
+        <h2>Admin Tools</h2>
+        <button class="ats-nav-close" type="button" aria-label="Close menu">✕</button>
+      </header>
+      <nav class="ats-nav-list"></nav>
+      <div class="ats-nav-footer">
+        <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+      </div>
+    `;
 
-    const list = document.createElement("nav");
-    list.className = "ats-nav-list";
-
-    const curPath = window.location.pathname;
-
-    TOOLS.forEach(t => {
-      const a = document.createElement("a");
-      a.className = "ats-nav-item";
-      a.href = withEmp(t.href);
-      a.textContent = t.label;
-
-      if (isActive(t.href, curPath)) {
-        a.setAttribute("aria-current", "page");
-      }
+    const list = drawer.querySelector('.ats-nav-list');
+    TOOLS.forEach(item => {
+      const a = document.createElement('a');
+      a.className = 'ats-nav-item';
+      a.href = withEmp(item.href);
+      a.textContent = item.label;
+      if (normalizePath(item.href) === current) a.setAttribute('aria-current', 'page');
       list.appendChild(a);
     });
-
-    const footer = document.createElement("div");
-    footer.className = "ats-nav-footer";
-    const live = document.createElement("a");
-    live.className = "ats-live-btn";
-    live.href = "https://abouttoshinecleaning.com";
-    live.target = "_blank";
-    live.rel = "noopener";
-    live.textContent = "Go to Live Website";
-    footer.appendChild(live);
-
-    drawer.appendChild(header);
-    drawer.appendChild(list);
-    drawer.appendChild(footer);
 
     document.body.appendChild(backdrop);
     document.body.appendChild(drawer);
 
-    function openDrawer() {
-      backdrop.style.opacity = "1";
-      backdrop.style.pointerEvents = "auto";
-      drawer.style.transform = "translateX(0)";
-      document.body.style.overflow = "hidden";
-      const burger = document.querySelector(".ats-burger");
-      if (burger) burger.setAttribute("aria-expanded", "true");
-      closeBtn.focus({ preventScroll: true });
+    const burger = document.querySelector('.ats-burger');
+    const closeBtn = drawer.querySelector('.ats-nav-close');
+    if (!burger) return;
+
+    function openNav() {
+      backdrop.classList.add('open');
+      drawer.classList.add('open');
+      burger.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
     }
 
-    function closeDrawer() {
-      backdrop.style.opacity = "0";
-      backdrop.style.pointerEvents = "none";
-      drawer.style.transform = "translateX(105%)";
-      document.body.style.overflow = "";
-      const burger = document.querySelector(".ats-burger");
-      if (burger) burger.setAttribute("aria-expanded", "false");
-      if (burger) burger.focus({ preventScroll: true });
+    function closeNav() {
+      backdrop.classList.remove('open');
+      drawer.classList.remove('open');
+      burger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
     }
 
-    closeBtn.addEventListener("click", closeDrawer);
-    backdrop.addEventListener("click", closeDrawer);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeDrawer();
+    burger.addEventListener('click', openNav);
+    closeBtn.addEventListener('click', closeNav);
+    backdrop.addEventListener('click', closeNav);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer.classList.contains('open')) closeNav();
     });
-
-    const burger = document.querySelector(".ats-burger");
-    if (burger) burger.addEventListener("click", openDrawer);
   }
 
-  function init() {
-    // Only run on pages that opted into ats-admin body class
-    if (!document.body || !document.body.classList.contains("ats-admin")) return;
-    buildDrawer();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
   } else {
-    init();
+    mount();
   }
 })();
