@@ -4,125 +4,212 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <title>ATS Schedule</title>
+  <title>Schedule | About To Shine Admin</title>
+
   <link rel="stylesheet" href="/admin/admin-layout.css" />
-  <script defer src="/admin/admin-nav.js"></script>
+  <link rel="stylesheet" href="/admin/admin-brand.css" />
+
   <style>
-    .ats-page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-    .ats-page-head p{margin:6px 0 0;color:var(--ats-muted)}
-    .ats-week-switch{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-    .ats-week-btn{flex:1 1 160px;text-align:center}
-    .ats-week-btn.is-active{border-color:rgba(255,215,0,.7);background:rgba(255,215,0,.18)}
-    .ats-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
-    .ats-mini{padding:12px 14px;border-radius:14px;border:1px solid var(--ats-border);background:rgba(255,255,255,.06)}
-    .ats-mini .label{font-size:12px;color:var(--ats-muted);text-transform:uppercase;letter-spacing:.08em}
-    .ats-mini .value{font-weight:800;margin-top:4px}
-    .ats-day-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    .ats-day{padding:14px;border-radius:18px;border:1px solid var(--ats-border);background:rgba(255,255,255,.08);box-shadow:var(--ats-shadow);cursor:pointer;min-height:180px}
-    .ats-day-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
-    .ats-day-head h3{margin:0;font-size:18px}
-    .ats-date-chip{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(255,215,0,.14);border:1px solid rgba(255,215,0,.35)}
-    .ats-list{display:flex;flex-direction:column;gap:8px}
-    .ats-item{padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.08)}
-    .ats-item .top{font-weight:700;font-size:14px;line-height:1.35}
-    .ats-item .sub{margin-top:2px;font-size:12px;color:var(--ats-muted)}
-    .ats-empty{color:var(--ats-muted);font-size:13px;padding:18px 6px 6px}
-    .ats-hint{margin-top:10px;font-size:12px;color:var(--ats-muted)}
-    .ats-modal{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.62);z-index:120;padding:0}
-    .ats-modal.open{display:flex}
-    .ats-sheet{width:100%;max-width:720px;background:linear-gradient(180deg, rgba(63,28,131,.97), rgba(11,16,32,.98));border-top-left-radius:24px;border-top-right-radius:24px;border:1px solid var(--ats-border);box-shadow:var(--ats-shadow2);padding:16px 16px 22px;max-height:90vh;overflow:auto}
-    .ats-sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}
-    .ats-sheet-head h2{margin:0;font-size:20px}
-    .ats-sheet-close{width:42px;height:42px;border-radius:999px}
-    .ats-form-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px}
-    .ats-sheet-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-    .ats-existing{margin-top:14px}
-    .ats-existing h3{margin:0 0 10px;font-size:15px}
-    .ats-existing-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.09)}
-    .ats-existing-row:first-child{border-top:none}
-    .ats-existing-name{font-weight:700;font-size:14px}
-    .ats-existing-sub{font-size:12px;color:var(--ats-muted);margin-top:2px}
-    .ats-inline-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .ats-existing select{min-width:128px}
-    .ats-banner{margin-top:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,215,0,.34);background:rgba(255,215,0,.08);font-size:13px;color:var(--ats-text)}
-    @media (max-width: 760px){
-      .ats-meta{grid-template-columns:1fr}
-      .ats-day-grid{grid-template-columns:1fr}
-      .ats-day{min-height:unset}
-      .ats-sheet{max-width:none}
-      .ats-existing-row{grid-template-columns:1fr}
-      .ats-inline-actions{justify-content:stretch}
-      .ats-inline-actions > *{flex:1 1 100%}
+    .schedule-page{
+      max-width:1280px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .schedule-shell{
+      background:linear-gradient(135deg, rgba(72,58,102,.92), rgba(45,58,113,.92));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:28px;
+      padding:24px 20px 18px;
+      box-shadow:0 20px 60px rgba(0,0,0,.24);
+    }
+
+    .schedule-title{
+      color:#fff;
+      font-size:2rem;
+      font-weight:800;
+      margin:0 0 8px;
+    }
+
+    .schedule-subtitle{
+      color:rgba(255,255,255,.86);
+      font-size:1rem;
+      line-height:1.45;
+      margin:0 0 18px;
+    }
+
+    .schedule-nav-row{
+      display:grid;
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .schedule-pill-row{
+      display:grid;
+      gap:14px;
+      grid-template-columns:1fr;
+    }
+
+    .schedule-pill{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.10);
+      color:#fff;
+      min-height:48px;
+      border-radius:999px;
+      font-size:1.05rem;
+      font-weight:800;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+
+    .schedule-pill:hover{
+      transform:translateY(-1px);
+      background:rgba(255,255,255,.14);
+    }
+
+    .schedule-pill.is-active{
+      background:rgba(246,199,68,.16);
+      border-color:rgba(246,199,68,.7);
+      box-shadow:0 0 0 1px rgba(246,199,68,.22) inset;
+    }
+
+    .schedule-stat-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .schedule-stat{
+      border-radius:18px;
+      padding:16px 16px 14px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .schedule-stat-label{
+      color:rgba(255,255,255,.74);
+      font-size:.92rem;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
+
+    .schedule-stat-value{
+      color:#fff;
+      font-size:1.02rem;
+      font-weight:800;
+      line-height:1.2;
+    }
+
+    .schedule-note{
+      margin:0 0 18px;
+      border-radius:18px;
+      padding:14px 16px;
+      color:rgba(255,255,255,.9);
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(246,199,68,.45);
+      line-height:1.45;
+    }
+
+    #scheduleDays{
+      min-height:120px;
+    }
+
+    @media (min-width: 760px){
+      .schedule-pill-row{
+        grid-template-columns:1fr 1fr 1fr;
+      }
+
+      .schedule-stat-grid{
+        grid-template-columns:1fr 1fr 1fr;
+      }
     }
   </style>
 </head>
-<body class="ats-admin">
-<header class="ats-header">
-  <div class="ats-header-inner">
-    <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home"><img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" /></a>
-    <div class="ats-header-actions">
-      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
-      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false"><span></span><span></span><span></span></button>
-    </div>
-  </div>
-</header>
-<main class="ats-main"><div class="ats-container">
-  <section class="ats-card">
-    <div class="ats-page-head">
-      <div>
-        <h1 class="ats-title">Schedule</h1>
-        <p>Mobile-first day boxes for on-the-fly schedule fixes. Tap a day, choose cleaner + client, and update the live week.</p>
-      </div>
-      <div class="ats-row" style="flex:0 1 360px;justify-content:flex-end">
-        <button class="ats-btn" id="prevWeekBtn" type="button">Prev</button>
-        <button class="ats-btn primary" id="todayWeekBtn" type="button">This Week</button>
-        <button class="ats-btn" id="nextWeekBtn" type="button">Next</button>
-      </div>
-    </div>
-    <div class="ats-week-switch">
-      <button class="ats-btn ats-week-btn is-active" type="button" data-week="this">This Week</button>
-      <button class="ats-btn ats-week-btn" type="button" data-week="next">Next Week</button>
-    </div>
-    <div class="ats-meta">
-      <div class="ats-mini"><div class="label">Week View</div><div class="value" id="metaView">This Week</div></div>
-      <div class="ats-mini"><div class="label">Week Starts</div><div class="value" id="metaStart">—</div></div>
-      <div class="ats-mini"><div class="label">Rotation</div><div class="value" id="metaRotation">Week 1</div></div>
-    </div>
-    <div class="ats-banner">Current build is ready for mobile use and stores changes in the browser inside this ZIP preview. When you connect it to your Apps Script routes, the same UI can write to your live schedule/override sheets.</div>
-  </section>
 
-  <section class="ats-day-grid" id="dayGrid"></section>
-</div></main>
+<body>
+  <header class="ats-header">
+    <div class="inner">
+      <div class="ats-brand">
+        <a href="/admin/">
+          <img src="/assets/images/logo.png" alt="About To Shine Cleaning logo" />
+        </a>
+      </div>
 
-<div class="ats-modal" id="dayModal" aria-hidden="true">
-  <div class="ats-sheet">
-    <div class="ats-sheet-head">
-      <div>
-        <h2 id="modalTitle">Edit Day</h2>
-        <div class="ats-subtitle" id="modalSubtitle"></div>
+      <nav class="ats-nav" id="adminNav">
+        <a href="/admin/">Admin</a>
+        <a href="/admin/estimator/">Estimator</a>
+        <a href="/admin/payroll/">Payroll</a>
+        <a href="/admin/legacy/">Legacy Pricing</a>
+        <a href="/admin/schedule/" aria-current="page">Schedule</a>
+        <a href="/admin/tools/site-report/">Site Report</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="schedule-page">
+    <section class="schedule-shell">
+      <h1 class="schedule-title">Schedule</h1>
+      <p class="schedule-subtitle">
+        Mobile-first day boxes for on-the-fly schedule fixes. Tap a day, choose cleaner + client,
+        replace a cleaner, temporarily reschedule this cycle, or remove a visit.
+      </p>
+
+      <div class="schedule-nav-row">
+        <div class="schedule-pill-row">
+          <button type="button" class="schedule-pill" id="prevWeekBtn">Prev</button>
+          <button type="button" class="schedule-pill is-active" id="thisWeekBtn">This Week</button>
+          <button type="button" class="schedule-pill" id="nextWeekNavBtn">Next</button>
+        </div>
+
+        <div class="schedule-pill-row">
+          <button type="button" class="schedule-pill is-active" id="thisWeekBtnSecondary">This Week</button>
+          <button type="button" class="schedule-pill" id="nextWeekBtn">Next Week</button>
+        </div>
       </div>
-      <button class="ats-btn ats-sheet-close" type="button" id="closeModalBtn">✕</button>
-    </div>
-    <div class="ats-form-grid">
-      <div>
-        <label for="cleanerSelect">Cleaner</label>
-        <select id="cleanerSelect"></select>
+
+      <div class="schedule-stat-grid">
+        <div class="schedule-stat">
+          <div class="schedule-stat-label">Week View</div>
+          <div class="schedule-stat-value" id="weekViewValue">This Week</div>
+        </div>
+
+        <div class="schedule-stat">
+          <div class="schedule-stat-label">Week Starts</div>
+          <div class="schedule-stat-value" id="weekStartValue">—</div>
+        </div>
+
+        <div class="schedule-stat">
+          <div class="schedule-stat-label">Rotation</div>
+          <div class="schedule-stat-value" id="rotationValue">Week 1</div>
+        </div>
       </div>
-      <div>
-        <label for="clientSelect">Client</label>
-        <select id="clientSelect"></select>
-      </div>
-    </div>
-    <div class="ats-sheet-actions">
-      <button class="ats-btn primary" type="button" id="addAssignmentBtn">Add</button>
-      <button class="ats-btn" type="button" id="clearDayBtn">Clear Day</button>
-    </div>
-    <div class="ats-existing">
-      <h3>Current Assignments</h3>
-      <div id="existingAssignments"></div>
-    </div>
-  </div>
-</div>
-<script src="/admin/schedule/schedule.js"></script>
+
+      <p class="schedule-note">
+        This page should show the live week schedule pulled from your master recurring list plus any temporary overrides.
+      </p>
+
+      <div id="scheduleDays"></div>
+    </section>
+  </main>
+
+  <script>
+    (function bindDuplicateWeekButtons(){
+      document.addEventListener("DOMContentLoaded", function(){
+        var primaryThis = document.getElementById("thisWeekBtn");
+        var secondaryThis = document.getElementById("thisWeekBtnSecondary");
+        if(primaryThis && secondaryThis){
+          secondaryThis.addEventListener("click", function(){
+            primaryThis.click();
+          });
+        }
+      });
+    })();
+  </script>
+
+  <script src="/admin/schedule/schedule.js"></script>
 </body>
 </html>
