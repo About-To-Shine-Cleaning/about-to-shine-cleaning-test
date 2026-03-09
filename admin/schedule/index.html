@@ -196,20 +196,6 @@
     </section>
   </main>
 
-  <script>
-    (function bindDuplicateWeekButtons(){
-      document.addEventListener("DOMContentLoaded", function(){
-        var primaryThis = document.getElementById("thisWeekBtn");
-        var secondaryThis = document.getElementById("thisWeekBtnSecondary");
-        if(primaryThis && secondaryThis){
-          secondaryThis.addEventListener("click", function(){
-            primaryThis.click();
-          });
-        }
-      });
-    })();
-  </script>
-
   <script src="/admin/schedule/schedule.js"></script>
 </body>
 </html>
