@@ -1,215 +1,313 @@
-(function(){
-  const STORAGE_KEY = 'ats_schedule_v1_demo';
-  const ROTATION_START = new Date('2026-04-02T00:00:00');
-  const CLEANERS = ['Ali','Caprea','Cappy','Laurie','Matt','Shannon','Shauna'];
-  const CLIENTS = [
-    'Ang RL','Arliene Eck','Barry','Becca and Jim','Catherine','Chris H.','Christopher','Cory W.','Deb B.','Elaine G.','Eveline','Jill','Joanne','Jodi','Julie Artist','Julie F.','Justine','Kelly','Kim C','Linda M.','Liz and Billy','Margaret','Mason','Michelle','Nancy A','Rose','Sharon','Sue P.','Wenda','Yvonne','Ziad','Terry','Melissa','Jess','Janet','Kimmie','Aegis Mcgee Solutions 1','Aegis Mcgee Solutions 2','HSA Chapman','HSA Walbert','Mindful Movements','RL Reppert'
-  ];
-  const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+/* ======================================================
+ATS Scheduler v1
+Mobile-first weekly scheduler
+Reads Apps Script backend via JSONP
+====================================================== */
 
-  let state = loadState();
-  let viewOffset = 0; // 0=this week, 1=next week
-  let modalDayIndex = null;
+/* ================================
+   CONFIG
+================================ */
 
-  const els = {
-    weekBtns: Array.from(document.querySelectorAll('[data-week]')),
-    metaView: document.getElementById('metaView'),
-    metaStart: document.getElementById('metaStart'),
-    metaRotation: document.getElementById('metaRotation'),
-    dayGrid: document.getElementById('dayGrid'),
-    modal: document.getElementById('dayModal'),
-    modalTitle: document.getElementById('modalTitle'),
-    modalSubtitle: document.getElementById('modalSubtitle'),
-    cleanerSelect: document.getElementById('cleanerSelect'),
-    clientSelect: document.getElementById('clientSelect'),
-    existingAssignments: document.getElementById('existingAssignments'),
-    addBtn: document.getElementById('addAssignmentBtn'),
-    clearDayBtn: document.getElementById('clearDayBtn'),
-    closeModalBtn: document.getElementById('closeModalBtn'),
-    prevWeekBtn: document.getElementById('prevWeekBtn'),
-    todayWeekBtn: document.getElementById('todayWeekBtn'),
-    nextWeekBtn: document.getElementById('nextWeekBtn')
-  };
+/* PASTE YOUR EXEC URL HERE */
+const ATS_API =
+"https://script.google.com/macros/s/AKfycbxxlswMSBSpXO9KqptzOULfDFCOmiu0dqGmMDDIY4IX-3EHqMkauIvAfNrUq0_rsbrN/exec";
 
-  function startOfWeek(date){
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-  function addDays(date, days){ const d = new Date(date); d.setDate(d.getDate() + days); return d; }
-  function formatDate(date){ return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric'}).format(date); }
-  function formatDateLong(date){ return new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(date); }
-  function isoDate(date){ return date.toISOString().slice(0,10); }
-  function rotationWeek(weekStart){
-    const diffDays = Math.round((startOfWeek(weekStart) - startOfWeek(ROTATION_START)) / 86400000);
-    const diffWeeks = Math.floor(diffDays / 7);
-    return ((diffWeeks % 4) + 4) % 4 + 1;
-  }
+/* ================================
+   STATE
+================================ */
 
-  function getWeekStart(){ return addDays(startOfWeek(new Date()), viewOffset * 7); }
-  function getWeekKey(){ return isoDate(getWeekStart()); }
+let currentWeek = "this";
+let weekData = {};
+let cleaners = [];
+let clients = [];
 
-  function baseWeekTemplate(){
-    return DAY_NAMES.map((day, idx) => ({
-      day,
-      date: isoDate(addDays(getWeekStart(), idx)),
-      items: []
-    }));
-  }
+const days = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday"
+];
 
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : { weeks: {} };
-    }catch(e){
-      return { weeks: {} };
-    }
-  }
-  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function ensureWeek(){
-    const key = getWeekKey();
-    if (!state.weeks[key]) state.weeks[key] = baseWeekTemplate();
-    saveState();
-    return state.weeks[key];
-  }
+/* ================================
+   JSONP helper
+================================ */
 
-  function populateSelect(select, options, placeholder){
-    select.innerHTML = '';
-    const ph = document.createElement('option');
-    ph.value = '';
-    ph.textContent = placeholder;
-    select.appendChild(ph);
-    options.forEach(v => {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = v; select.appendChild(o);
+function api(action, params = {}) {
+
+  return new Promise((resolve,reject)=>{
+
+    const cb = "cb_" + Math.random().toString(36).substring(2);
+
+    window[cb] = function(data){
+      delete window[cb];
+      resolve(data);
+    };
+
+    const query = new URLSearchParams({
+      action,
+      callback: cb,
+      ...params
     });
-  }
 
-  function render(){
-    const weekStart = getWeekStart();
-    const key = getWeekKey();
-    const week = ensureWeek();
-    els.metaView.textContent = viewOffset === 0 ? 'This Week' : (viewOffset === 1 ? 'Next Week' : `Week +${viewOffset}`);
-    els.metaStart.textContent = formatDateLong(weekStart);
-    els.metaRotation.textContent = `Week ${rotationWeek(weekStart)}`;
-    els.weekBtns.forEach(btn => btn.classList.toggle('is-active', btn.dataset.week === (viewOffset === 0 ? 'this' : 'next')));
-    els.dayGrid.innerHTML = '';
-    week.forEach((dayObj, idx) => {
-      const dateObj = new Date(dayObj.date + 'T00:00:00');
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'ats-day';
-      card.innerHTML = `
-        <div class="ats-day-head">
-          <h3>${dayObj.day}</h3>
-          <div class="ats-date-chip">${formatDate(dateObj)}</div>
-        </div>
-        <div class="ats-list">
-          ${dayObj.items.length ? dayObj.items
-            .slice().sort((a,b)=> a.cleaner.localeCompare(b.cleaner) || a.client.localeCompare(b.client))
-            .map(item => `<div class="ats-item"><div class="top">${item.cleaner} — ${item.client}</div><div class="sub">Tap day to edit</div></div>`).join('')
-            : '<div class="ats-empty">No assignments yet. Tap to add one.</div>'}
-        </div>
-        <div class="ats-hint">Tap to edit ${dayObj.day.toLowerCase()}.</div>`;
-      card.addEventListener('click', ()=> openModal(idx));
-      els.dayGrid.appendChild(card);
-    });
-  }
+    const s = document.createElement("script");
+    s.src = ATS_API + "?" + query.toString();
+    document.body.appendChild(s);
 
-  function openModal(dayIndex){
-    modalDayIndex = dayIndex;
-    const week = ensureWeek();
-    const dayObj = week[dayIndex];
-    const dateObj = new Date(dayObj.date + 'T00:00:00');
-    els.modalTitle.textContent = dayObj.day;
-    els.modalSubtitle.textContent = `${viewOffset === 0 ? 'This Week' : 'Next Week'} • ${formatDateLong(dateObj)}`;
-    populateSelect(els.cleanerSelect, CLEANERS, 'Choose cleaner');
-    populateSelect(els.clientSelect, CLIENTS, 'Choose client');
-    renderExisting(dayObj);
-    els.modal.classList.add('open');
-    els.modal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeModal(){
-    els.modal.classList.remove('open');
-    els.modal.setAttribute('aria-hidden', 'true');
-    modalDayIndex = null;
-  }
-
-  function renderExisting(dayObj){
-    els.existingAssignments.innerHTML = '';
-    if (!dayObj.items.length){
-      els.existingAssignments.innerHTML = '<div class="ats-empty">No assignments on this day yet.</div>';
-      return;
-    }
-    dayObj.items.slice().sort((a,b)=> a.cleaner.localeCompare(b.cleaner) || a.client.localeCompare(b.client)).forEach((item, idx) => {
-      const row = document.createElement('div');
-      row.className = 'ats-existing-row';
-      const cleanerOptions = CLEANERS.map(name => `<option value="${name}" ${name === item.cleaner ? 'selected' : ''}>${name}</option>`).join('');
-      row.innerHTML = `
-        <div>
-          <div class="ats-existing-name">${item.cleaner} — ${item.client}</div>
-          <div class="ats-existing-sub">Adjust cleaner or remove this assignment.</div>
-        </div>
-        <div class="ats-inline-actions">
-          <select data-role="reassign">${cleanerOptions}</select>
-          <button class="ats-btn danger" type="button" data-role="remove">Remove</button>
-        </div>`;
-      row.querySelector('[data-role="reassign"]').addEventListener('change', (e)=> {
-        item.cleaner = e.target.value;
-        updateCurrentDay(dayObj);
-      });
-      row.querySelector('[data-role="remove"]').addEventListener('click', ()=> {
-        const index = dayObj.items.indexOf(item);
-        if (index > -1) dayObj.items.splice(index,1);
-        updateCurrentDay(dayObj);
-      });
-      els.existingAssignments.appendChild(row);
-    });
-  }
-
-  function updateCurrentDay(dayObj){
-    const week = ensureWeek();
-    week[modalDayIndex] = dayObj;
-    saveState();
-    renderExisting(dayObj);
-    render();
-  }
-
-  els.addBtn.addEventListener('click', ()=> {
-    if (modalDayIndex == null) return;
-    const cleaner = els.cleanerSelect.value;
-    const client = els.clientSelect.value;
-    if (!cleaner || !client) return;
-    const week = ensureWeek();
-    const dayObj = week[modalDayIndex];
-    dayObj.items.push({ cleaner, client });
-    saveState();
-    renderExisting(dayObj);
-    render();
-    els.cleanerSelect.value = '';
-    els.clientSelect.value = '';
   });
 
-  els.clearDayBtn.addEventListener('click', ()=> {
-    if (modalDayIndex == null) return;
-    const week = ensureWeek();
-    week[modalDayIndex].items = [];
-    saveState();
-    renderExisting(week[modalDayIndex]);
-    render();
+}
+
+/* ================================
+   LOAD SCHEDULE
+================================ */
+
+async function loadSchedule() {
+
+  const res = await api("schedule_week",{
+    week: currentWeek
   });
-  els.closeModalBtn.addEventListener('click', closeModal);
-  els.modal.addEventListener('click', (e)=> { if (e.target === els.modal) closeModal(); });
-  document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') closeModal(); });
 
-  els.weekBtns.forEach(btn => btn.addEventListener('click', ()=> { viewOffset = btn.dataset.week === 'next' ? 1 : 0; render(); }));
-  els.prevWeekBtn.addEventListener('click', ()=> { viewOffset -= 1; render(); });
-  els.todayWeekBtn.addEventListener('click', ()=> { viewOffset = 0; render(); });
-  els.nextWeekBtn.addEventListener('click', ()=> { viewOffset += 1; render(); });
+  if(!res.ok){
+    alert("Schedule load error");
+    return;
+  }
 
-  render();
-})();
+  weekData = res.days || {};
+
+  renderSchedule();
+
+}
+
+/* ================================
+   LOAD CLEANERS
+================================ */
+
+async function loadCleaners(){
+
+  const res = await api("schedule_cleaners");
+
+  if(res.ok){
+    cleaners = res.cleaners;
+  }
+
+}
+
+/* ================================
+   LOAD CLIENTS
+================================ */
+
+async function loadClients(){
+
+  const res = await api("schedule_clients");
+
+  if(res.ok){
+    clients = res.clients;
+  }
+
+}
+
+/* ================================
+   RENDER WEEK
+================================ */
+
+function renderSchedule(){
+
+  const wrap = document.getElementById("scheduleDays");
+  wrap.innerHTML = "";
+
+  days.forEach(day=>{
+
+    const card = document.createElement("div");
+    card.className = "day-card";
+
+    const head = document.createElement("div");
+    head.className = "day-head";
+    head.innerHTML = `<h3>${day}</h3>`;
+
+    card.appendChild(head);
+
+    const list = document.createElement("div");
+    list.className = "assignment-list";
+
+    const items = weekData[day] || [];
+
+    if(items.length===0){
+      list.innerHTML = `<div class="empty-day">No jobs</div>`;
+    }
+
+    items.forEach(item=>{
+      const row = createAssignmentRow(day,item);
+      list.appendChild(row);
+    });
+
+    card.appendChild(list);
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "add-btn";
+    addBtn.innerText = "Add Job";
+
+    addBtn.onclick = ()=> openAddModal(day);
+
+    card.appendChild(addBtn);
+
+    wrap.appendChild(card);
+
+  });
+
+}
+
+/* ================================
+   ASSIGNMENT ROW
+================================ */
+
+function createAssignmentRow(day,item){
+
+  const row = document.createElement("div");
+  row.className = "assignment-item";
+
+  const main = document.createElement("div");
+  main.className = "assignment-main";
+
+  main.innerHTML = `
+    <div class="assignment-client">${item.client}</div>
+    <div class="assignment-cleaner">${item.cleaner}</div>
+  `;
+
+  row.appendChild(main);
+
+  const actions = document.createElement("div");
+  actions.className = "assignment-actions";
+
+  const btn = document.createElement("button");
+  btn.className = "mini-btn";
+  btn.innerText = "Edit";
+
+  btn.onclick = ()=> openEditModal(day,item);
+
+  actions.appendChild(btn);
+  row.appendChild(actions);
+
+  return row;
+
+}
+
+/* ================================
+   ADD JOB
+================================ */
+
+function openAddModal(day){
+
+  const client = prompt("Client name?");
+  if(!client) return;
+
+  const cleaner = prompt("Cleaner?");
+  if(!cleaner) return;
+
+  api("schedule_add",{
+    day,
+    client,
+    cleaner
+  }).then(loadSchedule);
+
+}
+
+/* ================================
+   EDIT JOB
+================================ */
+
+function openEditModal(day,item){
+
+  const action = prompt(
+`Choose action:
+1 Replace Cleaner
+2 Move Day
+3 Remove`
+  );
+
+  if(action==="1"){
+    replaceCleaner(day,item);
+  }
+
+  if(action==="2"){
+    reschedule(day,item);
+  }
+
+  if(action==="3"){
+    removeJob(day,item);
+  }
+
+}
+
+/* ================================
+   REPLACE CLEANER
+================================ */
+
+function replaceCleaner(day,item){
+
+  const cleaner = prompt("New Cleaner");
+
+  api("schedule_replace",{
+    day,
+    client:item.client,
+    cleaner
+  }).then(loadSchedule);
+
+}
+
+/* ================================
+   TEMP RESCHEDULE
+================================ */
+
+function reschedule(day,item){
+
+  const newDay = prompt("Move to which day?");
+
+  api("schedule_reschedule",{
+    day,
+    client:item.client,
+    newDay
+  }).then(loadSchedule);
+
+}
+
+/* ================================
+   REMOVE
+================================ */
+
+function removeJob(day,item){
+
+  api("schedule_remove",{
+    day,
+    client:item.client
+  }).then(loadSchedule);
+
+}
+
+/* ================================
+   WEEK SWITCH
+================================ */
+
+function setWeek(type){
+
+  currentWeek = type;
+
+  loadSchedule();
+
+}
+
+/* ================================
+   INIT
+================================ */
+
+async function init(){
+
+  await loadCleaners();
+  await loadClients();
+  await loadSchedule();
+
+}
+
+document.addEventListener("DOMContentLoaded",init);
