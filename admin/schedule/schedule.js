@@ -744,5 +744,136 @@ async function replaceCleaner(day, item, newCleaner) {
     serviceDate: item.serviceDate
   });
 
+    if (!res.ok) {
+    alert(res.error || "Could not replace cleaner.");
+    return;
+  }
+
+  closeModal();
+  await loadSchedule();
+}
+
+async function tempReschedule(day, item, newDay) {
+  const res = await postApi("schedule_reschedule", {
+    week: currentWeek,
+    weekStart,
+    day,
+    client: item.client,
+    clientId: item.clientId,
+    serviceDate: item.serviceDate,
+    newDay,
+    oldCleaner: item.cleaner
+  });
+
   if (!res.ok) {
-    alert(res.error || "Could not
+    alert(res.error || "Could not reschedule.");
+    return;
+  }
+
+  closeModal();
+  await loadSchedule();
+}
+
+async function removeJob(day, item) {
+  const res = await postApi("schedule_remove", {
+    week: currentWeek,
+    weekStart,
+    day,
+    client: item.client,
+    clientId: item.clientId,
+    serviceDate: item.serviceDate,
+    oldCleaner: item.cleaner
+  });
+
+  if (!res.ok) {
+    alert(res.error || "Could not remove job.");
+    return;
+  }
+
+  closeModal();
+  await loadSchedule();
+}
+
+function bindWeekButtons() {
+  const thisWeekBtn = $("thisWeekBtn");
+  const nextWeekBtn = $("nextWeekBtn");
+  const prevBtn = $("prevWeekBtn");
+  const nextBtn = $("nextWeekNavBtn");
+  const thisWeekBtnSecondary = $("thisWeekBtnSecondary");
+
+  if (thisWeekBtn) {
+    thisWeekBtn.addEventListener("click", async () => {
+      currentWeek = "this";
+      await loadSchedule();
+    });
+  }
+
+  if (thisWeekBtnSecondary) {
+    thisWeekBtnSecondary.addEventListener("click", async () => {
+      currentWeek = "this";
+      await loadSchedule();
+    });
+  }
+
+  if (nextWeekBtn) {
+    nextWeekBtn.addEventListener("click", async () => {
+      currentWeek = "next";
+      await loadSchedule();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", async () => {
+      currentWeek = "this";
+      await loadSchedule();
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", async () => {
+      currentWeek = "next";
+      await loadSchedule();
+    });
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/'/g, "&#39;");
+}
+
+async function initScheduler() {
+  injectSchedulerStyles();
+  ensureDaysMount();
+  ensureModal();
+  bindWeekButtons();
+
+  try {
+    const token = getAdminToken();
+    const deviceKey = getDeviceKey();
+
+    setDebug(
+      `Auth check → token: ${token ? "found" : "missing"} | device: ${deviceKey ? "found" : "missing"}`
+    );
+
+    ensureAuthPresent();
+    await loadCleaners();
+    await loadClients();
+    await loadSchedule();
+    setDebug("");
+  } catch (err) {
+    const mount = ensureDaysMount();
+    mount.innerHTML = `<div class="schedule-error">Scheduler failed to load.</div>`;
+    setDebug(String(err && err.message ? err.message : err), true);
+    console.error(err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", initScheduler);
