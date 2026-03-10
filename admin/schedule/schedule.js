@@ -1,19 +1,10 @@
 /* ======================================================
    ATS Scheduler v1
-   Mobile-first weekly scheduler
-   Current week / next week + day boxes
+   Live Apps Script version
 ====================================================== */
-
-/* ================================
-   CONFIG
-================================ */
 
 const ATS_API =
   "https://script.google.com/macros/s/AKfycbypP0QPCfgX5LGUhEGol2RuOOYzRO_Nzdish8xRaPy49a0httlNJmNT2x59LvrM1RR-/exec";
-
-/* ================================
-   STATE
-================================ */
 
 let currentWeek = "this";
 let scheduleData = {};
@@ -32,32 +23,63 @@ const DAY_NAMES = [
   "Sunday"
 ];
 
-/* ================================
-   DOM HELPERS
-================================ */
-
 function $(id) {
   return document.getElementById(id);
 }
 
+function setDebug(message, show = true) {
+  const el = $("scheduleDebug");
+  if (!el) return;
+  el.textContent = message || "";
+  el.classList.toggle("show", !!show && !!message);
+}
+
+function getStoredValue(keys) {
+  for (const key of keys) {
+    const fromSession = sessionStorage.getItem(key);
+    if (fromSession) return fromSession;
+
+    const fromLocal = localStorage.getItem(key);
+    if (fromLocal) return fromLocal;
+  }
+  return "";
+}
+
 function getAdminToken() {
-  return (
-    localStorage.getItem("ats_admin_token") ||
-    sessionStorage.getItem("ats_admin_token") ||
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken") ||
-    ""
-  );
+  return getStoredValue([
+    "ats_admin_token_v1",
+    "ats_admin_token",
+    "adminToken",
+    "admin_token",
+    "token"
+  ]);
 }
 
 function getDeviceKey() {
-  return (
-    localStorage.getItem("ats_device_key") ||
-    sessionStorage.getItem("ats_device_key") ||
-    localStorage.getItem("deviceKey") ||
-    sessionStorage.getItem("deviceKey") ||
-    ""
-  );
+  return getStoredValue([
+    "ats_device_key_v1",
+    "ats_device_key",
+    "deviceKey",
+    "device_key",
+    "boundDeviceKey"
+  ]);
+}
+
+function ensureAuthPresent() {
+  const token = getAdminToken();
+  const deviceKey = getDeviceKey();
+
+  if (!token || !deviceKey) {
+    throw new Error("Missing admin token or device key in browser storage.");
+  }
+}
+
+function buildAuthParams(extra = {}) {
+  return {
+    ...extra,
+    t: getAdminToken(),
+    d: getDeviceKey()
+  };
 }
 
 function ensureDaysMount() {
@@ -365,21 +387,6 @@ function injectSchedulerStyles() {
   document.head.appendChild(style);
 }
 
-/* ================================
-   API HELPERS
-================================ */
-
-function buildAuthParams(extra = {}) {
-  const t = getAdminToken();
-  const d = getDeviceKey();
-
-  return {
-    ...extra,
-    t,
-    d
-  };
-}
-
 function api(action, params = {}) {
   return new Promise((resolve, reject) => {
     const cb = "cb_" + Math.random().toString(36).slice(2);
@@ -411,14 +418,14 @@ function api(action, params = {}) {
 }
 
 async function postApi(action, payload = {}) {
-  const t = getAdminToken();
-  const d = getDeviceKey();
+  const token = getAdminToken();
+  const deviceKey = getDeviceKey();
 
   const res = await fetch(
     ATS_API +
       "?action=" + encodeURIComponent(action) +
-      "&t=" + encodeURIComponent(t) +
-      "&d=" + encodeURIComponent(d),
+      "&t=" + encodeURIComponent(token) +
+      "&d=" + encodeURIComponent(deviceKey),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -433,19 +440,6 @@ async function postApi(action, payload = {}) {
     return { ok: false, error: "Invalid JSON response", raw: text };
   }
 }
-
-function ensureAuthPresent() {
-  const token = getAdminToken();
-  const deviceKey = getDeviceKey();
-
-  if (!token || !deviceKey) {
-    throw new Error("Missing admin token or device key in browser storage.");
-  }
-}
-
-/* ================================
-   LOADERS
-================================ */
 
 async function loadCleaners() {
   const res = await api("schedule_cleaners");
@@ -483,10 +477,6 @@ async function loadSchedule() {
   renderDays();
 }
 
-/* ================================
-   RENDER
-================================ */
-
 function renderMeta() {
   const weekViewEl = $("weekViewValue");
   const weekStartEl = $("weekStartValue");
@@ -498,8 +488,10 @@ function renderMeta() {
 
   const thisWeekBtn = $("thisWeekBtn");
   const nextWeekBtn = $("nextWeekBtn");
+  const thisWeekBtnSecondary = $("thisWeekBtnSecondary");
 
   if (thisWeekBtn) thisWeekBtn.classList.toggle("is-active", currentWeek === "this");
+  if (thisWeekBtnSecondary) thisWeekBtnSecondary.classList.toggle("is-active", currentWeek === "this");
   if (nextWeekBtn) nextWeekBtn.classList.toggle("is-active", currentWeek === "next");
 }
 
@@ -581,10 +573,6 @@ function getDateForDayLabel(dayName) {
   base.setDate(base.getDate() + (map[dayName] || 0));
   return base.toLocaleDateString();
 }
-
-/* ================================
-   MODAL
-================================ */
 
 let modalState = {
   day: "",
@@ -725,10 +713,6 @@ function closeModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-/* ================================
-   ACTIONS
-================================ */
-
 async function addJob(day, cleaner, clientId, clientName) {
   const res = await postApi("schedule_add", {
     week: currentWeek,
@@ -761,138 +745,4 @@ async function replaceCleaner(day, item, newCleaner) {
   });
 
   if (!res.ok) {
-    alert(res.error || "Could not replace cleaner.");
-    return;
-  }
-
-  closeModal();
-  await loadSchedule();
-}
-
-async function tempReschedule(day, item, newDay) {
-  const res = await postApi("schedule_reschedule", {
-    week: currentWeek,
-    weekStart,
-    day,
-    client: item.client,
-    clientId: item.clientId,
-    serviceDate: item.serviceDate,
-    newDay,
-    oldCleaner: item.cleaner
-  });
-
-  if (!res.ok) {
-    alert(res.error || "Could not reschedule.");
-    return;
-  }
-
-  closeModal();
-  await loadSchedule();
-}
-
-async function removeJob(day, item) {
-  const res = await postApi("schedule_remove", {
-    week: currentWeek,
-    weekStart,
-    day,
-    client: item.client,
-    clientId: item.clientId,
-    serviceDate: item.serviceDate,
-    oldCleaner: item.cleaner
-  });
-
-  if (!res.ok) {
-    alert(res.error || "Could not remove job.");
-    return;
-  }
-
-  closeModal();
-  await loadSchedule();
-}
-
-/* ================================
-   WEEK SWITCH
-================================ */
-
-function bindWeekButtons() {
-  const thisWeekBtn = $("thisWeekBtn");
-  const nextWeekBtn = $("nextWeekBtn");
-  const prevBtn = $("prevWeekBtn");
-  const nextBtn = $("nextWeekNavBtn");
-  const thisWeekBtnSecondary = $("thisWeekBtnSecondary");
-
-  if (thisWeekBtn) {
-    thisWeekBtn.addEventListener("click", async () => {
-      currentWeek = "this";
-      await loadSchedule();
-    });
-  }
-
-  if (thisWeekBtnSecondary) {
-    thisWeekBtnSecondary.addEventListener("click", async () => {
-      currentWeek = "this";
-      await loadSchedule();
-    });
-  }
-
-  if (nextWeekBtn) {
-    nextWeekBtn.addEventListener("click", async () => {
-      currentWeek = "next";
-      await loadSchedule();
-    });
-  }
-
-  if (prevBtn) {
-    prevBtn.addEventListener("click", async () => {
-      currentWeek = "this";
-      await loadSchedule();
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener("click", async () => {
-      currentWeek = "next";
-      await loadSchedule();
-    });
-  }
-}
-
-/* ================================
-   ESCAPE
-================================ */
-
-function escapeHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function escapeAttr(str) {
-  return escapeHtml(str).replace(/'/g, "&#39;");
-}
-
-/* ================================
-   INIT
-================================ */
-
-async function initScheduler() {
-  injectSchedulerStyles();
-  ensureDaysMount();
-  ensureModal();
-  bindWeekButtons();
-
-  try {
-    ensureAuthPresent();
-    await loadCleaners();
-    await loadClients();
-    await loadSchedule();
-  } catch (err) {
-    const mount = ensureDaysMount();
-    mount.innerHTML = `<div class="schedule-error">Scheduler failed to load.</div>`;
-    console.error(err);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", initScheduler);
+    alert(res.error || "Could not
