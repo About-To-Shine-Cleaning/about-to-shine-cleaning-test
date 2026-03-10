@@ -114,6 +114,21 @@
       line-height:1.45;
     }
 
+    .schedule-debug{
+      margin:0 0 18px;
+      border-radius:14px;
+      padding:10px 14px;
+      color:rgba(255,255,255,.88);
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:.92rem;
+      display:none;
+    }
+
+    .schedule-debug.show{
+      display:block;
+    }
+
     #scheduleDays{
       min-height:120px;
     }
@@ -192,6 +207,7 @@
         This page should show the live week schedule pulled from your master recurring list plus any temporary overrides.
       </p>
 
+      <div id="scheduleDebug" class="schedule-debug"></div>
       <div id="scheduleDays"></div>
     </section>
   </main>
