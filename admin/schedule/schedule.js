@@ -450,14 +450,20 @@ async function postApi(action, payload = {}) {
     "&d=" + encodeURIComponent(deviceKey);
 
   console.log("Scheduler POST URL", requestUrl);
+  console.log("Scheduler POST payload", payload);
 
   const res = await fetch(requestUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
     body: JSON.stringify(payload)
   });
 
   const text = await res.text();
+
+  console.log("Scheduler POST raw response", text);
+
   try {
     return JSON.parse(text);
   } catch (err) {
