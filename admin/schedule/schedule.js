@@ -439,36 +439,52 @@ function api(action, params = {}) {
   });
 }
 
-async function postApi(action, payload = {}) {
-  const token = getAdminToken();
-  const deviceKey = getDeviceKey();
+function postApi(action, payload = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = "cb_post_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
 
-  const requestUrl =
-    ATS_API +
-    "?action=" + encodeURIComponent(action) +
-    "&t=" + encodeURIComponent(token) +
-    "&d=" + encodeURIComponent(deviceKey);
+    const query = new URLSearchParams(
+      buildAuthParams({
+        action,
+        callback: cb,
+        payload: JSON.stringify(payload)
+      })
+    );
 
-  console.log("Scheduler POST URL", requestUrl);
-  console.log("Scheduler POST payload", payload);
+    const requestUrl = ATS_API + "?" + query.toString();
 
-  const res = await fetch(requestUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(payload)
+    console.log("Scheduler JSONP write URL", requestUrl);
+    console.log("Scheduler JSONP write payload", payload);
+
+    let finished = false;
+
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+    };
+
+    window[cb] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error("Write API load failed: " + requestUrl));
+    };
+
+    setTimeout(() => {
+      if (finished) return;
+      cleanup();
+      reject(new Error("Write API timeout: " + requestUrl));
+    }, 15000);
+
+    script.src = requestUrl;
+    document.body.appendChild(script);
   });
-
-  const text = await res.text();
-
-  console.log("Scheduler POST raw response", text);
-
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    return { ok: false, error: "Invalid JSON response", raw: text };
-  }
 }
 
 async function loadCleaners() {
@@ -547,9 +563,9 @@ function renderDays() {
               type="button"
               class="schedule-item-btn"
               data-day="${day}"
-              data-client="${escapeAttr(item.client || "")}"
-              data-client-id="${escapeAttr(item.clientId || "")}"
-              data-cleaner="${escapeAttr(item.cleaner || "")}"
+              data-client="${escapeAttr(item.client || "")}" 
+              data-client-id="${escapeAttr(item.clientId || "")}" 
+              data-cleaner="${escapeAttr(item.cleaner || "")}" 
               data-service-date="${escapeAttr(item.serviceDate || "")}">
               Edit
             </button>
@@ -653,27 +669,27 @@ function openDayModal(day, item = null) {
             <button
               type="button"
               class="schedule-action-btn"
-              data-replace="${escapeAttr(row.client || "")}"
-              data-client-id="${escapeAttr(row.clientId || "")}"
-              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-replace="${escapeAttr(row.client || "")}" 
+              data-client-id="${escapeAttr(row.clientId || "")}" 
+              data-cleaner="${escapeAttr(row.cleaner || "")}" 
               data-service-date="${escapeAttr(row.serviceDate || "")}">
               Replace Cleaner
             </button>
             <button
               type="button"
               class="schedule-action-btn"
-              data-reschedule="${escapeAttr(row.client || "")}"
-              data-client-id="${escapeAttr(row.clientId || "")}"
-              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-reschedule="${escapeAttr(row.client || "")}" 
+              data-client-id="${escapeAttr(row.clientId || "")}" 
+              data-cleaner="${escapeAttr(row.cleaner || "")}" 
               data-service-date="${escapeAttr(row.serviceDate || "")}">
               Temp Reschedule
             </button>
             <button
               type="button"
               class="schedule-action-btn"
-              data-remove="${escapeAttr(row.client || "")}"
-              data-client-id="${escapeAttr(row.clientId || "")}"
-              data-cleaner="${escapeAttr(row.cleaner || "")}"
+              data-remove="${escapeAttr(row.client || "")}" 
+              data-client-id="${escapeAttr(row.clientId || "")}" 
+              data-cleaner="${escapeAttr(row.cleaner || "")}" 
               data-service-date="${escapeAttr(row.serviceDate || "")}">
               Remove
             </button>
@@ -722,17 +738,28 @@ function openDayModal(day, item = null) {
   });
 
   addBtn.onclick = async () => {
-    const cleaner = cleanerSelect.value;
-    const clientId = clientSelect.value;
-    const clientRow = clients.find(c => (c.clientId || c.clientName) === clientId);
-    const clientName = clientRow ? clientRow.clientName : "";
+    try {
+      const cleaner = cleanerSelect.value;
+      const clientId = clientSelect.value;
+      const clientRow = clients.find(c => (c.clientId || c.clientName) === clientId);
+      const clientName = clientRow ? clientRow.clientName : "";
 
-    if (!cleaner || !clientId) {
-      alert("Pick a cleaner and client first.");
-      return;
+      if (!cleaner || !clientId) {
+        alert("Pick a cleaner and client first.");
+        return;
+      }
+
+      addBtn.disabled = true;
+      addBtn.textContent = "Saving...";
+
+      await addJob(day, cleaner, clientId, clientName);
+    } catch (err) {
+      console.error("ADD CLICK ERROR:", err);
+      alert("Add failed: " + (err && err.message ? err.message : err));
+    } finally {
+      addBtn.disabled = false;
+      addBtn.textContent = "Add";
     }
-
-    await addJob(day, cleaner, clientId, clientName);
   };
 
   modal.classList.remove("hidden");
@@ -753,8 +780,8 @@ async function addJob(day, cleaner, clientId, clientName) {
     clientName
   });
 
-  if (!res.ok) {
-    alert(res.error || "Could not add job.");
+  if (!res || !res.ok) {
+    alert((res && res.error) || "Could not add job.");
     return;
   }
 
@@ -774,8 +801,8 @@ async function replaceCleaner(day, item, newCleaner) {
     serviceDate: item.serviceDate
   });
 
-  if (!res.ok) {
-    alert(res.error || "Could not replace cleaner.");
+  if (!res || !res.ok) {
+    alert((res && res.error) || "Could not replace cleaner.");
     return;
   }
 
@@ -795,8 +822,8 @@ async function tempReschedule(day, item, newDay) {
     oldCleaner: item.cleaner
   });
 
-  if (!res.ok) {
-    alert(res.error || "Could not reschedule.");
+  if (!res || !res.ok) {
+    alert((res && res.error) || "Could not reschedule.");
     return;
   }
 
@@ -815,8 +842,8 @@ async function removeJob(day, item) {
     oldCleaner: item.cleaner
   });
 
-  if (!res.ok) {
-    alert(res.error || "Could not remove job.");
+  if (!res || !res.ok) {
+    alert((res && res.error) || "Could not remove job.");
     return;
   }
 
@@ -872,7 +899,7 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/\"/g, "&quot;");
 }
 
 function escapeAttr(str) {
