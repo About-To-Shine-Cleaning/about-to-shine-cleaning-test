@@ -391,18 +391,8 @@ function api(action, params = {}) {
   return new Promise((resolve, reject) => {
     const cb = "cb_" + Math.random().toString(36).slice(2);
     const script = document.createElement("script");
-
-    window[cb] = function(data) {
-      try { delete window[cb]; } catch (e) {}
-      script.remove();
-      resolve(data);
-    };
-
-    script.onerror = function() {
-      try { delete window[cb]; } catch (e) {}
-      script.remove();
-      reject(new Error("API load failed"));
-    };
+    const token = getAdminToken();
+    const deviceKey = getDeviceKey();
 
     const query = new URLSearchParams(
       buildAuthParams({
@@ -412,7 +402,39 @@ function api(action, params = {}) {
       })
     );
 
-    script.src = ATS_API + "?" + query.toString();
+    const requestUrl = ATS_API + "?" + query.toString();
+
+    console.log("ATS_API", ATS_API);
+    console.log("Scheduler token found?", !!token, token);
+    console.log("Scheduler device found?", !!deviceKey, deviceKey);
+    console.log("Scheduler request URL", requestUrl);
+
+    let finished = false;
+
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+    };
+
+    window[cb] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error("API load failed: " + requestUrl));
+    };
+
+    setTimeout(() => {
+      if (finished) return;
+      cleanup();
+      reject(new Error("API timeout: " + requestUrl));
+    }, 15000);
+
+    script.src = requestUrl;
     document.body.appendChild(script);
   });
 }
@@ -421,17 +443,19 @@ async function postApi(action, payload = {}) {
   const token = getAdminToken();
   const deviceKey = getDeviceKey();
 
-  const res = await fetch(
+  const requestUrl =
     ATS_API +
-      "?action=" + encodeURIComponent(action) +
-      "&t=" + encodeURIComponent(token) +
-      "&d=" + encodeURIComponent(deviceKey),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }
-  );
+    "?action=" + encodeURIComponent(action) +
+    "&t=" + encodeURIComponent(token) +
+    "&d=" + encodeURIComponent(deviceKey);
+
+  console.log("Scheduler POST URL", requestUrl);
+
+  const res = await fetch(requestUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
 
   const text = await res.text();
   try {
@@ -744,7 +768,7 @@ async function replaceCleaner(day, item, newCleaner) {
     serviceDate: item.serviceDate
   });
 
-    if (!res.ok) {
+  if (!res.ok) {
     alert(res.error || "Could not replace cleaner.");
     return;
   }
