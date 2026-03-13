@@ -830,7 +830,7 @@ async function replaceCleaner(day, item, newCleaner) {
     day,
     client: item.client,
     clientId: item.clientId,
-    cleaner: newCleaner,
+    newCleaner: newCleaner,
     oldCleaner: item.cleaner,
     serviceDate: item.serviceDate
   });
