@@ -387,7 +387,7 @@ function injectSchedulerStyles() {
   document.head.appendChild(style);
 }
 
-function api(action, params = {}) {
+function api(action, params = {}, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const cb = "cb_" + Math.random().toString(36).slice(2);
     const script = document.createElement("script");
@@ -411,35 +411,52 @@ function api(action, params = {}) {
 
     let finished = false;
 
-    const cleanup = () => {
-      if (finished) return;
-      finished = true;
-      try { delete window[cb]; } catch (e) {}
-      try { script.remove(); } catch (e) {}
-    };
+    function removeScript() {
+      try {
+        if (script.parentNode) script.parentNode.removeChild(script);
+      } catch (e) {}
+    }
+
+    function deleteCallback() {
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+    }
 
     window[cb] = function(data) {
-      cleanup();
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      removeScript();
+      deleteCallback();
       resolve(data);
     };
 
     script.onerror = function() {
-      cleanup();
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      removeScript();
+      deleteCallback();
       reject(new Error("API load failed: " + requestUrl));
     };
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (finished) return;
-      cleanup();
+      finished = true;
+
+      removeScript();
       reject(new Error("API timeout: " + requestUrl));
-    }, 15000);
+
+      setTimeout(() => {
+        deleteCallback();
+      }, 30000);
+    }, timeoutMs);
 
     script.src = requestUrl;
     document.body.appendChild(script);
   });
 }
 
-function postApi(action, payload = {}) {
+function postApi(action, payload = {}, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const cb = "cb_post_" + Math.random().toString(36).slice(2);
     const script = document.createElement("script");
@@ -459,28 +476,45 @@ function postApi(action, payload = {}) {
 
     let finished = false;
 
-    const cleanup = () => {
-      if (finished) return;
-      finished = true;
-      try { delete window[cb]; } catch (e) {}
-      try { script.remove(); } catch (e) {}
-    };
+    function removeScript() {
+      try {
+        if (script.parentNode) script.parentNode.removeChild(script);
+      } catch (e) {}
+    }
+
+    function deleteCallback() {
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+    }
 
     window[cb] = function(data) {
-      cleanup();
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      removeScript();
+      deleteCallback();
       resolve(data);
     };
 
     script.onerror = function() {
-      cleanup();
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      removeScript();
+      deleteCallback();
       reject(new Error("Write API load failed: " + requestUrl));
     };
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (finished) return;
-      cleanup();
+      finished = true;
+
+      removeScript();
       reject(new Error("Write API timeout: " + requestUrl));
-    }, 15000);
+
+      setTimeout(() => {
+        deleteCallback();
+      }, 30000);
+    }, timeoutMs);
 
     script.src = requestUrl;
     document.body.appendChild(script);
