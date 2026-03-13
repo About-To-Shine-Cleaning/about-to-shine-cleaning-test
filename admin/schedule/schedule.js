@@ -791,8 +791,10 @@ function openDayModal(day, item = null) {
       console.error("ADD CLICK ERROR:", err);
       alert("Add failed: " + (err && err.message ? err.message : err));
     } finally {
-      addBtn.disabled = false;
-      addBtn.textContent = "Add";
+      setTimeout(() => {
+        addBtn.disabled = false;
+        addBtn.textContent = "Add";
+      }, 150);
     }
   };
 
@@ -820,7 +822,10 @@ async function addJob(day, cleaner, clientId, clientName) {
   }
 
   closeModal();
-  await loadSchedule();
+
+  loadSchedule().catch(err => {
+    console.error("Background reload failed after add:", err);
+  });
 }
 
 async function replaceCleaner(day, item, newCleaner) {
@@ -841,7 +846,10 @@ async function replaceCleaner(day, item, newCleaner) {
   }
 
   closeModal();
-  await loadSchedule();
+
+  loadSchedule().catch(err => {
+    console.error("Background reload failed after replace:", err);
+  });
 }
 
 async function tempReschedule(day, item, newDay) {
@@ -862,7 +870,10 @@ async function tempReschedule(day, item, newDay) {
   }
 
   closeModal();
-  await loadSchedule();
+
+  loadSchedule().catch(err => {
+    console.error("Background reload failed after reschedule:", err);
+  });
 }
 
 async function removeJob(day, item) {
@@ -882,7 +893,10 @@ async function removeJob(day, item) {
   }
 
   closeModal();
-  await loadSchedule();
+
+  loadSchedule().catch(err => {
+    console.error("Background reload failed after remove:", err);
+  });
 }
 
 function bindWeekButtons() {
