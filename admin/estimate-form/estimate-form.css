@@ -1,0 +1,59 @@
+
+:root{
+  --purple:#5b2aa8;
+  --purple2:#3f1c83;
+  --yellow:#ffd700;
+  --card:rgba(255,255,255,.10);
+  --border:rgba(255,255,255,.18);
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.82);
+  --shadow:0 14px 34px rgba(0,0,0,.22);
+}
+.estimate-shell{max-width:1100px;margin:0 auto;padding:18px}
+.letterhead-card,.toolbar-card,.status-card,.form-stage-card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px;color:var(--text)}
+.letterhead-top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+.page-title{font-size:1.35rem;font-weight:800}
+.page-sub{color:var(--muted);font-size:.92rem;margin-top:4px}
+.page-links{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.back-link{color:var(--text);text-decoration:none;font-weight:800}
+.pill{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(255,215,0,.14);border:1px solid rgba(255,215,0,.35);font-weight:700}
+.accentline{height:6px;background:var(--yellow);border-radius:999px;margin-top:12px}
+.toolbar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.toolbar-grid label{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--muted)}
+.toolbar-grid input,.toolbar-grid select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:rgba(0,0,0,.15);color:#fff}
+.mode-toggle{display:flex;gap:10px}
+.mode-btn,.primary-btn,.secondary-btn{border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer}
+.mode-btn{flex:1;background:rgba(255,255,255,.08);color:#fff}
+.mode-btn.active,.primary-btn{background:rgba(255,215,0,.18);border-color:rgba(255,215,0,.55);color:#fff}
+.secondary-btn{background:rgba(255,255,255,.08);color:#fff}
+.status-card{font-size:.96rem;white-space:pre-wrap}
+.form-canvas-wrap{overflow:auto}
+.form-canvas{position:relative;width:min(100%,860px);margin:0 auto}
+.form-canvas img#formBg{display:block;width:100%;height:auto;border-radius:10px}
+.overlay-input,.overlay-value,.checkbox-mark,.sig-image{position:absolute;box-sizing:border-box}
+.overlay-input{background:rgba(255,255,255,.78);border:1px solid rgba(0,0,0,.18);color:#111;border-radius:6px;padding:4px 6px;font:600 14px/1.2 Arial,sans-serif}
+.overlay-input.text{height:28px}
+.overlay-input.money{height:26px;text-align:right}
+.overlay-input.textarea{resize:none;font:600 15px/1.35 Arial,sans-serif;padding:8px;background:rgba(255,255,255,.72)}
+.overlay-value{font:700 16px/1.2 Arial,sans-serif;color:#111;text-align:right;padding:2px 4px}
+.overlay-value.total{font-weight:800}
+.checkbox-mark{width:2.1%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:800 18px/1 Arial,sans-serif;color:#111;background:rgba(255,255,255,.84);border-radius:4px;opacity:0}
+.checkbox-mark.on{opacity:1}
+.sig-image{display:none;object-fit:contain}
+.sig-image.on{display:block}
+.scope-controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.check-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border)}
+.signature-modal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
+.signature-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.signature-sheet{position:relative;z-index:2;width:min(920px,100%);background:linear-gradient(180deg, rgba(63,28,131,.98), rgba(11,16,32,.98));border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.signature-head,.signature-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+#sigPad{width:100%;height:auto;background:#fff;border-radius:12px}
+.hidden-frame{width:0;height:0;border:0;position:absolute;left:-9999px}
+@media (max-width:900px){.toolbar-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){
+  .estimate-shell{padding:14px}
+  .toolbar-grid{grid-template-columns:1fr}
+  .overlay-input{font-size:12px;padding:3px 5px}
+  .overlay-input.textarea{font-size:12px}
+  .overlay-value{font-size:12px}
+}

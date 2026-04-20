@@ -5,6 +5,7 @@
     { label: "Admin Home", href: "/admin/" },
     { label: "Clock", href: "/clock.html" },
     { label: "Estimator", href: "/admin/estimator/" },
+    { label: "Estimate Form", href: "/admin/estimate-form/" },
     { label: "Payroll", href: "/admin/payroll/" },
     { label: "Legacy Pricing", href: "/admin/legacy/" },
     { label: "Schedule", href: "/admin/schedule/" },

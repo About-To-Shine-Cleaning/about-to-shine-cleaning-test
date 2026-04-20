@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ATS Estimate Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <link rel="icon" type="image/png" href="/assets/images/logo-v2.png">
+  <link rel="apple-touch-icon" href="/assets/images/logo-v2.png">
+  <link rel="stylesheet" href="/admin/admin-layout.css" />
+  <script defer src="/admin/admin-nav.js"></script>
+  <link rel="stylesheet" href="/admin/estimate-form/estimate-form.css" />
+</head>
+<body class="ats-admin">
+  <header class="ats-header">
+    <div class="ats-header-inner">
+      <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
+        <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
+      </a>
+      <div class="ats-header-actions">
+        <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+        <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="ats-main">
+    <div class="ats-container">
+      <div class="estimate-shell">
+        <div class="letterhead-card">
+          <div class="letterhead-top">
+            <div>
+              <div class="page-title">Estimate Form</div>
+              <div class="page-sub">Mobile estimate sheet matching the paper form</div>
+            </div>
+            <div class="page-links">
+              <a class="back-link" href="/admin/">← Admin</a>
+              <div class="pill" id="authWho">Checking access…</div>
+            </div>
+          </div>
+          <div class="accentline"></div>
+        </div>
+
+        <div class="toolbar-card">
+          <div class="mode-toggle" role="tablist" aria-label="Estimate mode">
+            <button type="button" class="mode-btn active" id="modeWB">Weekly + Bi-Weekly</button>
+            <button type="button" class="mode-btn" id="modeBM">Bi-Weekly + Monthly</button>
+          </div>
+
+          <div class="toolbar-grid">
+            <label>
+              <span>Prepared by</span>
+              <select id="preparedBy">
+                <option value="Matthew Bari">Matthew Bari</option>
+                <option value="Shannon Kovecses">Shannon Kovecses</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Date</span>
+              <input id="estimateDate" type="date" />
+            </label>
+
+            <label>
+              <span>Client signature (optional)</span>
+              <button type="button" class="secondary-btn" id="toggleClientSig">Open Signature Pad</button>
+            </label>
+
+            <label>
+              <span>Finalize</span>
+              <button type="button" class="primary-btn" id="finalizeBtn">Finalize PDF</button>
+            </label>
+          </div>
+        </div>
+
+        <div class="status-card" id="formStatus">Loading form…</div>
+
+        <div class="form-stage-card">
+          <div class="form-canvas-wrap">
+            <div class="form-canvas" id="formCanvas">
+              <img id="formBg" src="/admin/estimate-form/assets/weekly-biweekly.png" alt="Estimate form background" />
+              <div class="checkbox-mark" id="markResidential">✓</div>
+              <div class="checkbox-mark" id="markCommercial">✓</div>
+              <div class="checkbox-mark" id="markMove">✓</div>
+
+              <input class="overlay-input text" id="clientName" type="text" autocomplete="name" />
+              <input class="overlay-input text" id="clientAddress" type="text" autocomplete="street-address" />
+              <input class="overlay-input text" id="clientPhone" type="text" autocomplete="tel" />
+              <input class="overlay-input text" id="clientEmail" type="email" autocomplete="email" />
+
+              <textarea class="overlay-input textarea" id="jobDescription"></textarea>
+
+              <input class="overlay-input money" id="initialBase" type="number" inputmode="decimal" step="0.01" />
+              <div class="overlay-value money" id="initialTax"></div>
+              <div class="overlay-value money total" id="initialTotal"></div>
+
+              <input class="overlay-input money" id="recurringLeftBase" type="number" inputmode="decimal" step="0.01" />
+              <div class="overlay-value money" id="recurringLeftTax"></div>
+              <div class="overlay-value money total" id="recurringLeftTotal"></div>
+
+              <input class="overlay-input money" id="recurringRightBase" type="number" inputmode="decimal" step="0.01" />
+              <div class="overlay-value money" id="recurringRightTax"></div>
+              <div class="overlay-value money total" id="recurringRightTotal"></div>
+
+              <img class="sig-image prepared-sig" id="preparedSig" alt="Prepared by signature" />
+              <div class="overlay-value date-value" id="preparedDate"></div>
+              <img class="sig-image client-sig" id="clientSigPreview" alt="Client signature preview" />
+              <div class="overlay-value client-date-value" id="clientDate"></div>
+            </div>
+          </div>
+
+          <div class="scope-controls">
+            <label class="check-chip"><input type="checkbox" id="scopeResidential" /> Residential</label>
+            <label class="check-chip"><input type="checkbox" id="scopeCommercial" /> Commercial</label>
+            <label class="check-chip"><input type="checkbox" id="scopeMove" /> Move-Out / Move-In</label>
+          </div>
+        </div>
+
+        <div class="signature-modal" id="sigModal" hidden>
+          <div class="signature-backdrop" id="sigBackdrop"></div>
+          <div class="signature-sheet">
+            <div class="signature-head">
+              <strong>Client Signature</strong>
+              <button type="button" class="secondary-btn" id="closeSig">Close</button>
+            </div>
+            <canvas id="sigPad" width="900" height="240"></canvas>
+            <div class="signature-actions">
+              <button type="button" class="secondary-btn" id="clearSig">Clear</button>
+              <button type="button" class="primary-btn" id="saveSig">Use Signature</button>
+            </div>
+          </div>
+        </div>
+
+        <iframe name="estimateFormSubmitFrame" id="estimateFormSubmitFrame" class="hidden-frame"></iframe>
+      </div>
+    </div>
+  </main>
+
+  <script src="/admin/estimate-form/estimate-form.js"></script>
+</body>
+</html>
