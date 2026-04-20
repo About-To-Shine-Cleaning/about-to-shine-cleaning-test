@@ -24,7 +24,6 @@
     rightTotal: [837, 1281, 250, 24],
     preparedSig: [232, 1287, 364, 38],
     preparedDate: [674, 1294, 180, 26],
-    clientSig: [234, 1588, 360, 36],
     clientDate: [670, 1594, 170, 26],
     residentialMark: [112, 450],
     commercialMark: [493, 450],
@@ -37,20 +36,18 @@
   };
 
   const $ = (id) => document.getElementById(id);
+  
   const formStatus = $("formStatus");
   const authWho = $("authWho");
   const formBg = $("formBg");
   const preparedBy = $("preparedBy");
   const estimateDate = $("estimateDate");
   const preparedSig = $("preparedSig");
-  const clientSigPreview = $("clientSigPreview");
   const preparedDate = $("preparedDate");
   const clientDate = $("clientDate");
   const modeWB = $("modeWB");
   const modeBM = $("modeBM");
-  const sigModal = $("sigModal");
-  const sigPad = $("sigPad");
-  const sigCtx = sigPad.getContext("2d");
+  
   const finalizeBtn = $("finalizeBtn");
 
   let currentMode = "WB";
