@@ -326,7 +326,7 @@
     setStatus("Loading current pay period…");
     const cur = await payrollCurrent();
     if (!cur || !cur.ok) throw new Error(cur?.error || "payroll_current failed");
-    renderPeriod(cur.period);
+    renderPeriod(cur);
 
     if (!currentPeriodId) {
       setStatus("No current period id returned.", "err");
