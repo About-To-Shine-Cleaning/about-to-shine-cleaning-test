@@ -4,7 +4,7 @@
 ====================================================== */
 
 const ATS_API =
-  "https://script.google.com/macros/s/AKfycbypP0QPCfgX5LGUhEGol2RuOOYzRO_Nzdish8xRaPy49a0httlNJmNT2x59LvrM1RR-/exec";
+  "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw";
 
 let currentWeek = "this";
 let scheduleData = {};
