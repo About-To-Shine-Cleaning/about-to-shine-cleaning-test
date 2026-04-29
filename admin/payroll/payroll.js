@@ -156,7 +156,21 @@
     const t = getTokenFromSession();
     const d = getDeviceKey();
 
-    function markPaid(periodId, employeeId) {
+function markPaid(periodId, employeeId) {
+  const cb = "cb_mark_paid_" + Math.random().toString(36).slice(2);
+
+  window[cb] = function (res) {
+    try { delete window[cb]; } catch (e) {}
+
+    if (!res || !res.ok) {
+      alert("Mark Paid failed");
+      console.error(res);
+      return;
+    }
+
+    loadPayroll(); // refresh UI
+  };
+
   const url =
     API_URL +
     "?action=payroll_mark_paid" +
@@ -164,18 +178,18 @@
     "&employeeId=" + encodeURIComponent(employeeId) +
     "&t=" + encodeURIComponent(t) +
     "&d=" + encodeURIComponent(d) +
-    "&callback=cb";
+    "&callback=" + encodeURIComponent(cb);
 
-  window.cb = function (res) {
-    if (!res || !res.ok) {
-      alert("Mark Paid failed");
-      console.error(res);
-      return;
-    }
+  const script = document.createElement("script");
+  script.src = url;
 
-    // reload payroll UI
-    loadPayroll();
+  script.onerror = function () {
+    try { delete window[cb]; } catch (e) {}
+    console.error("Mark Paid JSONP failed");
   };
+
+  document.body.appendChild(script);
+}
 
   const script = document.createElement("script");
   script.src = url;
