@@ -153,29 +153,15 @@
   async function payrollPayments(periodId){ return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
 
   async function payrollMarkPaid(periodId, employeeId, paidMethod, reference, notes) {
-    const t = getTokenFromSession();
-    const d = getDeviceKey();
+  const t = getTokenFromSession();
+  const d = getDeviceKey();
 
-function markPaid(periodId, employeeId) {
-  const cb = "cb_mark_paid_" + Math.random().toString(36).slice(2);
+  function markPaid(periodId, employeeId) {
+    ...
+  }
 
-  const markPaidUrl =
-    API_URL +
-    "?action=payroll_mark_paid" +
-    "&periodId=" + encodeURIComponent(periodId) +
-    "&employeeId=" + encodeURIComponent(employeeId) +
-    "&t=" + encodeURIComponent(t) +
-    "&d=" + encodeURIComponent(d) +
-    "&callback=" + encodeURIComponent(cb);
-
-  window[cb] = function (res) {
-    try { delete window[cb]; } catch (e) {}
-
-    if (!res || !res.ok) {
-      alert("Mark Paid failed: " + (res && res.error ? res.error : "unknown error"));
-      console.error(res);
-      return;
-    }
+  const url = ...
+}
 
     loadPayroll();
   };
@@ -307,8 +293,9 @@ function markPaid(periodId, employeeId) {
 
       const btn = r.paid
         ? `<button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>`
-        : `<button class="btn"
-     onclick="markPaid('${escapeHtml(r.periodId || currentPeriodId)}','${escapeHtml(r.employeeId)}')"
+        : `<button class="btn mark-paid-btn"
+     data-period="${escapeHtml(r.periodId || currentPeriodId)}"
+     data-emp="${escapeHtml(r.employeeId)}"
      style="width:auto; padding:10px 12px; border-radius:12px;">
      Mark Paid
    </button>`;
