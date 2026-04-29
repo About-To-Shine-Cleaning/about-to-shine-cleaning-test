@@ -151,41 +151,6 @@
 
   // ✅ NEW
   async function payrollPayments(periodId){ return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
-
-  async function payrollMarkPaid(periodId, employeeId, paidMethod, reference, notes) {
-  const t = getTokenFromSession();
-  const d = getDeviceKey();
-
-  function markPaid(periodId, employeeId) {
-    ...
-  }
-
-  const url = ...
-}
-
-    loadPayroll();
-  };
-
-  const script = document.createElement("script");
-
-  script.onerror = function () {
-    try { delete window[cb]; } catch (e) {}
-    alert("Mark Paid failed to load.");
-  };
-
-  script.src = markPaidUrl;
-  document.body.appendChild(script);
-}
-  const url =
-    API_URL +
-    "?action=payroll_mark_paid" +
-    "&periodId=" + encodeURIComponent(periodId) +
-    "&employeeId=" + encodeURIComponent(employeeId) +
-    "&t=" + encodeURIComponent(t) +
-    "&d=" + encodeURIComponent(d) +
-    "&callback=" + encodeURIComponent(cb);
-
-  
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || "";
     if (periodIdEl) periodIdEl.textContent = p?.periodId || "—";
