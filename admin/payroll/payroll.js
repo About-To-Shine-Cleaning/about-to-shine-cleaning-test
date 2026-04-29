@@ -156,19 +156,31 @@
     const t = getTokenFromSession();
     const d = getDeviceKey();
 
-    return fetch(`${API_URL}?action=payroll_mark_paid&t=${encodeURIComponent(t)}&d=${encodeURIComponent(d)}`, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        periodId,
-        employeeId,
-        paid: true,
-        paidMethod: paidMethod || "",
-        reference: reference || "",
-        notes: notes || ""
-      })
-    });
-  }
+    function markPaid(periodId, employeeId) {
+  const url =
+    API_URL +
+    "?action=payroll_mark_paid" +
+    "&periodId=" + encodeURIComponent(periodId) +
+    "&employeeId=" + encodeURIComponent(employeeId) +
+    "&t=" + encodeURIComponent(t) +
+    "&d=" + encodeURIComponent(d) +
+    "&callback=cb";
+
+  window.cb = function (res) {
+    if (!res || !res.ok) {
+      alert("Mark Paid failed");
+      console.error(res);
+      return;
+    }
+
+    // reload payroll UI
+    loadPayroll();
+  };
+
+  const script = document.createElement("script");
+  script.src = url;
+  document.body.appendChild(script);
+}
 
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || "";
