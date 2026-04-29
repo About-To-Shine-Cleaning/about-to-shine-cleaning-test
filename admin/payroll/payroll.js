@@ -159,18 +159,37 @@
 function markPaid(periodId, employeeId) {
   const cb = "cb_mark_paid_" + Math.random().toString(36).slice(2);
 
+  const markPaidUrl =
+    API_URL +
+    "?action=payroll_mark_paid" +
+    "&periodId=" + encodeURIComponent(periodId) +
+    "&employeeId=" + encodeURIComponent(employeeId) +
+    "&t=" + encodeURIComponent(t) +
+    "&d=" + encodeURIComponent(d) +
+    "&callback=" + encodeURIComponent(cb);
+
   window[cb] = function (res) {
     try { delete window[cb]; } catch (e) {}
 
     if (!res || !res.ok) {
-      alert("Mark Paid failed");
+      alert("Mark Paid failed: " + (res && res.error ? res.error : "unknown error"));
       console.error(res);
       return;
     }
 
-    loadPayroll(); // refresh UI
+    loadPayroll();
   };
 
+  const script = document.createElement("script");
+
+  script.onerror = function () {
+    try { delete window[cb]; } catch (e) {}
+    alert("Mark Paid failed to load.");
+  };
+
+  script.src = markPaidUrl;
+  document.body.appendChild(script);
+}
   const url =
     API_URL +
     "?action=payroll_mark_paid" +
@@ -180,22 +199,7 @@ function markPaid(periodId, employeeId) {
     "&d=" + encodeURIComponent(d) +
     "&callback=" + encodeURIComponent(cb);
 
-  const script = document.createElement("script");
-  script.src = url;
-
-  script.onerror = function () {
-    try { delete window[cb]; } catch (e) {}
-    console.error("Mark Paid JSONP failed");
-  };
-
-  document.body.appendChild(script);
-}
-
-  const script = document.createElement("script");
-  script.src = url;
-  document.body.appendChild(script);
-}
-
+  
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || "";
     if (periodIdEl) periodIdEl.textContent = p?.periodId || "—";
