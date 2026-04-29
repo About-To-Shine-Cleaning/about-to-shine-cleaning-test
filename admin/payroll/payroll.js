@@ -299,7 +299,16 @@
 
         try {
           setStatus("Marking as paid…");
-          await payrollMarkPaid(currentPeriodId, empId, method, reference, notes);
+          await jsonp(
+  secureUrl(
+    "payroll_mark_paid",
+    "periodId=" + encodeURIComponent(currentPeriodId) +
+    "&employeeId=" + encodeURIComponent(empId) +
+    "&paidMethod=" + encodeURIComponent(method) +
+    "&reference=" + encodeURIComponent(reference) +
+    "&notes=" + encodeURIComponent(notes)
+  )
+);
           await refreshPaymentsOnly();
           setStatus("Paid saved ✅", "ok");
         } catch (err) {
