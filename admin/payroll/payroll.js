@@ -151,16 +151,7 @@
 
   // ✅ NEW
   async function payrollPayments(periodId){ return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
-  function renderPeriod(p) {
-    currentPeriodId = p?.periodId || "";
-    if (periodIdEl) periodIdEl.textContent = p?.periodId || "—";
-    if (periodStartEl) periodStartEl.textContent = p?.startDate || "—";
-    if (periodEndEl) periodEndEl.textContent = p?.endDate || "—";
-    if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
-    if (periodStatusEl) periodStatusEl.textContent = p?.status || "—";
-    if (summaryHint) summaryHint.textContent = currentPeriodId ? `Showing summary for ${currentPeriodId}` : "—";
-  }
-async function payrollMarkPaid(periodId, employeeId) {
+  async function payrollMarkPaid(periodId, employeeId) {
   return jsonp(
     secureUrl(
       "payroll_mark_paid",
@@ -169,6 +160,16 @@ async function payrollMarkPaid(periodId, employeeId) {
     )
   );
 }
+   function renderPeriod(p) {
+    currentPeriodId = p?.periodId || "";
+    if (periodIdEl) periodIdEl.textContent = p?.periodId || "—";
+    if (periodStartEl) periodStartEl.textContent = p?.startDate || "—";
+    if (periodEndEl) periodEndEl.textContent = p?.endDate || "—";
+    if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
+    if (periodStatusEl) periodStatusEl.textContent = p?.status || "—";
+    if (summaryHint) summaryHint.textContent = currentPeriodId ? `Showing summary for ${currentPeriodId}` : "—";
+  }
+
   function renderSummary(rows) {
     if (!summaryBody) return;
     const data = Array.isArray(rows) ? rows : [];
