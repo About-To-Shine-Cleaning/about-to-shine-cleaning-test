@@ -160,7 +160,15 @@
     if (periodStatusEl) periodStatusEl.textContent = p?.status || "—";
     if (summaryHint) summaryHint.textContent = currentPeriodId ? `Showing summary for ${currentPeriodId}` : "—";
   }
-
+async function payrollMarkPaid(periodId, employeeId) {
+  return jsonp(
+    secureUrl(
+      "payroll_mark_paid",
+      "periodId=" + encodeURIComponent(periodId) +
+      "&employeeId=" + encodeURIComponent(employeeId)
+    )
+  );
+}
   function renderSummary(rows) {
     if (!summaryBody) return;
     const data = Array.isArray(rows) ? rows : [];
