@@ -307,7 +307,11 @@ function markPaid(periodId, employeeId) {
 
       const btn = r.paid
         ? `<button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>`
-        : `<button class="btn" data-emp="${escapeHtml(r.employeeId)}" style="width:auto; padding:10px 12px; border-radius:12px;">Mark Paid</button>`;
+        : `<button class="btn"
+     onclick="markPaid('${escapeHtml(r.periodId || currentPeriodId)}','${escapeHtml(r.employeeId)}')"
+     style="width:auto; padding:10px 12px; border-radius:12px;">
+     Mark Paid
+   </button>`;
 
       return `
         <tr>
