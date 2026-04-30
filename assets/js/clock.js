@@ -196,29 +196,47 @@ function postLog(payload) {
 // Log event
 // ==============================
 function logEvent(action) {
-  // capture notes immediately (before any async GPS / sendBeacon)
   const notesValue =
     action === "Clock Out"
       ? (document.getElementById("jobNotes")?.value || "").trim()
       : "";
 
   getLocation((coords, gpsDenied) => {
-    const payload = {
-      employeeId,
-      employeeName,
-      action,
-      jobId: selectedJob?.id || "",
+    const unifiedUrl =
+      "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+
+    const route = action === "Clock Out" ? "clock_out" : "clock_in";
+
+    const qs = new URLSearchParams({
+      action: route,
+      emp: employeeId,
+      employeeId: employeeId,
+      employeeName: employeeName,
       jobName: selectedJob?.name || "",
       jobPay: selectedJob?.pay || "",
-      notes: notesValue, // ✅ use captured value
+      notes: notesValue,
       latitude: coords?.latitude || "",
       longitude: coords?.longitude || "",
       accuracy: coords?.accuracy || "",
-      gpsDenied,
-      timestamp: new Date().toISOString()
+      gpsDenied: gpsDenied ? "YES" : "NO",
+      clientTimestamp: new Date().toISOString()
+    });
+
+    const cb = "cb_" + Math.random().toString(36).slice(2);
+    window[cb] = function (res) {
+      try { delete window[cb]; } catch (e) {}
+
+      if (!res || !res.ok) {
+        setStatus("Clock event did not save: " + (res?.error || "unknown error"), "err");
+      }
     };
 
-    postLog(payload);
+    const s = document.createElement("script");
+    s.src = unifiedUrl + "?" + qs.toString() + "&callback=" + cb;
+    s.onerror = function () {
+      setStatus("Clock event failed to save.", "err");
+    };
+    document.body.appendChild(s);
   });
 }
 
