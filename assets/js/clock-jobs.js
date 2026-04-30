@@ -1,5 +1,5 @@
 (function () {
-  const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbyCCv30Q3l0Gg2zGs2sHD6a9jHm678QQKV_mdTm_GFnjR-xsmaYdDonmlBugX3TeHPiJA/exec";
 
   function getToken() {
     return sessionStorage.getItem("ats_admin_token_v1") || "";
@@ -92,8 +92,8 @@
     list.innerHTML = "Loading today’s jobs...";
 
     try {
-      const url =
-        `${API_URL}?action=clock_today_jobs&t=${encodeURIComponent(getToken())}&d=${encodeURIComponent(getDevice())}`;
+      const emp = new URLSearchParams(window.location.search).get("emp") || "";
+const url = `${API_URL}?action=clock_today_jobs&emp=${encodeURIComponent(emp)}`;
 
       const res = await jsonp(url);
 
