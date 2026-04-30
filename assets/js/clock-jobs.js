@@ -42,34 +42,32 @@
   }
 
   function setSelectedJob(job) {
-    const select = document.getElementById("jobSelect");
-    if (!select) return;
+  const select = document.getElementById("jobSelect");
+  if (!select) return false;
 
-    const jobName = job.jobName || "";
-    const jobPay = job.jobPay || job.pay || "";
+  const jobId = job.scheduleKey || job.clientId || job.jobName || "";
+  const jobName = job.jobName || job.clientName || "";
+  const jobPay = job.jobPay || job.pay || "";
 
-    let opt = Array.from(select.options).find(o => o.value === jobName);
+  let opt = Array.from(select.options).find(o => o.value === jobId);
 
-    if (!opt) {
-      opt = document.createElement("option");
-      opt.value = jobName;
-      opt.textContent = jobName;
-      select.appendChild(opt);
-    }
-
-    opt.dataset.jobPay = jobPay;
-    opt.dataset.address = job.address || "";
-    select.value = jobName;
+  if (!opt) {
+    opt = document.createElement("option");
+    opt.value = jobId;
+    opt.textContent = jobName;
+    select.appendChild(opt);
   }
 
-  window.clockInJob = function (index) {
-    const jobs = window.ATS_TODAY_JOBS || [];
-    const job = jobs[index];
+  opt.dataset.name = jobName;
+  opt.dataset.pay = jobPay;
 
-    if (!job) {
-      alert("Job not found.");
-      return;
-    }
+  select.value = jobId;
+
+  // This triggers the original clock.js change listener
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+
+  return true;
+}
 
     setSelectedJob(job);
 
