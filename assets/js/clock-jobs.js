@@ -41,7 +41,7 @@
     return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address || "");
   }
 
-  function setSelectedJob(job) {
+function setSelectedJob(job) {
   const select = document.getElementById("jobSelect");
   if (!select) return false;
 
@@ -63,7 +63,6 @@
 
   select.value = jobId;
 
-  // This triggers the original clock.js change listener
   select.dispatchEvent(new Event("change", { bubbles: true }));
 
   return true;
@@ -140,3 +139,52 @@ const url = `${API_URL}?action=clock_today_jobs&emp=${encodeURIComponent(emp)}`;
 
   document.addEventListener("DOMContentLoaded", loadJobs);
 })();
+function setSelectedJob(job) {
+  const select = document.getElementById("jobSelect");
+  if (!select) return false;
+
+  const jobId = job.scheduleKey || job.clientId || job.jobName || "";
+  const jobName = job.jobName || job.clientName || "";
+  const jobPay = job.jobPay || job.pay || "";
+
+  let opt = Array.from(select.options).find(o => o.value === jobId);
+
+  if (!opt) {
+    opt = document.createElement("option");
+    opt.value = jobId;
+    opt.textContent = jobName;
+    select.appendChild(opt);
+  }
+
+  opt.dataset.name = jobName;
+  opt.dataset.pay = jobPay;
+
+  select.value = jobId;
+
+  // 🔥 THIS is the missing trigger
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+
+  return true;
+}
+
+window.clockInJob = function (index) {
+  const jobs = window.ATS_TODAY_JOBS || [];
+  const job = jobs[index];
+
+  if (!job) {
+    alert("Job not found.");
+    return;
+  }
+
+  const selected = setSelectedJob(job);
+  if (!selected) {
+    alert("Could not select job.");
+    return;
+  }
+
+  if (typeof window.clockIn === "function") {
+    window.clockIn();
+  } else {
+    alert("Clock system not loaded.");
+  }
+};
