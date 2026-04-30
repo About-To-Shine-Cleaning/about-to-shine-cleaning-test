@@ -18,6 +18,10 @@
 <p id="employee-display"></p>
 <!-- No pop-up alerts; we show status here -->
 <div aria-live="polite" id="clock-status" role="status" style="margin:12px 0;"></div>
+  <section id="todayJobsCard" style="margin:18px 0;padding:16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);">
+  <h3 style="margin-top:0;">Today’s Jobs</h3>
+  <div id="todayJobsList">Loading today’s jobs...</div>
+</section>
 <label for="jobSelect">Current Cleaning</label>
 <select id="jobSelect">
 <option value="">-- Select Current Cleaning --</option>
@@ -80,6 +84,7 @@
 </footer>
 <link href="/assets/css/style.css" rel="stylesheet"/>
 <script defer="" src="/assets/js/clock.js"></script>
+  <script defer src="/assets/js/clock-jobs.js?v=1"></script>
 <img src="/assets/images/logo.png"/>
 </div></main>
 </body>
