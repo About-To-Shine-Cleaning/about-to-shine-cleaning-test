@@ -22,15 +22,19 @@
   <h3 style="margin-top:0;">Today’s Jobs</h3>
   <div id="todayJobsList">Loading today’s jobs...</div>
 </section>
-<label for="jobSelect">Current Cleaning</label>
-<select id="jobSelect">
-<option value="">-- Select Current Cleaning --</option>
-</select>
+<div style="display:none;">
+  <label for="jobSelect">Current Cleaning</label>
+  <select id="jobSelect">
+    <option value="">-- Select Current Cleaning --</option>
+  </select>
+
+  <button class="button" id="btnClockIn" onclick="clockIn()">Clock In</button>
+</div>
+
 <div class="clock-actions" style="margin-top:16px;">
-<button class="button" id="btnClockIn" onclick="clockIn()">Clock In</button>
-<button class="button" id="btnBreakStart" onclick="startBreak()">Start Break</button>
-<button class="button" id="btnBreakEnd" onclick="endBreak()">End Break</button>
-<button class="button" id="btnClockOut" onclick="clockOut()">Clock Out</button>
+  <button class="button" id="btnBreakStart" onclick="startBreak()">Start Break</button>
+  <button class="button" id="btnBreakEnd" onclick="endBreak()">End Break</button>
+  <button class="button" id="btnClockOut" onclick="clockOut()">Clock Out</button>
 </div>
 <!-- Notes (logged on clock-out) -->
 <section style="margin-top:22px;">
