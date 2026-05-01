@@ -23,15 +23,18 @@
       const script = document.createElement("script");
 
       window[cb] = function (data) {
-        resolve(data);
-        try { delete window[cb]; } catch (e) {}
-        try { script.remove(); } catch (e) {}
+        try {
+          resolve(data);
+        } finally {
+          try { delete window[cb]; } catch (e) {}
+          try { script.remove(); } catch (e) {}
+        }
       };
 
       script.onerror = function () {
-        reject(new Error("JSONP failed"));
         try { delete window[cb]; } catch (e) {}
         try { script.remove(); } catch (e) {}
+        reject(new Error("JSONP failed"));
       };
 
       script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
@@ -102,7 +105,9 @@
       const res = await jsonp(url);
 
       if (!res || !res.ok) {
-        list.innerHTML = "Could not load today’s jobs: " + escapeHtml(res && res.error ? res.error : "unknown error");
+        list.innerHTML =
+          "Could not load today’s jobs: " +
+          escapeHtml(res && res.error ? res.error : "unknown error");
         return;
       }
 
@@ -116,7 +121,8 @@
 
       list.innerHTML = jobs.map((j, index) => {
         const jobName = escapeHtml(j.jobName || j.clientName || "Cleaning Job");
-        const address = escapeHtml(j.address || "");
+        const rawAddress = j.address || "";
+        const address = escapeHtml(rawAddress);
         const notes = escapeHtml(j.notes || j.note || "");
 
         return `
@@ -124,8 +130,8 @@
             <strong>${jobName}</strong><br>
 
             ${
-              address
-                ? `<a href="${mapLink(j.address)}" target="_blank" rel="noopener">📍 ${address}</a><br>`
+              rawAddress
+                ? `<a href="${mapLink(rawAddress)}" target="_blank" rel="noopener">📍 ${address}</a><br>`
                 : `<span style="opacity:.75;">No address listed</span><br>`
             }
 
