@@ -205,10 +205,18 @@ function logEvent(action) {
     const unifiedUrl =
       "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
 
-    const route = action === "Clock Out" ? "clock_out" : "clock_in";
+    const routeMap = {
+      "Clock In": "clock_in",
+      "Clock Out": "clock_out",
+      "Break Start": "break_start",
+      "Break End": "break_end"
+    };
+
+    const route = routeMap[action] || "clock_in";
 
     const qs = new URLSearchParams({
       action: route,
+      clockAction: action,
       emp: employeeId,
       employeeId: employeeId,
       employeeName: employeeName,
