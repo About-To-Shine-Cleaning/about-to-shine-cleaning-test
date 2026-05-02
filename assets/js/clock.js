@@ -119,6 +119,7 @@ window.loadJobs = function (jobs) {
     opt.textContent = `${job.name}`; // ✅ pay NOT shown
     opt.dataset.name = job.name;
     opt.dataset.pay = job.pay;       // ✅ pay still logged
+    opt.dataset.address = job.address || ""
     jobSelect.appendChild(opt);
   });
 
@@ -129,10 +130,11 @@ window.loadJobs = function (jobs) {
     const opt = jobSelect.selectedOptions[0];
     if (opt && opt.value) {
       selectedJob = {
-        id: opt.value,
-        name: opt.dataset.name || "",
-        pay: Number(opt.dataset.pay || 0)
-      };
+  id: opt.value,
+  name: opt.dataset.name || "",
+  pay: Number(opt.dataset.pay || 0),
+  address: opt.dataset.address || ""
+};
     }
   }
 
