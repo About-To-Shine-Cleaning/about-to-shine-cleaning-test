@@ -98,6 +98,21 @@ jobSelect.addEventListener("change", (e) => {
     };
     sessionStorage.setItem(lastJobKey, selectedJob.id);
     setStatus(`Selected: ${selectedJob.name}`, "info");
+
+// 👇 ADD THIS BLOCK RIGHT UNDER IT
+const linkEl = document.getElementById("jobAddressLink");
+
+if (linkEl && opt.dataset.address) {
+  const encoded = encodeURIComponent(opt.dataset.address);
+
+  const url = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? "http://maps.apple.com/?q=" + encoded
+    : "https://www.google.com/maps/search/?api=1&query=" + encoded;
+
+  linkEl.innerHTML = `<a href="${url}" target="_blank">📍 Open in Maps</a>`;
+} else if (linkEl) {
+  linkEl.innerHTML = "";
+}
   } else {
     selectedJob = null;
     sessionStorage.removeItem(lastJobKey);
@@ -118,7 +133,8 @@ window.loadJobs = function (jobs) {
     opt.value = job.id;
     opt.textContent = `${job.name}`; // ✅ pay NOT shown
     opt.dataset.name = job.name;
-    opt.dataset.pay = job.pay;       // ✅ pay still logged
+    opt.dataset.pay = job.pay;
+    opt.dataset.address = job.address || "";      // ✅ pay still logged
     opt.dataset.address = job.address || ""
     jobSelect.appendChild(opt);
   });
