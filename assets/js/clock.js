@@ -30,6 +30,7 @@ const display = document.getElementById("employee-display");
 const statusEl = document.getElementById("clock-status");
 const jobSelect = document.getElementById("jobSelect");
 const notesEl = document.getElementById("jobNotes");
+const jobSearch = document.getElementById("jobSearch");
 
 const btnClockIn = document.getElementById("btnClockIn");
 const btnBreakStart = document.getElementById("btnBreakStart");
@@ -120,6 +121,21 @@ if (linkEl && opt.dataset.address) {
   }
   updateButtons();
 });
+// ==============================
+// 🔍 Job Search Filter
+// ==============================
+if (jobSearch) {
+  jobSearch.addEventListener("input", function () {
+    const term = this.value.toLowerCase();
+
+    Array.from(jobSelect.options).forEach((opt, i) => {
+      if (i === 0) return; // keep placeholder
+
+      const text = (opt.textContent || "").toLowerCase();
+      opt.style.display = text.includes(term) ? "" : "none";
+    });
+  });
+}
 
 // ==============================
 // 📋 Job load (JSONP to bypass CORS)
