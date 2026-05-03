@@ -124,33 +124,32 @@ if (linkEl && opt.dataset.address) {
 // ==============================
 // 📋 Job load (JSONP to bypass CORS)
 // ==============================
-window.loadJobs = function (jobs) {
-  // clear options except first placeholder
+window.loadJobs = function (res) {
+  const jobs = Array.isArray(res) ? res : (res && Array.isArray(res.jobs) ? res.jobs : []);
+
   while (jobSelect.options.length > 1) jobSelect.remove(1);
 
   jobs.forEach((job) => {
     const opt = document.createElement("option");
     opt.value = job.id;
-    opt.textContent = `${job.name}`; // ✅ pay NOT shown
+    opt.textContent = job.name;
     opt.dataset.name = job.name;
     opt.dataset.pay = job.pay;
-    opt.dataset.address = job.address || "";      // ✅ pay still logged
-    opt.dataset.address = job.address || ""
+    opt.dataset.address = job.address || "";
     jobSelect.appendChild(opt);
   });
 
-  // restore last job if present
   const lastJobId = sessionStorage.getItem(lastJobKey);
   if (lastJobId) {
     jobSelect.value = lastJobId;
     const opt = jobSelect.selectedOptions[0];
     if (opt && opt.value) {
       selectedJob = {
-  id: opt.value,
-  name: opt.dataset.name || "",
-  pay: Number(opt.dataset.pay || 0),
-  address: opt.dataset.address || ""
-};
+        id: opt.value,
+        name: opt.dataset.name || "",
+        pay: Number(opt.dataset.pay || 0),
+        address: opt.dataset.address || ""
+      };
     }
   }
 
