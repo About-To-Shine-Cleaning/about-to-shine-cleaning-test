@@ -165,8 +165,7 @@ window.loadJobs = function (jobs) {
 
 (function injectJobsScript() {
   const s = document.createElement("script");
-  s.src = `${JOBS_URL}?callback=loadJobs`;
-  s.async = true;
+s.src = `https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec?action=clock_jobs_list&callback=loadJobs`;  s.async = true;
   s.onerror = () => setStatus("Jobs failed to load (script error).", "err");
   document.body.appendChild(s);
 })();
