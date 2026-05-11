@@ -37,29 +37,38 @@
 
       <div aria-live="polite" id="clock-status" role="status" style="margin:12px 0;"></div>
 
-      <!-- Kept for later schedule-based workflow; hidden for now. -->
+      <!-- Hidden for later schedule-based workflow -->
       <section id="todayJobsCard" style="display:none;">
         <h3 style="margin-top:0;">Today’s Jobs</h3>
         <div id="todayJobsList">Loading today’s jobs...</div>
       </section>
 
       <div>
-        <label for="jobSelect">Current Cleaning</label>
+        <label for="jobSearch">Current Cleaning</label>
 
+        <!-- 🔍 SEARCH -->
         <input
           type="text"
           id="jobSearch"
-          placeholder="Search client..."
+          placeholder="Start typing client name..."
+          autocomplete="off"
           style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc;"
         >
 
-        <select id="jobSelect">
+        <!-- 🔍 AUTOCOMPLETE RESULTS -->
+        <div id="jobResults" style="margin-top:10px;"></div>
+
+        <!-- Hidden dropdown kept for compatibility -->
+        <select id="jobSelect" style="display:none;">
           <option value="">-- Select Current Cleaning --</option>
         </select>
 
+        <!-- 📍 MAP LINK -->
         <div id="jobAddressLink" style="margin-top:10px;"></div>
 
-        <button class="button" id="btnClockIn" onclick="clockIn()">Clock In</button>
+        <button class="button" id="btnClockIn" onclick="clockIn()" style="margin-top:12px;">
+          Clock In
+        </button>
       </div>
 
       <div class="clock-actions" style="margin-top:16px;">
@@ -71,7 +80,9 @@
       <section style="margin-top:22px;">
         <label for="jobNotes"><strong>Job Notes (optional)</strong></label>
         <textarea id="jobNotes" rows="4" style="width:100%;max-width:860px;"></textarea>
-        <p style="margin-top:8px;font-size:0.95rem;opacity:0.8;">Notes will be saved when you Clock Out.</p>
+        <p style="margin-top:8px;font-size:0.95rem;opacity:0.8;">
+          Notes will be saved when you Clock Out.
+        </p>
       </section>
 
       <hr style="margin:40px 0;"/>
@@ -87,15 +98,18 @@
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-callout">Sit back, relax — your home is about to shine!</div>
-        <div class="footer-bottom">© 2026 About To Shine Cleaning • Emmaus, PA</div>
+        <div class="footer-callout">
+          Sit back, relax — your home is about to shine!
+        </div>
+        <div class="footer-bottom">
+          © 2026 About To Shine Cleaning • Emmaus, PA
+        </div>
       </div>
     </footer>
   </div>
 </main>
 
 <link href="/assets/css/style.css" rel="stylesheet"/>
-<script defer src="/assets/js/clock.js?v=11"></script>
-<script defer src="/assets/js/clock-jobs.js?v=6"></script>
+<script defer src="/assets/js/clock.js?v=12"></script>
 </body>
 </html>
