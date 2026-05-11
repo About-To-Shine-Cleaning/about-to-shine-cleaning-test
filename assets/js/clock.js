@@ -6,7 +6,7 @@ const employees = {
   E02: "Shauna Bari",
   E03: "Caprea Kovecses",
   E04: "Matthew Bari",
-  E05: "Employee Five",
+  E05: "Allison Walck",
   E06: "Employee Six",
   E07: "Employee Seven",
   E08: "Employee Eight",
@@ -15,13 +15,13 @@ const employees = {
 };
 
 // ==============================
-// 🔗 Google Apps Script Web App URL
+// 🔗 Google Apps Script Web App URLs
 // ==============================
 const SHEET_URL =
   "https://script.google.com/macros/s/AKfycbyCCv30Q3l0Gg2zGs2sHD6a9jHm678QQKV_mdTm_GFnjR-xsmaYdDonmlBugX3TeHPiJA/exec";
 
-// same endpoint returns jobs via GET (JSONP)
-const JOBS_URL = SHEET_URL;
+const UNIFIED_URL =
+  "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
 
 // ==============================
 // DOM
@@ -29,8 +29,9 @@ const JOBS_URL = SHEET_URL;
 const display = document.getElementById("employee-display");
 const statusEl = document.getElementById("clock-status");
 const jobSelect = document.getElementById("jobSelect");
-const notesEl = document.getElementById("jobNotes");
 const jobSearch = document.getElementById("jobSearch");
+const jobResults = document.getElementById("jobResults");
+const notesEl = document.getElementById("jobNotes");
 
 const btnClockIn = document.getElementById("btnClockIn");
 const btnBreakStart = document.getElementById("btnBreakStart");
@@ -45,10 +46,11 @@ const employeeId = params.get("emp");
 const employeeName = employees[employeeId];
 
 if (!employeeName) {
-  display.textContent = "Unauthorized Access";
+  if (display) display.textContent = "Unauthorized Access";
   throw new Error("Invalid employee ID");
 }
-display.textContent = `Welcome, ${employeeName}`;
+
+if (display) display.textContent = `Welcome, ${employeeName}`;
 
 // ==============================
 // State (persisted)
@@ -56,8 +58,8 @@ display.textContent = `Welcome, ${employeeName}`;
 let onBreak = sessionStorage.getItem("onBreak") === "true";
 let isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
 let selectedJob = null;
+let allJobs = [];
 
-// Remember last job selection per employee
 const lastJobKey = `lastJob_${employeeId}`;
 
 // ==============================
@@ -70,9 +72,37 @@ function setStatus(msg, kind = "info") {
     warn: "background:#fff7db;border:1px solid rgba(0,0,0,0.15);padding:10px 12px;border-radius:10px;",
     err: "background:#ffeaea;border:1px solid rgba(0,0,0,0.15);padding:10px 12px;border-radius:10px;"
   };
+
   if (!statusEl) return;
   statusEl.setAttribute("style", styles[kind] + "margin:12px 0;");
   statusEl.textContent = msg;
+}
+
+function escapeHtml(s) {
+  return String(s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getMapUrl(address) {
+  const encoded = encodeURIComponent(address || "");
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? "http://maps.apple.com/?q=" + encoded
+    : "https://www.google.com/maps/search/?api=1&query=" + encoded;
+}
+
+function showSelectedJobAddress(address) {
+  const linkEl = document.getElementById("jobAddressLink");
+  if (!linkEl) return;
+
+  if (address) {
+    linkEl.innerHTML = `<a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open in Maps</a>`;
+  } else {
+    linkEl.innerHTML = "";
+  }
 }
 
 function updateButtons() {
@@ -87,61 +117,120 @@ function updateButtons() {
 }
 
 // ==============================
-// Job dropdown change
+// Job selection helpers
 // ==============================
-jobSelect.addEventListener("change", (e) => {
-  const opt = e.target.selectedOptions[0];
+function setSelectedJobFromOption(opt) {
   if (opt && opt.value) {
     selectedJob = {
       id: opt.value,
-      name: opt.dataset.name || "",
-      pay: Number(opt.dataset.pay || 0)
+      name: opt.dataset.name || opt.textContent || "",
+      pay: Number(opt.dataset.pay || 0),
+      address: opt.dataset.address || ""
     };
+
     sessionStorage.setItem(lastJobKey, selectedJob.id);
+
+    if (jobSearch) jobSearch.value = selectedJob.name;
+    if (jobResults) jobResults.innerHTML = "";
+
     setStatus(`Selected: ${selectedJob.name}`, "info");
-
-// 👇 ADD THIS BLOCK RIGHT UNDER IT
-const linkEl = document.getElementById("jobAddressLink");
-
-if (linkEl && opt.dataset.address) {
-  const encoded = encodeURIComponent(opt.dataset.address);
-
-  const url = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-    ? "http://maps.apple.com/?q=" + encoded
-    : "https://www.google.com/maps/search/?api=1&query=" + encoded;
-
-  linkEl.innerHTML = `<a href="${url}" target="_blank">📍 Open in Maps</a>`;
-} else if (linkEl) {
-  linkEl.innerHTML = "";
-}
+    showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
     sessionStorage.removeItem(lastJobKey);
+
+    if (jobSearch) jobSearch.value = "";
+    if (jobResults) jobResults.innerHTML = "";
+
     setStatus("Please select a job to continue.", "warn");
+    showSelectedJobAddress("");
   }
+
   updateButtons();
-});
+}
+
+function selectJobById(jobId) {
+  if (!jobSelect) return;
+
+  jobSelect.value = jobId;
+  const opt = jobSelect.selectedOptions[0];
+  setSelectedJobFromOption(opt);
+}
+
+function renderJobResults(term) {
+  if (!jobResults) return;
+
+  const q = String(term || "").trim().toLowerCase();
+
+  if (!q) {
+    jobResults.innerHTML = "";
+    return;
+  }
+
+  const matches = allJobs
+    .filter(job => String(job.name || "").toLowerCase().includes(q))
+    .slice(0, 10);
+
+  if (!matches.length) {
+    jobResults.innerHTML = `<div style="opacity:.75;margin:8px 0;">No matching jobs</div>`;
+    return;
+  }
+
+  jobResults.innerHTML = matches.map(job => {
+    const id = escapeHtml(job.id);
+    const name = escapeHtml(job.name || "");
+    const address = escapeHtml(job.address || "");
+
+    return `
+      <button
+        type="button"
+        class="button job-result-btn"
+        data-job-id="${id}"
+        style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
+      >
+        <strong>${name}</strong>
+        ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
+      </button>
+    `;
+  }).join("");
+}
+
 // ==============================
-// 🔍 Job Search Filter
+// Job search / result events
 // ==============================
 if (jobSearch) {
   jobSearch.addEventListener("input", function () {
-    const term = this.value.toLowerCase();
+    renderJobResults(this.value);
+  });
 
-    Array.from(jobSelect.options).forEach((opt, i) => {
-      if (i === 0) return; // keep placeholder
+  jobSearch.addEventListener("focus", function () {
+    if (this.value) renderJobResults(this.value);
+  });
+}
 
-      const text = (opt.textContent || "").toLowerCase();
-      opt.style.display = text.includes(term) ? "" : "none";
-    });
+if (jobResults) {
+  jobResults.addEventListener("click", function (e) {
+    const btn = e.target.closest("[data-job-id]");
+    if (!btn) return;
+
+    selectJobById(btn.dataset.jobId);
+  });
+}
+
+if (jobSelect) {
+  jobSelect.addEventListener("change", function (e) {
+    setSelectedJobFromOption(e.target.selectedOptions[0]);
   });
 }
 
 // ==============================
-// 📋 Job load (JSONP to bypass CORS)
+// 📋 Job load (JSONP)
 // ==============================
 window.loadJobs = function (res) {
   const jobs = Array.isArray(res) ? res : (res && Array.isArray(res.jobs) ? res.jobs : []);
+  allJobs = jobs;
+
+  if (!jobSelect) return;
 
   while (jobSelect.options.length > 1) jobSelect.remove(1);
 
@@ -159,28 +248,21 @@ window.loadJobs = function (res) {
   if (lastJobId) {
     jobSelect.value = lastJobId;
     const opt = jobSelect.selectedOptions[0];
+
     if (opt && opt.value) {
-      selectedJob = {
-        id: opt.value,
-        name: opt.dataset.name || "",
-        pay: Number(opt.dataset.pay || 0),
-        address: opt.dataset.address || ""
-      };
+      setSelectedJobFromOption(opt);
+      return;
     }
   }
 
-  if (!selectedJob) {
-    setStatus("Select the current job to enable clock actions.", "info");
-  } else {
-    setStatus(`Selected: ${selectedJob.name}`, "info");
-  }
-
+  setStatus("Start typing a client name, then tap Full or .5.", "info");
   updateButtons();
 };
 
 (function injectJobsScript() {
   const s = document.createElement("script");
-s.src = `https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec?action=clock_jobs_list&callback=loadJobs`;  s.async = true;
+  s.src = `${UNIFIED_URL}?action=clock_jobs_list&callback=loadJobs`;
+  s.async = true;
   s.onerror = () => setStatus("Jobs failed to load (script error).", "err");
   document.body.appendChild(s);
 })();
@@ -193,35 +275,12 @@ function getLocation(callback) {
     callback(null, true);
     return;
   }
+
   navigator.geolocation.getCurrentPosition(
     (pos) => callback(pos.coords, false),
     () => callback(null, true),
     { enableHighAccuracy: true, timeout: 8000 }
   );
-}
-
-// ==============================
-// POST helper (sendBeacon)
-// ==============================
-function postLog(payload) {
-  const body = new URLSearchParams({
-    payload: JSON.stringify(payload)
-  }).toString();
-
-  // sendBeacon is most reliable on mobile Safari
-  if (navigator.sendBeacon) {
-    const blob = new Blob([body], { type: "application/x-www-form-urlencoded" });
-    const ok = navigator.sendBeacon(SHEET_URL, blob);
-    if (ok) return;
-  }
-
-  // fallback
-  fetch(SHEET_URL, {
-    method: "POST",
-    body,
-    mode: "no-cors",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" }
-  });
 }
 
 // ==============================
@@ -234,8 +293,9 @@ function logEvent(action) {
       : "";
 
   getLocation((coords, gpsDenied) => {
-    const unifiedUrl =
-      "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+    if (!gpsDenied && coords && Number(coords.accuracy || 0) > 150) {
+      setStatus("⚠️ GPS weak — move closer to job location if possible.", "warn");
+    }
 
     const routeMap = {
       "Clock In": "clock_in",
@@ -263,6 +323,7 @@ function logEvent(action) {
     });
 
     const cb = "cb_" + Math.random().toString(36).slice(2);
+
     window[cb] = function (res) {
       try { delete window[cb]; } catch (e) {}
 
@@ -272,18 +333,17 @@ function logEvent(action) {
     };
 
     const s = document.createElement("script");
-    s.src = unifiedUrl + "?" + qs.toString() + "&callback=" + cb;
+    s.src = UNIFIED_URL + "?" + qs.toString() + "&callback=" + cb;
     s.onerror = function () {
       setStatus("Clock event failed to save.", "err");
     };
+
     document.body.appendChild(s);
   });
 }
 
-
-
 // ==============================
-// Actions (called by buttons)
+// Actions
 // ==============================
 window.clockIn = function () {
   if (!selectedJob) return setStatus("Please select a job before clocking in.", "warn");
@@ -341,9 +401,15 @@ window.clockOut = function () {
   sessionStorage.setItem("isClockedIn", "false");
 
   setStatus("Clocked Out ✅ (Notes saved if entered)", "ok");
+
   if (notesEl) notesEl.value = "";
+
   updateButtons();
 };
 
 // Init
 updateButtons();
+
+document.addEventListener("DOMContentLoaded", function () {
+  if (jobSearch) jobSearch.focus();
+});
