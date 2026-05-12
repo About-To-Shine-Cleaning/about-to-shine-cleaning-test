@@ -1,22 +1,26 @@
 /* =========================================================
-   ATS Admin Panel — v1.7 (Option A: bookmark /admin/ without token)
+   ATS Admin Panel — v1.8 role-aware permissions
    ✅ JSONP ping/auth to Apps Script
    ✅ Device binding via localStorage device key
    ✅ Desktop sign-in box when no token present
-   ✅ Stores token in sessionStorage, optional localStorage ("remember")
-   ✅ Links to payroll/estimator work without ?t= in URL
-   ✅ Token removed from URL after sign-in
+   ✅ Stores token/auth in browser storage
+   ✅ Role-based admin cards
 ========================================================= */
 
 (() => {
   const API_URL = "https://script.google.com/macros/s/AKfycbxZdZi2eojV04LBbXikTIrg60WKvX21BGijgpqLdBdwjPiJquC_GzBudMvXgcu0oMGd/exec";
 
-  const ESTIMATOR_ALLOWED = ["E01", "E04"];
-
   const DEVICE_KEY_STORAGE = "ats_device_key_v1";
-  const AUTH_STORAGE  = "ats_admin_auth_v1";    // sessionStorage
-  const TOKEN_STORAGE = "ats_admin_token_v1";   // sessionStorage
-  const TOKEN_LOCAL   = "ats_admin_token_local_v1"; // localStorage
+  const AUTH_STORAGE  = "ats_admin_auth_v1";
+  const TOKEN_STORAGE = "ats_admin_token_v1";
+  const TOKEN_LOCAL   = "ats_admin_token_local_v1";
+
+  const ROLE_TOOLS = {
+    full_admin: ["clock", "estimator", "estimate_form", "payroll", "legacy", "schedule", "admin_tools", "site_report"],
+    schedule_payroll: ["clock", "payroll", "schedule"],
+    payroll: ["clock", "payroll"],
+    clock_only: ["clock"]
+  };
 
   const statusEl = document.getElementById("status");
   const whoEl = document.getElementById("who");
@@ -24,23 +28,31 @@
   const debugEl = document.getElementById("debug");
 
   const clockBtn = document.getElementById("clockBtn");
-  const estimatorCard = document.getElementById("estimatorCard");
-  const estimatorBtn = document.getElementById("estimatorBtn");
-  const payrollBtn = document.getElementById("payrollBtn");
 
-  // Desktop login UI
   const desktopLogin = document.getElementById("desktopLogin");
   const desktopToken = document.getElementById("desktopToken");
   const rememberDevice = document.getElementById("rememberDevice");
   const btnDesktopSignIn = document.getElementById("btnDesktopSignIn");
   const btnClearAccess = document.getElementById("btnClearAccess");
 
+  function normalizeRole(role) {
+    const r = String(role || "").trim().toLowerCase();
+    if (r === "admin" || r === "owner" || r === "super_admin") return "full_admin";
+    if (r === "schedule" || r === "scheduler") return "schedule_payroll";
+    if (r === "clock" || r === "employee") return "clock_only";
+    return r || "clock_only";
+  }
+
+  function canUse(role, tool) {
+    role = normalizeRole(role);
+    if (role === "full_admin") return true;
+    return (ROLE_TOOLS[role] || []).includes(tool);
+  }
+
   function setStatus(msg, state) {
     if (!statusEl) return;
-
     statusEl.textContent = msg || "";
     statusEl.classList.remove("is-loading", "is-success", "is-error");
-
     if (state === "loading") statusEl.classList.add("is-loading");
     if (state === "success") statusEl.classList.add("is-success");
     if (state === "error") statusEl.classList.add("is-error");
@@ -136,19 +148,21 @@
     if (whoEl) whoEl.textContent = "";
   }
 
-  function showCards(employeeId, employeeName) {
-    if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
+  function applyCardPermissions(role) {
+    document.querySelectorAll("[data-tool]").forEach(card => {
+      const tool = card.getAttribute("data-tool");
+      if (canUse(role, tool)) card.classList.remove("hidden");
+      else card.classList.add("hidden");
+    });
+  }
 
-    if (clockBtn) clockBtn.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
+  function showCards(employeeId, employeeName, role) {
+    role = normalizeRole(role);
 
-    if (estimatorCard) {
-      if (ESTIMATOR_ALLOWED.includes(employeeId)) estimatorCard.classList.remove("hidden");
-      else estimatorCard.classList.add("hidden");
-    }
+    if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName} • ${role}`;
+    if (clockBtn) clockBtn.href = `/admin/clock.html?emp=${encodeURIComponent(employeeId)}`;
 
-    // ✅ Option A: no token in links — pages read token from storage
-    if (estimatorBtn) estimatorBtn.href = `/admin/estimator/`;
-    if (payrollBtn) payrollBtn.href = `/admin/payroll/`;
+    applyCardPermissions(role);
 
     if (cardsEl) cardsEl.classList.remove("hidden");
     if (desktopLogin) desktopLogin.classList.add("hidden");
@@ -180,27 +194,26 @@
       ok: true,
       employeeId: res.employeeId,
       employeeName: res.employeeName,
-      role: res.role,
-      authedAt: new Date().toISOString(),
+      role: normalizeRole(res.role),
+      authedAt: new Date().toISOString()
     };
 
     saveSessionAuth(authObj);
     saveToken(token, remember);
 
-    showCards(res.employeeId, res.employeeName);
+    showCards(authObj.employeeId, authObj.employeeName, authObj.role);
     setStatus("Access granted ✅", "success");
     removeTokenFromUrl();
     setDebug("Device binding active. Token saved. Token removed from address bar.");
+
+    window.dispatchEvent(new CustomEvent("ats-auth-ready", { detail: authObj }));
   }
 
   async function boot() {
     const url = new URL(window.location.href);
     const tokenFromUrl = (url.searchParams.get("t") || "").trim();
-
-    // 1) token from URL (NFC) OR 2) saved token (desktop bookmark)
     const token = tokenFromUrl || loadAnyTokenFromStorage();
 
-    // If no token anywhere -> show desktop sign-in box (Option A)
     if (!token) {
       setStatus("Desktop sign-in required.\n\n(Or open via NFC link that includes ?t=TOKEN)", "loading");
       if (desktopLogin) desktopLogin.classList.remove("hidden");
@@ -214,13 +227,12 @@
           );
         };
       }
+
       if (btnClearAccess) btnClearAccess.onclick = () => clearAccess();
       return;
     }
 
-    // Token exists (URL or storage) -> auth it
-    const remember = true; // default remember on device
-    await runAuthFlow(token, remember);
+    await runAuthFlow(token, true);
   }
 
   if (document.readyState === "loading") {
