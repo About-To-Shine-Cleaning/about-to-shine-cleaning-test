@@ -1,11 +1,14 @@
-/* ATS Admin Nav v3 — role-aware global navigation
-   Preserves emp=... when present and hides tools by saved auth role. */
+/* ATS Admin Nav v4 — fixed role-aware global navigation
+   ✅ Correct Clock URL: /clock.html
+   ✅ Strict frontend role handling
+   ✅ Preserves emp=... for clock link only
+*/
 (function () {
   const AUTH_STORAGE = "ats_admin_auth_v1";
 
   const TOOLS = [
     { key: "admin_home", label: "Admin Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll"] },
-    { key: "clock", label: "Clock", href: "/admin/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
+    { key: "clock", label: "Clock", href: "/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "estimator", label: "Estimator", href: "/admin/estimator/", roles: ["full_admin"] },
     { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/", roles: ["full_admin"] },
     { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
@@ -15,12 +18,25 @@
     { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/", roles: ["full_admin"] }
   ];
 
-  function normalizeRole(role) {
+  function normalizeRole(role, employeeId) {
     const r = String(role || "").trim().toLowerCase();
-    if (r === "admin" || r === "owner" || r === "super_admin") return "full_admin";
-    if (r === "schedule" || r === "scheduler") return "schedule_payroll";
-    if (r === "clock" || r === "employee") return "clock_only";
-    return r || "clock_only";
+    const id = String(employeeId || "").trim().toUpperCase();
+
+    // Safety fallback if backend still sends older "admin" role.
+    if (r === "admin") {
+      if (id === "E01" || id === "E04") return "full_admin";
+      if (id === "E02") return "schedule_payroll";
+      return "clock_only";
+    }
+
+    if (r === "full_admin") return "full_admin";
+    if (r === "schedule_payroll") return "schedule_payroll";
+    if (r === "payroll") return "payroll";
+    if (r === "clock_only") return "clock_only";
+
+    if (id === "E01" || id === "E04") return "full_admin";
+    if (id === "E02") return "schedule_payroll";
+    return "clock_only";
   }
 
   function getStoredAuth() {
@@ -32,19 +48,20 @@
   }
 
   function getRole() {
-    return normalizeRole(getStoredAuth().role || "clock_only");
+    const auth = getStoredAuth();
+    return normalizeRole(auth.role, auth.employeeId);
   }
 
   function allowed(item, role) {
     role = normalizeRole(role);
-    if (role === "full_admin") return true;
-    return (item.roles || []).map(normalizeRole).includes(role);
+    return (item.roles || []).map(r => normalizeRole(r)).includes(role);
   }
 
   function getEmpQuery() {
     try {
       const p = new URLSearchParams(window.location.search);
-      const emp = p.get("emp") || getStoredAuth().employeeId || "";
+      const auth = getStoredAuth();
+      const emp = p.get("emp") || auth.employeeId || "";
       return emp ? `emp=${encodeURIComponent(emp)}` : "";
     } catch (e) {
       return "";
