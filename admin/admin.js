@@ -1,9 +1,7 @@
 /* =========================================================
-   ATS Admin Panel — v1.8 role-aware permissions
-   ✅ JSONP ping/auth to Apps Script
-   ✅ Device binding via localStorage device key
-   ✅ Desktop sign-in box when no token present
-   ✅ Stores token/auth in browser storage
+   ATS Admin Panel — v1.9 fixed role permissions
+   ✅ Correct Clock URL: /clock.html
+   ✅ Strict frontend role handling
    ✅ Role-based admin cards
 ========================================================= */
 
@@ -35,18 +33,30 @@
   const btnDesktopSignIn = document.getElementById("btnDesktopSignIn");
   const btnClearAccess = document.getElementById("btnClearAccess");
 
-  function normalizeRole(role) {
+  function normalizeRole(role, employeeId) {
     const r = String(role || "").trim().toLowerCase();
-    if (r === "admin" || r === "owner" || r === "super_admin") return "full_admin";
-    if (r === "schedule" || r === "scheduler") return "schedule_payroll";
-    if (r === "clock" || r === "employee") return "clock_only";
-    return r || "clock_only";
+    const id = String(employeeId || "").trim().toUpperCase();
+
+    // Safety fallback if backend still sends older "admin" role.
+    if (r === "admin") {
+      if (id === "E01" || id === "E04") return "full_admin";
+      if (id === "E02") return "schedule_payroll";
+      return "clock_only";
+    }
+
+    if (r === "full_admin") return "full_admin";
+    if (r === "schedule_payroll") return "schedule_payroll";
+    if (r === "payroll") return "payroll";
+    if (r === "clock_only") return "clock_only";
+
+    if (id === "E01" || id === "E04") return "full_admin";
+    if (id === "E02") return "schedule_payroll";
+    return "clock_only";
   }
 
   function canUse(role, tool) {
     role = normalizeRole(role);
-    if (role === "full_admin") return true;
-    return (ROLE_TOOLS[role] || []).includes(tool);
+    return (ROLE_TOOLS[role] || ROLE_TOOLS.clock_only).includes(tool);
   }
 
   function setStatus(msg, state) {
@@ -58,7 +68,9 @@
     if (state === "error") statusEl.classList.add("is-error");
   }
 
-  function setDebug(msg) { if (debugEl) debugEl.textContent = msg || ""; }
+  function setDebug(msg) {
+    if (debugEl) debugEl.textContent = msg || "";
+  }
 
   function getDeviceKey() {
     let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -130,10 +142,12 @@
       const s = (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
       if (s) return s;
     } catch (e) {}
+
     try {
       const l = (localStorage.getItem(TOKEN_LOCAL) || "").trim();
       if (l) return l;
     } catch (e) {}
+
     return "";
   }
 
@@ -157,10 +171,12 @@
   }
 
   function showCards(employeeId, employeeName, role) {
-    role = normalizeRole(role);
+    role = normalizeRole(role, employeeId);
 
     if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName} • ${role}`;
-    if (clockBtn) clockBtn.href = `/admin/clock.html?emp=${encodeURIComponent(employeeId)}`;
+
+    // Clock page is at the site root, NOT /admin/clock.html.
+    if (clockBtn) clockBtn.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
 
     applyCardPermissions(role);
 
@@ -194,7 +210,7 @@
       ok: true,
       employeeId: res.employeeId,
       employeeName: res.employeeName,
-      role: normalizeRole(res.role),
+      role: normalizeRole(res.role, res.employeeId),
       authedAt: new Date().toISOString()
     };
 
