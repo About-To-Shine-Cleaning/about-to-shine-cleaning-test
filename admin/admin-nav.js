@@ -1,22 +1,50 @@
-/* ATS Admin Nav v2 — visual-only global navigation (hamburger + drawer)
-   Keeps existing admin look and preserves emp=... when present. */
+/* ATS Admin Nav v3 — role-aware global navigation
+   Preserves emp=... when present and hides tools by saved auth role. */
 (function () {
+  const AUTH_STORAGE = "ats_admin_auth_v1";
+
   const TOOLS = [
-    { label: "Admin Home", href: "/admin/" },
-    { label: "Clock", href: "/clock.html" },
-    { label: "Estimator", href: "/admin/estimator/" },
-    { label: "Estimate Form", href: "/admin/estimate-form/" },
-    { label: "Payroll", href: "/admin/payroll/" },
-    { label: "Legacy Pricing", href: "/admin/legacy/" },
-    { label: "Schedule", href: "/admin/schedule/" },
-    { label: "Admin Tools", href: "/admin/tools/" },
-    { label: "Site Report", href: "/admin/tools/site-report/" }
+    { key: "admin_home", label: "Admin Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll"] },
+    { key: "clock", label: "Clock", href: "/admin/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
+    { key: "estimator", label: "Estimator", href: "/admin/estimator/", roles: ["full_admin"] },
+    { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/", roles: ["full_admin"] },
+    { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
+    { key: "legacy", label: "Legacy Pricing", href: "/admin/legacy/", roles: ["full_admin"] },
+    { key: "schedule", label: "Schedule", href: "/admin/schedule/", roles: ["full_admin", "schedule_payroll"] },
+    { key: "admin_tools", label: "Admin Tools", href: "/admin/tools/", roles: ["full_admin"] },
+    { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/", roles: ["full_admin"] }
   ];
+
+  function normalizeRole(role) {
+    const r = String(role || "").trim().toLowerCase();
+    if (r === "admin" || r === "owner" || r === "super_admin") return "full_admin";
+    if (r === "schedule" || r === "scheduler") return "schedule_payroll";
+    if (r === "clock" || r === "employee") return "clock_only";
+    return r || "clock_only";
+  }
+
+  function getStoredAuth() {
+    try {
+      return JSON.parse(sessionStorage.getItem(AUTH_STORAGE) || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function getRole() {
+    return normalizeRole(getStoredAuth().role || "clock_only");
+  }
+
+  function allowed(item, role) {
+    role = normalizeRole(role);
+    if (role === "full_admin") return true;
+    return (item.roles || []).map(normalizeRole).includes(role);
+  }
 
   function getEmpQuery() {
     try {
       const p = new URLSearchParams(window.location.search);
-      const emp = p.get("emp");
+      const emp = p.get("emp") || getStoredAuth().employeeId || "";
       return emp ? `emp=${encodeURIComponent(emp)}` : "";
     } catch (e) {
       return "";
@@ -26,6 +54,7 @@
   function withEmp(href) {
     const empQ = getEmpQuery();
     if (!empQ) return href;
+    if (!href.includes("clock.html")) return href;
     return href.includes("?") ? `${href}&${empQ}` : `${href}?${empQ}`;
   }
 
@@ -40,9 +69,19 @@
     return p;
   }
 
+  function removeExisting() {
+    const existingDrawer = document.getElementById("atsNavDrawer");
+    const existingBackdrop = document.getElementById("atsNavBackdrop");
+    if (existingDrawer) existingDrawer.remove();
+    if (existingBackdrop) existingBackdrop.remove();
+  }
+
   function mount() {
-    if (document.getElementById("atsNavDrawer")) return;
+    removeExisting();
+
+    const role = getRole();
     const current = normalizePath(window.location.pathname);
+    const visibleTools = TOOLS.filter(item => allowed(item, role));
 
     const backdrop = document.createElement("div");
     backdrop.className = "ats-nav-backdrop";
@@ -66,48 +105,50 @@
       </div>
     `;
 
-    const list = drawer.querySelector('.ats-nav-list');
-    TOOLS.forEach(item => {
-      const a = document.createElement('a');
-      a.className = 'ats-nav-item';
+    const list = drawer.querySelector(".ats-nav-list");
+    visibleTools.forEach(item => {
+      const a = document.createElement("a");
+      a.className = "ats-nav-item";
       a.href = withEmp(item.href);
       a.textContent = item.label;
-      if (normalizePath(item.href) === current) a.setAttribute('aria-current', 'page');
+      if (normalizePath(item.href) === current) a.setAttribute("aria-current", "page");
       list.appendChild(a);
     });
 
     document.body.appendChild(backdrop);
     document.body.appendChild(drawer);
 
-    const burger = document.querySelector('.ats-burger');
-    const closeBtn = drawer.querySelector('.ats-nav-close');
+    const burger = document.querySelector(".ats-burger");
+    const closeBtn = drawer.querySelector(".ats-nav-close");
     if (!burger) return;
 
     function openNav() {
-      backdrop.classList.add('open');
-      drawer.classList.add('open');
-      burger.setAttribute('aria-expanded', 'true');
-      document.body.style.overflow = 'hidden';
+      backdrop.classList.add("open");
+      drawer.classList.add("open");
+      burger.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
     }
 
     function closeNav() {
-      backdrop.classList.remove('open');
-      drawer.classList.remove('open');
-      burger.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
+      backdrop.classList.remove("open");
+      drawer.classList.remove("open");
+      burger.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
     }
 
-    burger.addEventListener('click', openNav);
-    closeBtn.addEventListener('click', closeNav);
-    backdrop.addEventListener('click', closeNav);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && drawer.classList.contains('open')) closeNav();
+    burger.onclick = openNav;
+    closeBtn.onclick = closeNav;
+    backdrop.onclick = closeNav;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && drawer.classList.contains("open")) closeNav();
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mount);
   } else {
     mount();
   }
+
+  window.addEventListener("ats-auth-ready", mount);
 })();
