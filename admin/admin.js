@@ -1,4 +1,4 @@
-```javascript
+
 /* =========================================================
    ATS Admin Panel — v1.9.1 fixed role display
    ✅ Correct Clock URL: /clock.html
@@ -260,4 +260,3 @@
     boot().catch(err => setStatus(String(err?.message || err), "error"));
   }
 })();
-```
