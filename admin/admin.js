@@ -1,8 +1,9 @@
 /* =========================================================
-   ATS Admin Panel — v1.9 fixed role permissions
+   ATS Admin Panel — v1.9.1 fixed role display
    ✅ Correct Clock URL: /clock.html
    ✅ Strict frontend role handling
    ✅ Role-based admin cards
+   ✅ Visible header now shows ONLY E## • Name, not role
 ========================================================= */
 
 (() => {
@@ -37,7 +38,6 @@
     const r = String(role || "").trim().toLowerCase();
     const id = String(employeeId || "").trim().toUpperCase();
 
-    // Safety fallback if backend still sends older "admin" role.
     if (r === "admin") {
       if (id === "E01" || id === "E04") return "full_admin";
       if (id === "E02") return "schedule_payroll";
@@ -173,9 +173,9 @@
   function showCards(employeeId, employeeName, role) {
     role = normalizeRole(role, employeeId);
 
-    if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName} • ${role}`;
+    // FIXED: role is still used internally, but no longer shown in header.
+    if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
 
-    // Clock page is at the site root, NOT /admin/clock.html.
     if (clockBtn) clockBtn.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
 
     applyCardPermissions(role);
@@ -259,3 +259,4 @@
     boot().catch(err => setStatus(String(err?.message || err), "error"));
   }
 })();
+```
