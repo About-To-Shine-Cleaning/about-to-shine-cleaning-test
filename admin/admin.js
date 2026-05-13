@@ -1,9 +1,12 @@
 /* =========================================================
-   ATS Admin Panel — v1.9.1 fixed role display
+   FILE: /admin/admin.js
+   TYPE: .js
+   ATS Admin Panel — v1.9.2 fixed role display
    ✅ Correct Clock URL: /clock.html
    ✅ Strict frontend role handling
    ✅ Role-based admin cards
    ✅ Visible header now shows ONLY E## • Name, not role
+   ✅ Removed markdown code fence that broke JavaScript
 ========================================================= */
 
 (() => {
@@ -173,7 +176,6 @@
   function showCards(employeeId, employeeName, role) {
     role = normalizeRole(role, employeeId);
 
-    // FIXED: role is still used internally, but no longer shown in header.
     if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
 
     if (clockBtn) clockBtn.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
