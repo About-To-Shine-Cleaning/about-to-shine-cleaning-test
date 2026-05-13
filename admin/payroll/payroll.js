@@ -106,9 +106,19 @@
     return null;
   }
 
-  function requireAdmin(authObj) {
-    return !!(authObj && authObj.ok && String(authObj.role || "").toLowerCase() === "admin");
-  }
+ function requireAdmin(authObj) {
+  if (!authObj || !authObj.ok) return false;
+
+  const role = String(authObj.role || "").toLowerCase();
+
+  return [
+    "full_admin",
+    "schedule_payroll",
+    "payroll",
+    "admin"
+  ].includes(role);
+}
+
 
   function setWho(authObj) {
     if (!pillWho) return;
