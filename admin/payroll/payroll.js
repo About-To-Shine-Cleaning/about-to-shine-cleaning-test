@@ -441,7 +441,11 @@
     setStatus(`Exporting QB CSV for ${currentPeriodId}…`);
     const res = await payrollExportQB(currentPeriodId);
     if (!res || !res.ok) throw new Error(res?.error || "payroll_export_qb failed");
-    downloadTextFile(res.filename || `ATS_QB_Payroll_${currentPeriodId}.csv`, res.csv || "");
+    if (res.url) {
+  window.open(res.url, "_blank");
+} else {
+  alert("No sheet URL returned.");
+}
     setStatus(`QB CSV exported for ${currentPeriodId} ✅`, "ok");
   }
 
