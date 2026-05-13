@@ -1,3 +1,4 @@
+```javascript
 /* =========================================================
    ATS Admin Panel — v1.9.1 fixed role display
    ✅ Correct Clock URL: /clock.html
