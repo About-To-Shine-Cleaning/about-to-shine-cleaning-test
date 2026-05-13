@@ -1,4 +1,9 @@
 // ==============================
+// FILE: /clock.js
+// TYPE: .js
+// ==============================
+
+// ==============================
 // 👷 Employees
 // ==============================
 const employees = {
@@ -312,6 +317,7 @@ function logEvent(action) {
       emp: employeeId,
       employeeId: employeeId,
       employeeName: employeeName,
+      jobId: selectedJob?.id || "",
       jobName: selectedJob?.name || "",
       jobPay: selectedJob?.pay || "",
       notes: notesValue,
