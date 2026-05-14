@@ -63,8 +63,9 @@
 
     .quick-actions{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr;
       gap:10px;
+      align-content:start;
     }
     @media (max-width:520px){
       .quick-actions{grid-template-columns:1fr}
@@ -165,6 +166,16 @@
     }
     summary{cursor:pointer;font-weight:850;color:var(--gold2)}
     .debug-box{margin-top:10px;word-break:break-all}
+    .past-inline{
+      margin-top:14px;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(0,0,0,.14);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .past-label{font-weight:850;color:var(--gold2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+    .past-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .payroll-select.compact{max-width:360px}
   </style>
 
   <script type="application/ld+json" id="ats-schema">
@@ -213,11 +224,20 @@
                 <span class="meta-chip">Status: <strong id="periodStatus">—</strong></span>
               </div>
               <div class="status" id="statusBox">Loading payroll…</div>
+              <div class="past-inline">
+                <div class="small past-label">Past Payroll</div>
+                <div class="past-row">
+                  <select class="payroll-select compact" id="pastPayrollSelect">
+                    <option value="">Loading past periods…</option>
+                  </select>
+                  <button class="btn secondary" id="btnLoadPastPayroll">Load</button>
+                </div>
+                <div class="small" id="pastPayrollHint">Choose a saved week if you need history.</div>
+              </div>
             </div>
 
             <div class="quick-actions" aria-label="Primary payroll actions">
-              <button class="btn" id="btnGenerate">1. Generate / Refresh Payroll</button>
-              <button class="btn secondary" id="btnPayouts">View Job Breakdown</button>
+              <button class="btn" id="btnGenerate">Generate Payroll</button>
             </div>
           </div>
         </section>
@@ -279,31 +299,7 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <div class="section-title">
-                  <span class="step-label">4</span>
-                  <h2>History</h2>
-                </div>
-                <p class="muted">View past payroll weeks without changing the current week.</p>
-              </div>
-            </div>
-            <button class="btn secondary wide" id="btnPastPayroll">Past Payroll</button>
-          </div>
-
-          <div class="card hidden full" id="pastPayrollCard">
-            <h3>Past Payroll</h3>
-            <p class="muted" id="pastPayrollHint">Choose a saved payroll period to view its summary and payments.</p>
-            <div class="action-row">
-              <select class="payroll-select" id="pastPayrollSelect">
-                <option value="">Loading periods…</option>
-              </select>
-              <button class="btn secondary" id="btnLoadPastPayroll">Load Selected Week</button>
-            </div>
-          </div>
-
-          <div class="card hidden full" id="payoutCard">
+          <div class="card full" id="payoutCard">
             <div class="card-head">
               <div>
                 <h2>Job Breakdown</h2>
@@ -318,7 +314,7 @@
                   <tr>
                     <th style="text-align:left;">Employee</th>
                     <th style="text-align:left;">Date</th>
-                    <th style="text-align:left;">Job</th>
+                    <th style="text-align:left;">Client / Job</th>
                     <th style="text-align:right;">Pay</th>
                   </tr>
                 </thead>
@@ -351,6 +347,6 @@
     </div>
   </main>
 
-  <script src="./payroll.js?v=101"></script>
+  <script src="./payroll.js?v=102"></script>
 </body>
 </html>
