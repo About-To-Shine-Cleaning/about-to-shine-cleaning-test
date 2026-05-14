@@ -2,7 +2,7 @@
    ATS Payroll (Admin UI) — Simple Powerful Payroll Screen
    - Keeps payroll flow
    - Allows full_admin / schedule_payroll / payroll / admin
-   - Opens Payroll Export Google Sheet instead of downloading CSV
+   - Simple payroll run screen, export route preserved for future/admin use
 ========================================================= */
 
 (() => {
