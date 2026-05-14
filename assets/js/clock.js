@@ -92,6 +92,48 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+function isNumericValue(value) {
+  const s = String(value ?? "").trim();
+  return s !== "" && !isNaN(Number(s));
+}
+
+function slugJobId(label) {
+  return String(label || "JOB")
+    .trim()
+    .replace(/[—–-]\s*(Full|\.5|Half)\s*$/i, "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase() || "JOB";
+}
+
+function normalizeJob(raw) {
+  raw = raw || {};
+
+  let id = String(raw.id ?? raw.jobId ?? raw.clientId ?? "").trim();
+  let name = String(raw.name ?? raw.jobName ?? raw.clientName ?? raw.client ?? "").trim();
+  let pay = String(raw.pay ?? raw.jobPay ?? raw.amount ?? "").trim();
+  let address = String(raw.address ?? "").trim();
+
+  // Defensive fix for shifted backend/job-list data:
+  // Example bad incoming object: { id: "Ziad — Full", name: "60", pay: "" }
+  // Corrected to: jobId = ZIAD_FULL, jobName = Ziad — Full, jobPay = 60
+  if (isNumericValue(name) && !isNumericValue(id) && !pay) {
+    pay = name;
+    name = id;
+    id = slugJobId(name);
+  }
+
+  if (!name && id && !isNumericValue(id)) name = id;
+  if (!id && name) id = slugJobId(name);
+
+  return {
+    id,
+    name,
+    pay: isNumericValue(pay) ? Number(pay) : 0,
+    address
+  };
+}
+
 function getMapUrl(address) {
   const encoded = encodeURIComponent(address || "");
   return /iPhone|iPad|iPod/i.test(navigator.userAgent)
@@ -127,9 +169,9 @@ function updateButtons() {
 function setSelectedJobFromOption(opt) {
   if (opt && opt.value) {
     selectedJob = {
-      id: opt.value,
-      name: opt.dataset.name || opt.textContent || "",
-      pay: Number(opt.dataset.pay || 0),
+      id: opt.dataset.jobId || opt.value,
+      name: opt.dataset.jobName || opt.dataset.name || opt.textContent || "",
+      pay: Number(opt.dataset.jobPay || opt.dataset.pay || 0),
       address: opt.dataset.address || ""
     };
 
@@ -138,7 +180,7 @@ function setSelectedJobFromOption(opt) {
     if (jobSearch) jobSearch.value = selectedJob.name;
     if (jobResults) jobResults.innerHTML = "";
 
-    setStatus(`Selected: ${selectedJob.name}`, "info");
+    setStatus(`Selected: ${selectedJob.name} ($${Number(selectedJob.pay || 0).toFixed(2)})`, "info");
     showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
@@ -184,6 +226,7 @@ function renderJobResults(term) {
   jobResults.innerHTML = matches.map(job => {
     const id = escapeHtml(job.id);
     const name = escapeHtml(job.name || "");
+    const pay = Number(job.pay || 0).toFixed(2);
     const address = escapeHtml(job.address || "");
 
     return `
@@ -194,6 +237,7 @@ function renderJobResults(term) {
         style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
       >
         <strong>${name}</strong>
+        <br><small style="opacity:.8;">Pay: $${pay}</small>
         ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
       </button>
     `;
@@ -233,18 +277,21 @@ if (jobSelect) {
 // ==============================
 window.loadJobs = function (res) {
   const jobs = Array.isArray(res) ? res : (res && Array.isArray(res.jobs) ? res.jobs : []);
-  allJobs = jobs;
+  allJobs = jobs.map(normalizeJob);
 
   if (!jobSelect) return;
 
   while (jobSelect.options.length > 1) jobSelect.remove(1);
 
-  jobs.forEach((job) => {
+  allJobs.forEach((job) => {
     const opt = document.createElement("option");
     opt.value = job.id;
     opt.textContent = job.name;
+    opt.dataset.jobId = job.id;
+    opt.dataset.jobName = job.name;
+    opt.dataset.jobPay = String(job.pay || 0);
     opt.dataset.name = job.name;
-    opt.dataset.pay = job.pay;
+    opt.dataset.pay = String(job.pay || 0);
     opt.dataset.address = job.address || "";
     jobSelect.appendChild(opt);
   });
