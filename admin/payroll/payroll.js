@@ -508,18 +508,35 @@
   async function exportCurrentQB() {
     if (!currentPeriodId) return;
 
-    setStatus(`Opening payroll export sheet for ${currentPeriodId}…`);
-
-    const res = await payrollExportQB(currentPeriodId);
-    if (!res || !res.ok) throw new Error(res?.error || "payroll_export_qb failed");
-
-    if (res.url) {
-      window.open(res.url, "_blank");
-    } else {
-      alert("No sheet URL returned.");
+    const exportWindow = window.open("about:blank", "_blank");
+    if (exportWindow) {
+      exportWindow.document.write("<p style='font-family:sans-serif;'>Exporting payroll to QB CSV sheet…</p>");
     }
 
-    setStatus(`Payroll export sheet opened for ${currentPeriodId} ✅`, "ok");
+    setStatus(`Exporting payroll to QB CSV sheet for ${currentPeriodId}…`);
+
+    try {
+      const res = await payrollExportQB(currentPeriodId);
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_export_qb failed");
+
+      const url = res.url || res.sheetUrl || "";
+
+      if (url) {
+        if (exportWindow) {
+          exportWindow.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      } else {
+        if (exportWindow) exportWindow.close();
+        alert("Export saved, but no sheet URL returned.");
+      }
+
+      setStatus(`QB CSV sheet exported for ${currentPeriodId} ✅`, "ok");
+    } catch (err) {
+      if (exportWindow) exportWindow.close();
+      throw err;
+    }
   }
 
   async function addOneOffJob() {
@@ -591,7 +608,9 @@
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
     await refreshAll();
-    await showPastPayrollPicker();
+
+    // Load past payroll last so the current week, payments, and job breakdown show first.
+    showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
     if (btnRefresh) {
       btnRefresh.onclick = () =>
