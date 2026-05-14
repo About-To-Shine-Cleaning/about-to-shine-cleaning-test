@@ -270,7 +270,13 @@
     }
 
     if (!data.length) {
-      paymentsBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payment rows yet. Generate payroll first.</td></tr>`;
+      paymentsBody.innerHTML = `
+        <tr>
+          <td colspan="7" style="color:#6b7280;padding:10px 12px;">
+            No payment rows yet. Generate payroll first.
+          </td>
+        </tr>
+      `;
       if (paymentsTotals) paymentsTotals.textContent = "";
       return;
     }
@@ -285,61 +291,166 @@
       const empName = r.employeeName || r.employeeId || "—";
       const periodText = `${r.startDate || start} → ${r.endDate || end}`;
       const total = Number(r.totalPay || r.total || 0).toFixed(2);
+      const employeeId = r.employeeId || "";
 
-      const paidAtText = r.paidAt ? ` • ${escapeHtml(r.paidAt)}` : "";
-      const refText = r.reference ? ` • Ref: ${escapeHtml(r.reference)}` : "";
-      const methodText = r.paidMethod ? ` • ${escapeHtml(r.paidMethod)}` : "";
+      const isPaid =
+        r.paid ||
+        String(r.status || "").toUpperCase() === "PAID";
 
-      const isPaid = r.paid || String(r.status || "").toUpperCase() === "PAID";
-
-      const status = isPaid
-        ? `✔ PAID${paidAtText}${methodText}${refText}`
-        : "NOT PAID";
-
-      const btn = isPaid
-        ? `<button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>`
-        : `<button class="btn mark-paid-btn" data-period="${escapeHtml(r.periodId || currentPeriodId)}" data-emp="${escapeHtml(r.employeeId)}" style="width:auto; padding:10px 12px; border-radius:12px;">Mark Paid</button>`;
+      if (isPaid) {
+        return `
+          <tr>
+            <td>${escapeHtml(empName)}</td>
+            <td>${escapeHtml(periodText)}</td>
+            <td class="right">$${escapeHtml(total)}</td>
+            <td colspan="3">
+              ✔ ${escapeHtml(r.paidMethod || "Paid")}
+              ${r.reference ? ` • ${escapeHtml(r.reference)}` : ""}
+              ${r.paymentNotes ? ` • ${escapeHtml(r.paymentNotes)}` : ""}
+            </td>
+            <td class="right">
+              <button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>
+            </td>
+          </tr>
+        `;
+      }
 
       return `
         <tr>
           <td>${escapeHtml(empName)}</td>
           <td>${escapeHtml(periodText)}</td>
           <td class="right">$${escapeHtml(total)}</td>
-          <td>${status}</td>
-          <td class="right">${btn}</td>
+
+          <td>
+            <select
+              class="pay-method"
+              data-emp="${escapeHtml(employeeId)}"
+              style="
+                min-width:120px;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid rgba(255,255,255,.18);
+                background:rgba(255,255,255,.08);
+                color:white;
+              "
+            >
+              <option value="Check">Check</option>
+              <option value="Zelle">Zelle</option>
+              <option value="Venmo">Venmo</option>
+              <option value="Cash App">Cash App</option>
+              <option value="Cash">Cash</option>
+              <option value="Other">Other</option>
+            </select>
+          </td>
+
+          <td>
+            <input
+              class="check-ref"
+              data-emp="${escapeHtml(employeeId)}"
+              placeholder="Check #"
+              style="
+                width:110px;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid rgba(255,255,255,.18);
+                background:rgba(255,255,255,.08);
+                color:white;
+              "
+            />
+          </td>
+
+          <td>
+            <input
+              class="pay-notes"
+              data-emp="${escapeHtml(employeeId)}"
+              placeholder="Notes"
+              style="
+                width:140px;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid rgba(255,255,255,.18);
+                background:rgba(255,255,255,.08);
+                color:white;
+              "
+            />
+          </td>
+
+          <td class="right">
+            <button
+              class="btn mark-paid-inline"
+              data-period="${escapeHtml(r.periodId || currentPeriodId)}"
+              data-emp="${escapeHtml(employeeId)}"
+              style="width:auto; padding:10px 12px; border-radius:12px;"
+            >
+              Mark Paid
+            </button>
+          </td>
         </tr>
       `;
     }).join("");
 
-    paymentsBody.querySelectorAll("button[data-emp]").forEach(btn => {
+    paymentsBody.querySelectorAll(".pay-method").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const emp = sel.dataset.emp;
+        const refInput = paymentsBody.querySelector(`.check-ref[data-emp="${emp}"]`);
+
+        if (!refInput) return;
+
+        if (sel.value === "Check") {
+          refInput.style.visibility = "visible";
+          refInput.disabled = false;
+        } else {
+          refInput.style.visibility = "hidden";
+          refInput.disabled = true;
+          refInput.value = "";
+        }
+      });
+
+      sel.dispatchEvent(new Event("change"));
+    });
+
+    paymentsBody.querySelectorAll(".mark-paid-inline").forEach(btn => {
       btn.addEventListener("click", async () => {
-        const empId = btn.getAttribute("data-emp");
-        if (!empId || !currentPeriodId) return;
+        const empId = btn.dataset.emp;
+        const periodId = btn.dataset.period || currentPeriodId;
 
-        const ok = confirm(`Mark ${empId} as PAID for ${currentPeriodId}?`);
-        if (!ok) return;
+        if (!empId || !periodId) return;
 
-        const method = prompt("Paid method? (Check / ACH / Cash)", "Check") || "";
-        const reference = prompt("Reference? (optional: check # / bank ref)", "") || "";
-        const notes = prompt("Notes? (optional)", "") || "";
+        const method =
+          paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
+
+        const reference =
+          paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
+
+        const notes =
+          paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
 
         try {
+          btn.disabled = true;
+          btn.textContent = "Saving...";
+
           setStatus("Marking as paid…");
 
-          const res = await jsonp(secureUrl(
-            "payroll_mark_paid",
-            "periodId=" + encodeURIComponent(currentPeriodId) +
-            "&employeeId=" + encodeURIComponent(empId) +
-            "&paidMethod=" + encodeURIComponent(method) +
-            "&reference=" + encodeURIComponent(reference) +
-            "&notes=" + encodeURIComponent(notes)
-          ));
+          const res = await jsonp(
+            secureUrl(
+              "payroll_mark_paid",
+              "periodId=" + encodeURIComponent(periodId) +
+              "&employeeId=" + encodeURIComponent(empId) +
+              "&paidMethod=" + encodeURIComponent(method) +
+              "&reference=" + encodeURIComponent(reference) +
+              "&notes=" + encodeURIComponent(notes)
+            )
+          );
 
-          if (!res || !res.ok) throw new Error(res?.error || "payroll_mark_paid failed");
+          if (!res || !res.ok) {
+            throw new Error(res?.error || "payroll_mark_paid failed");
+          }
 
           await refreshPaymentsOnly();
           setStatus("Paid saved ✅", "ok");
         } catch (err) {
+          btn.disabled = false;
+          btn.textContent = "Mark Paid";
           setStatus(String(err?.message || err), "err");
         }
       });
