@@ -1,13 +1,13 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Past Payroll + QB Export version
-   - Keeps original payroll flow
-   - Adds Past Payroll picker
-   - Adds Export QB CSV button
-   - Uses JSONP unified Apps Script backend
+   ATS Payroll (Admin UI) — Simple Powerful Payroll Screen
+   - Keeps payroll flow
+   - Allows full_admin / schedule_payroll / payroll / admin
+   - Opens Payroll Export Google Sheet instead of downloading CSV
 ========================================================= */
 
 (() => {
   const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+
   const DEVICE_KEY_STORAGE = "ats_device_key_v1";
   const AUTH_STORAGE = "ats_admin_auth_v1";
   const TOKEN_STORAGE = "ats_admin_token_v1";
@@ -29,6 +29,7 @@
   const btnPayouts = document.getElementById("btnPayouts");
   const btnPastPayroll = document.getElementById("btnPastPayroll");
   const btnExportQB = document.getElementById("btnExportQB");
+  const btnExportQB2 = document.getElementById("btnExportQB2");
 
   const pastPayrollCard = document.getElementById("pastPayrollCard");
   const pastPayrollSelect = document.getElementById("pastPayrollSelect");
@@ -88,6 +89,7 @@
     try {
       const url = new URL(window.location.href);
       const t = (url.searchParams.get("t") || "").trim();
+
       if (t) {
         saveTokenToSession(t);
         url.searchParams.delete("t");
@@ -100,25 +102,26 @@
     try {
       const raw = sessionStorage.getItem(AUTH_STORAGE);
       if (!raw) return null;
+
       const obj = JSON.parse(raw);
       if (obj && obj.ok && obj.employeeId && obj.role) return obj;
     } catch (e) {}
+
     return null;
   }
 
- function requireAdmin(authObj) {
-  if (!authObj || !authObj.ok) return false;
+  function requireAdmin(authObj) {
+    if (!authObj || !authObj.ok) return false;
 
-  const role = String(authObj.role || "").toLowerCase();
+    const role = String(authObj.role || "").trim().toLowerCase();
 
-  return [
-    "full_admin",
-    "schedule_payroll",
-    "payroll",
-    "admin"
-  ].includes(role);
-}
-
+    return [
+      "full_admin",
+      "schedule_payroll",
+      "payroll",
+      "admin"
+    ].includes(role);
+  }
 
   function setWho(authObj) {
     if (!pillWho) return;
@@ -163,35 +166,74 @@
   function secureUrl(action, extraQs = "") {
     const t = getTokenFromSession();
     const d = getDeviceKey();
-    const base = `${API_URL}?action=${encodeURIComponent(action)}&t=${encodeURIComponent(t)}&d=${encodeURIComponent(d)}`;
+
+    const base =
+      `${API_URL}?action=${encodeURIComponent(action)}` +
+      `&t=${encodeURIComponent(t)}` +
+      `&d=${encodeURIComponent(d)}`;
+
     return extraQs ? base + "&" + extraQs : base;
   }
 
-  async function ping() { return jsonp(`${API_URL}?action=ping`); }
-  async function payrollCurrent() { return jsonp(secureUrl("payroll_current")); }
-  async function payrollSummary(periodId) { return jsonp(secureUrl("payroll_summary", `period_id=${encodeURIComponent(periodId)}`)); }
-  async function payrollGenerate(periodId) { return jsonp(secureUrl("payroll_generate", `period_id=${encodeURIComponent(periodId)}`)); }
-  async function payrollLock(periodId) { return jsonp(secureUrl("payroll_lock", `period_id=${encodeURIComponent(periodId)}`)); }
-  async function payrollPayouts(periodId) { return jsonp(secureUrl("payroll_payouts", `period_id=${encodeURIComponent(periodId)}`)); }
-  async function payrollPayments(periodId) { return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
-  async function payrollPeriods() { return jsonp(secureUrl("payroll_periods")); }
-  async function payrollExportQB(periodId) { return jsonp(secureUrl("payroll_export_qb", `period_id=${encodeURIComponent(periodId)}`)); }
+  async function ping() {
+    return jsonp(`${API_URL}?action=ping`);
+  }
+
+  async function payrollCurrent() {
+    return jsonp(secureUrl("payroll_current"));
+  }
+
+  async function payrollSummary(periodId) {
+    return jsonp(secureUrl("payroll_summary", `period_id=${encodeURIComponent(periodId)}`));
+  }
+
+  async function payrollGenerate(periodId) {
+    return jsonp(secureUrl("payroll_generate", `period_id=${encodeURIComponent(periodId)}`));
+  }
+
+  async function payrollLock(periodId) {
+    return jsonp(secureUrl("payroll_lock", `period_id=${encodeURIComponent(periodId)}`));
+  }
+
+  async function payrollPayouts(periodId) {
+    return jsonp(secureUrl("payroll_payouts", `period_id=${encodeURIComponent(periodId)}`));
+  }
+
+  async function payrollPayments(periodId) {
+    return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`));
+  }
+
+  async function payrollPeriods() {
+    return jsonp(secureUrl("payroll_periods"));
+  }
+
+  async function payrollExportQB(periodId) {
+    return jsonp(secureUrl("payroll_export_qb", `period_id=${encodeURIComponent(periodId)}`));
+  }
 
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || p?.period || p?.id || currentPeriodId || "";
+
     if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
     if (periodStartEl) periodStartEl.textContent = p?.startDate || p?.start || "—";
     if (periodEndEl) periodEndEl.textContent = p?.endDate || p?.end || "—";
     if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
     if (periodStatusEl) periodStatusEl.textContent = p?.status || "—";
-    if (summaryHint) summaryHint.textContent = currentPeriodId ? `Showing summary for ${currentPeriodId}` : "—";
+
+    if (summaryHint) {
+      summaryHint.textContent = currentPeriodId
+        ? `Review job count and total pay for ${currentPeriodId}.`
+        : "Review job count and total pay before marking anyone paid.";
+    }
   }
 
   function renderSummary(rows) {
     if (!summaryBody) return;
+
     const data = Array.isArray(rows) ? rows : [];
+
     if (!data.length) {
-      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No data yet.</td></tr>`;
+      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payroll summary yet. Click Generate / Refresh Payroll.</td></tr>`;
       return;
     }
 
@@ -201,13 +243,14 @@
       const pay = Number(r.totalPay || r.total || 0).toFixed(2);
       const exc = Number(r.exceptionCount || r.exceptions || 0);
       const lu = r.lastUpdate || "";
+
       return `
         <tr>
-          <td style="padding:10px 12px;">${escapeHtml(emp)}</td>
-          <td class="right" style="padding:10px 12px;">${jobs}</td>
-          <td class="right" style="padding:10px 12px;">$${pay}</td>
-          <td class="right" style="padding:10px 12px;">${exc}</td>
-          <td style="padding:10px 12px;">${escapeHtml(lu)}</td>
+          <td>${escapeHtml(emp)}</td>
+          <td class="right">${jobs}</td>
+          <td class="right">$${pay}</td>
+          <td class="right">${exc}</td>
+          <td>${escapeHtml(lu)}</td>
         </tr>
       `;
     }).join("");
@@ -221,41 +264,49 @@
     const end = period?.endDate || data[0]?.endDate || "";
 
     if (paymentsHint) {
-      paymentsHint.textContent = start && end ? `One line per employee • ${start} → ${end}` : "One line per employee for this period.";
+      paymentsHint.textContent = start && end
+        ? `Mark employees paid for ${start} → ${end}.`
+        : "Mark payroll as paid after you review totals.";
     }
 
     if (!data.length) {
-      paymentsBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payment rows yet.</td></tr>`;
+      paymentsBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payment rows yet. Generate payroll first.</td></tr>`;
       if (paymentsTotals) paymentsTotals.textContent = "";
       return;
     }
 
     const grand = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || 0), 0);
-    if (paymentsTotals) paymentsTotals.textContent = `Grand Total: $${grand.toFixed(2)}`;
+
+    if (paymentsTotals) {
+      paymentsTotals.textContent = `Grand Total: $${grand.toFixed(2)}`;
+    }
 
     paymentsBody.innerHTML = data.map(r => {
       const empName = r.employeeName || r.employeeId || "—";
       const periodText = `${r.startDate || start} → ${r.endDate || end}`;
       const total = Number(r.totalPay || r.total || 0).toFixed(2);
+
       const paidAtText = r.paidAt ? ` • ${escapeHtml(r.paidAt)}` : "";
       const refText = r.reference ? ` • Ref: ${escapeHtml(r.reference)}` : "";
       const methodText = r.paidMethod ? ` • ${escapeHtml(r.paidMethod)}` : "";
 
-      const status = r.paid || String(r.status || "").toUpperCase() === "PAID"
+      const isPaid = r.paid || String(r.status || "").toUpperCase() === "PAID";
+
+      const status = isPaid
         ? `✔ PAID${paidAtText}${methodText}${refText}`
         : "NOT PAID";
 
-      const btn = r.paid || String(r.status || "").toUpperCase() === "PAID"
+      const btn = isPaid
         ? `<button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>`
         : `<button class="btn mark-paid-btn" data-period="${escapeHtml(r.periodId || currentPeriodId)}" data-emp="${escapeHtml(r.employeeId)}" style="width:auto; padding:10px 12px; border-radius:12px;">Mark Paid</button>`;
 
       return `
         <tr>
-          <td style="padding:10px 12px;">${escapeHtml(empName)}</td>
-          <td style="padding:10px 12px;">${escapeHtml(periodText)}</td>
-          <td class="right" style="padding:10px 12px;">$${escapeHtml(total)}</td>
-          <td style="padding:10px 12px;">${status}</td>
-          <td class="right" style="padding:10px 12px;">${btn}</td>
+          <td>${escapeHtml(empName)}</td>
+          <td>${escapeHtml(periodText)}</td>
+          <td class="right">$${escapeHtml(total)}</td>
+          <td>${status}</td>
+          <td class="right">${btn}</td>
         </tr>
       `;
     }).join("");
@@ -274,6 +325,7 @@
 
         try {
           setStatus("Marking as paid…");
+
           const res = await jsonp(secureUrl(
             "payroll_mark_paid",
             "periodId=" + encodeURIComponent(currentPeriodId) +
@@ -282,7 +334,9 @@
             "&reference=" + encodeURIComponent(reference) +
             "&notes=" + encodeURIComponent(notes)
           ));
+
           if (!res || !res.ok) throw new Error(res?.error || "payroll_mark_paid failed");
+
           await refreshPaymentsOnly();
           setStatus("Paid saved ✅", "ok");
         } catch (err) {
@@ -307,6 +361,7 @@
     }
 
     const rows = [];
+
     employees.forEach(emp => {
       (emp.jobs || []).forEach(j => {
         rows.push({
@@ -320,10 +375,10 @@
 
     payoutBody.innerHTML = rows.map(r => `
       <tr>
-        <td style="padding:10px 12px;">${escapeHtml(r.employee)}</td>
-        <td style="padding:10px 12px;">${escapeHtml(r.date)}</td>
-        <td style="padding:10px 12px;">${escapeHtml(r.job)}</td>
-        <td class="right" style="padding:10px 12px;">$${escapeHtml(r.pay)}</td>
+        <td>${escapeHtml(r.employee)}</td>
+        <td>${escapeHtml(r.date)}</td>
+        <td>${escapeHtml(r.job)}</td>
+        <td class="right">$${escapeHtml(r.pay)}</td>
       </tr>
     `).join("");
 
@@ -335,16 +390,20 @@
 
   async function refreshPaymentsOnly() {
     if (!currentPeriodId) return;
+
     const pay = await payrollPayments(currentPeriodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
+
     renderPayments(pay.rows, pay.period);
   }
 
   async function loadPeriod(periodId) {
     if (!periodId) return;
+
     currentPeriodId = periodId;
 
     setStatus(`Loading payroll period ${periodId}…`);
+
     const sum = await payrollSummary(periodId);
     if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
 
@@ -360,16 +419,20 @@
 
     const pay = await payrollPayments(periodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
+
     renderPayments(pay.rows, pay.period);
 
     if (payoutCard) payoutCard.classList.add("hidden");
+
     setStatus(`Loaded ${periodId} ✅`, "ok");
   }
 
   async function refreshAll() {
-    setStatus("Loading current pay period…");
+    setStatus("Loading current payroll week…");
+
     const cur = await payrollCurrent();
     if (!cur || !cur.ok) throw new Error(cur?.error || "payroll_current failed");
+
     renderPeriod(cur);
 
     if (!currentPeriodId) {
@@ -377,15 +440,19 @@
       return;
     }
 
-    setStatus("Loading summary…");
+    setStatus("Loading payroll summary…");
+
     const sum = await payrollSummary(currentPeriodId);
     if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
+
     renderSummary(sum.rows);
 
-    setStatus("Loading payments…");
+    setStatus("Loading payment rows…");
+
     await refreshPaymentsOnly();
 
     if (payoutCard) payoutCard.classList.add("hidden");
+
     setStatus("Ready ✅", "ok");
   }
 
@@ -400,6 +467,7 @@
     if (pastPayrollCard.classList.contains("hidden")) return;
 
     setStatus("Loading past payroll periods…");
+
     const res = await payrollPeriods();
     if (!res || !res.ok) throw new Error(res?.error || "payroll_periods failed");
 
@@ -418,35 +486,28 @@
       return `<option value="${escapeHtml(id)}" ${id === currentPeriodId ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
 
-    if (pastPayrollHint) pastPayrollHint.textContent = `${periods.length} payroll period(s) found.`;
-    setStatus("Choose a payroll period, then click Load Selected Week.", "ok");
-  }
+    if (pastPayrollHint) {
+      pastPayrollHint.textContent = `${periods.length} payroll period(s) found.`;
+    }
 
-  function downloadTextFile(filename, text, mime = "text/csv;charset=utf-8") {
-    const blob = new Blob([text || ""], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename || "export.csv";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      try { URL.revokeObjectURL(url); } catch (e) {}
-      try { a.remove(); } catch (e) {}
-    }, 0);
+    setStatus("Choose a payroll period, then click Load Selected Week.", "ok");
   }
 
   async function exportCurrentQB() {
     if (!currentPeriodId) return;
-    setStatus(`Exporting QB CSV for ${currentPeriodId}…`);
+
+    setStatus(`Opening payroll export sheet for ${currentPeriodId}…`);
+
     const res = await payrollExportQB(currentPeriodId);
     if (!res || !res.ok) throw new Error(res?.error || "payroll_export_qb failed");
+
     if (res.url) {
-  window.open(res.url, "_blank");
-} else {
-  alert("No sheet URL returned.");
-}
-    setStatus(`QB CSV exported for ${currentPeriodId} ✅`, "ok");
+      window.open(res.url, "_blank");
+    } else {
+      alert("No sheet URL returned.");
+    }
+
+    setStatus(`Payroll export sheet opened for ${currentPeriodId} ✅`, "ok");
   }
 
   async function addOneOffJob() {
@@ -474,7 +535,16 @@
       await fetch(`${API_URL}?action=schedule_override_add&t=${encodeURIComponent(t)}&d=${encodeURIComponent(d)}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ employeeId, date, jobName, jobPay, startTime, endTime, address, notes })
+        body: JSON.stringify({
+          employeeId,
+          date,
+          jobName,
+          jobPay,
+          startTime,
+          endTime,
+          address,
+          notes
+        })
       });
 
       setStatus("One-off job added ✅", "ok");
@@ -489,6 +559,7 @@
     captureTokenFromUrl();
 
     const authObj = loadSessionAuth();
+
     if (!requireAdmin(authObj)) {
       setStatus("Denied: admin access required.\n\nOpen this from the Admin Panel.", "err");
       if (pillWho) pillWho.textContent = "Denied";
@@ -503,23 +574,29 @@
     }
 
     setStatus("Checking secure API…");
+
     const p = await ping();
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
     await refreshAll();
 
     if (btnRefresh) {
-      btnRefresh.onclick = () => refreshAll().catch(err => setStatus(String(err?.message || err), "err"));
+      btnRefresh.onclick = () =>
+        refreshAll().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnGenerate) {
       btnGenerate.onclick = async () => {
         try {
           if (!currentPeriodId) return;
-          setStatus("Generating / rebuilding summary…");
+
+          setStatus("Generating / rebuilding payroll summary…");
+
           const res = await payrollGenerate(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.message || res?.error || "payroll_generate failed");
+
           await loadPeriod(currentPeriodId);
+          setStatus("Payroll summary rebuilt ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
@@ -530,41 +607,59 @@
       btnLock.onclick = async () => {
         try {
           if (!currentPeriodId) return;
+
           const ok = confirm(`Lock payroll period ${currentPeriodId}?`);
           if (!ok) return;
+
           setStatus("Locking period…");
+
           const res = await payrollLock(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.error || "payroll_lock failed");
+
           await loadPeriod(currentPeriodId);
+          setStatus("Payroll period locked ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
       };
     }
 
-    if (btnAddOverride) btnAddOverride.onclick = () => addOneOffJob();
+    if (btnAddOverride) {
+      btnAddOverride.onclick = () => addOneOffJob();
+    }
 
     if (btnPastPayroll) {
-      btnPastPayroll.onclick = () => showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
+      btnPastPayroll.onclick = () =>
+        showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnLoadPastPayroll) {
-      btnLoadPastPayroll.onclick = () => loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
+      btnLoadPastPayroll.onclick = () =>
+        loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnExportQB) {
-      btnExportQB.onclick = () => exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
+      btnExportQB.onclick = () =>
+        exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
+    }
+
+    if (btnExportQB2) {
+      btnExportQB2.onclick = () =>
+        exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnPayouts) {
       btnPayouts.onclick = async () => {
         try {
           if (!currentPeriodId) return;
+
           setStatus("Loading job breakdown…");
+
           const res = await payrollPayouts(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.error || "payroll_payouts failed");
+
           renderPayouts(res.payouts);
-          setStatus("Ready ✅", "ok");
+          setStatus("Job breakdown loaded ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
@@ -573,7 +668,9 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => boot().catch(err => setStatus(String(err?.message || err), "err")));
+    document.addEventListener("DOMContentLoaded", () =>
+      boot().catch(err => setStatus(String(err?.message || err), "err"))
+    );
   } else {
     boot().catch(err => setStatus(String(err?.message || err), "err"));
   }
