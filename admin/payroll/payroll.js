@@ -233,7 +233,7 @@
     const data = Array.isArray(rows) ? rows : [];
 
     if (!data.length) {
-      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payroll summary yet. Click Generate / Refresh Payroll.</td></tr>`;
+      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payroll summary yet. Click Generate Payroll.</td></tr>`;
       return;
     }
 
@@ -364,11 +364,25 @@
 
     employees.forEach(emp => {
       (emp.jobs || []).forEach(j => {
+        const rawJob =
+          j.clientName ||
+          j.jobName ||
+          j.job ||
+          j.client ||
+          j.jobId ||
+          "";
+
+        const rawPay =
+          j.jobPay ??
+          j.pay ??
+          j.amount ??
+          0;
+
         rows.push({
           employee: emp.employeeName || emp.employeeId,
           date: j.date || "",
-          job: j.jobName || "",
-          pay: Number(j.jobPay || 0).toFixed(2)
+          job: rawJob,
+          pay: Number(rawPay || 0).toFixed(2)
         });
       });
     });
@@ -422,7 +436,10 @@
 
     renderPayments(pay.rows, pay.period);
 
-    if (payoutCard) payoutCard.classList.add("hidden");
+    const payoutRes = await payrollPayouts(periodId);
+    if (payoutRes && payoutRes.ok) {
+      renderPayouts(payoutRes.payouts);
+    }
 
     setStatus(`Loaded ${periodId} ✅`, "ok");
   }
@@ -451,20 +468,17 @@
 
     await refreshPaymentsOnly();
 
-    if (payoutCard) payoutCard.classList.add("hidden");
+    setStatus("Loading job breakdown…");
+    const payoutRes = await payrollPayouts(currentPeriodId);
+    if (payoutRes && payoutRes.ok) {
+      renderPayouts(payoutRes.payouts);
+    }
 
     setStatus("Ready ✅", "ok");
   }
 
   async function showPastPayrollPicker() {
-    if (!pastPayrollCard || !pastPayrollSelect) {
-      const raw = prompt("Enter payroll period ID to view (YYYY-MM-DD_to_YYYY-MM-DD):", currentPeriodId || "");
-      if (raw) await loadPeriod(raw.trim());
-      return;
-    }
-
-    pastPayrollCard.classList.toggle("hidden");
-    if (pastPayrollCard.classList.contains("hidden")) return;
+    if (!pastPayrollSelect) return;
 
     setStatus("Loading past payroll periods…");
 
@@ -487,10 +501,8 @@
     }).join("");
 
     if (pastPayrollHint) {
-      pastPayrollHint.textContent = `${periods.length} payroll period(s) found.`;
+      pastPayrollHint.textContent = `${periods.length} saved payroll period(s).`;
     }
-
-    setStatus("Choose a payroll period, then click Load Selected Week.", "ok");
   }
 
   async function exportCurrentQB() {
@@ -579,6 +591,7 @@
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
     await refreshAll();
+    await showPastPayrollPicker();
 
     if (btnRefresh) {
       btnRefresh.onclick = () =>
@@ -590,13 +603,13 @@
         try {
           if (!currentPeriodId) return;
 
-          setStatus("Generating / rebuilding payroll summary…");
+          setStatus("Generating payroll summary…");
 
           const res = await payrollGenerate(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.message || res?.error || "payroll_generate failed");
 
           await loadPeriod(currentPeriodId);
-          setStatus("Payroll summary rebuilt ✅", "ok");
+          setStatus("Payroll generated ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
