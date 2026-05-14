@@ -6,41 +6,165 @@
   <title>ATS Payroll</title>
 
   <style>
+    :root{
+      --bg:#0b1020;
+      --card:rgba(255,255,255,.07);
+      --card2:rgba(255,255,255,.10);
+      --line:rgba(255,255,255,.14);
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --gold:#fbbf24;
+      --gold2:#fde68a;
+      --danger:#ef4444;
+      --ok:#22c55e;
+      --purple:#4b2e83;
+    }
+
+    *{box-sizing:border-box}
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-      background:#0b1020;
-      color:#e5e7eb;
+      background:
+        radial-gradient(circle at top left,rgba(251,191,36,.15),transparent 30%),
+        radial-gradient(circle at top right,rgba(79,70,229,.18),transparent 35%),
+        var(--bg);
+      color:var(--text);
     }
     a{color:inherit}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .wrap{max-width:1180px;margin:0 auto;padding:18px}
+    .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
-    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:14px;margin-top:14px}
-    .btn{cursor:pointer;border:none;border-radius:14px;padding:12px 14px;background:#fbbf24;color:#111827;font-weight:700}
-    .btn.secondary{background:rgba(255,255,255,.10);color:#e5e7eb;border:1px solid rgba(255,255,255,.18)}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .muted{color:#9ca3af}
-    .status{white-space:pre-wrap;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
-    .status.ok{border-color:rgba(34,197,94,.6)}
-    .status.err{border-color:rgba(239,68,68,.6)}
-    table th, table td{border-bottom:1px solid rgba(255,255,255,.10)}
-    th{font-size:12px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-    td{font-size:14px}
+    .muted{color:var(--muted)}
+    .small{font-size:12px;color:var(--muted)}
+    .hidden{display:none!important}
     .right{text-align:right}
-    .small{font-size:12px;color:#9ca3af}
-    .hidden{display:none}
+
+    .hero{
+      background:linear-gradient(135deg,rgba(75,46,131,.55),rgba(37,99,235,.28));
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:18px;
+      box-shadow:0 16px 50px rgba(0,0,0,.22);
+    }
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:16px;
+      align-items:stretch;
+    }
+    @media (max-width:820px){
+      .hero-grid{grid-template-columns:1fr}
+    }
+
+    .period-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);font-weight:800}
+    .period-id{font-size:24px;font-weight:900;margin:4px 0 8px}
+    .period-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .meta-chip{border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.16);border-radius:999px;padding:7px 10px;font-size:13px}
+
+    .quick-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width:520px){
+      .quick-actions{grid-template-columns:1fr}
+    }
+
+    .btn{
+      cursor:pointer;
+      border:none;
+      border-radius:15px;
+      padding:12px 14px;
+      background:var(--gold);
+      color:#111827;
+      font-weight:850;
+      min-height:44px;
+    }
+    .btn:hover{filter:brightness(1.04)}
+    .btn.secondary{background:rgba(255,255,255,.10);color:var(--text);border:1px solid rgba(255,255,255,.18)}
+    .btn.danger{background:rgba(239,68,68,.16);color:#fecaca;border:1px solid rgba(239,68,68,.38)}
+    .btn.wide{width:100%}
+
+    .status{
+      white-space:pre-wrap;
+      padding:12px;
+      border-radius:16px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.12);
+      margin-top:14px;
+    }
+    .status.ok{border-color:rgba(34,197,94,.65)}
+    .status.err{border-color:rgba(239,68,68,.65)}
+
+    .step-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+      margin-top:14px;
+    }
+    @media (max-width:900px){
+      .step-grid{grid-template-columns:1fr}
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:15px;
+      box-shadow:0 10px 34px rgba(0,0,0,.16);
+    }
+    .card.full{grid-column:1/-1}
+    .card.danger-zone{border-color:rgba(239,68,68,.42);background:rgba(239,68,68,.07)}
+    .card-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+    .card h2,.card h3{margin:0}
+    .card h2{font-size:18px}
+    .card h3{font-size:16px}
+    .step-label{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;height:28px;
+      border-radius:999px;
+      background:var(--gold);
+      color:#111827;
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .section-title{display:flex;gap:9px;align-items:center}
+
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .action-row .btn{width:auto}
+    @media (max-width:620px){
+      .action-row .btn{width:100%}
+    }
+
+    .table-wrap{overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.12)}
+    table{width:100%;border-collapse:collapse;min-width:760px}
+    table th,table td{border-bottom:1px solid rgba(255,255,255,.10)}
+    th{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+    td{font-size:14px}
+    th,td{padding:11px 12px}
+
     select.payroll-select{
       width:100%;
-      max-width:420px;
+      max-width:460px;
       padding:12px 14px;
       border-radius:14px;
       background:rgba(255,255,255,.10);
       border:1px solid rgba(255,255,255,.18);
-      color:#e5e7eb;
-      font-weight:700;
+      color:var(--text);
+      font-weight:750;
     }
     select.payroll-select option{color:#111827;background:#fff}
+
+    details{
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:18px;
+      padding:12px;
+      background:rgba(255,255,255,.04);
+    }
+    summary{cursor:pointer;font-weight:850;color:var(--gold2)}
+    .debug-box{margin-top:10px;word-break:break-all}
   </style>
 
   <script type="application/ld+json" id="ats-schema">
@@ -73,114 +197,175 @@
       <div class="wrap">
 
         <div class="top">
-          <div class="pill"><strong>ATS Payroll</strong> <span class="muted">Admin</span></div>
+          <div class="pill"><strong>ATS Payroll</strong> <span class="muted">Simple Run Screen</span></div>
           <div class="pill" id="pillWho">—</div>
         </div>
 
-        <div class="card">
-          <div class="row" style="justify-content:space-between">
+        <section class="hero">
+          <div class="hero-grid">
             <div>
-              <div class="muted">Current Pay Period</div>
-              <div style="font-size:18px;font-weight:800" id="periodId">—</div>
-              <div class="small">
-                <span id="periodStart">—</span> → <span id="periodEnd">—</span>
-                • Payday <span id="periodPayday">—</span>
-                • <span id="periodStatus">—</span>
+              <div class="period-title">Current Payroll Week</div>
+              <div class="period-id" id="periodId">—</div>
+              <div class="period-meta">
+                <span class="meta-chip">Start: <strong id="periodStart">—</strong></span>
+                <span class="meta-chip">End: <strong id="periodEnd">—</strong></span>
+                <span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span>
+                <span class="meta-chip">Status: <strong id="periodStatus">—</strong></span>
+              </div>
+              <div class="status" id="statusBox">Loading payroll…</div>
+            </div>
+
+            <div class="quick-actions" aria-label="Primary payroll actions">
+              <button class="btn" id="btnGenerate">1. Generate / Refresh Payroll</button>
+              <button class="btn secondary" id="btnRefresh">Reload Screen</button>
+              <button class="btn secondary" id="btnPayouts">View Job Breakdown</button>
+              <button class="btn secondary" id="btnExportQB">Open Payroll Export Sheet</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="step-grid">
+
+          <div class="card full">
+            <div class="card-head">
+              <div>
+                <div class="section-title">
+                  <span class="step-label">2</span>
+                  <h2>Review Pay</h2>
+                </div>
+                <p class="muted" id="summaryHint">Review job count and total pay before marking anyone paid.</p>
               </div>
             </div>
 
-            <div class="row">
-              <button class="btn secondary" id="btnRefresh">Refresh</button>
-              <button class="btn secondary" id="btnGenerate">Generate/Rebuild Summary</button>
-              <button class="btn secondary" id="btnLock">Lock Period</button>
-              <button class="btn secondary" id="btnAddOverride">Add One-Off Job</button>
-              <button class="btn secondary" id="btnPayouts">Job Breakdown</button>
-              <button class="btn secondary" id="btnPastPayroll">Past Payroll</button>
-              <button class="btn secondary" id="btnExportQB">Export QB CSV</button>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">Employee</th>
+                    <th class="right">Jobs</th>
+                    <th class="right">Total Pay</th>
+                    <th class="right">Exceptions</th>
+                    <th style="text-align:left;">Last Update</th>
+                  </tr>
+                </thead>
+                <tbody id="summaryBody"></tbody>
+              </table>
             </div>
           </div>
 
-          <div style="margin-top:12px" class="status" id="statusBox"></div>
-          <div class="small" id="debug" style="margin-top:10px"></div>
-        </div>
+          <div class="card full">
+            <div class="card-head">
+              <div>
+                <div class="section-title">
+                  <span class="step-label">3</span>
+                  <h2>Mark Paid</h2>
+                </div>
+                <p class="muted" id="paymentsHint">One line per employee for this period.</p>
+              </div>
+              <div class="small" id="paymentsTotals"></div>
+            </div>
 
-        <!-- PAST PAYROLL -->
-        <div class="card hidden" id="pastPayrollCard">
-          <h3 style="margin:0 0 8px 0">Past Payroll</h3>
-          <p class="muted" id="pastPayrollHint">Choose a saved payroll period to view its summary and payments.</p>
-          <div class="row">
-            <select class="payroll-select" id="pastPayrollSelect">
-              <option value="">Loading periods…</option>
-            </select>
-            <button class="btn secondary" id="btnLoadPastPayroll">Load Selected Week</button>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">Employee</th>
+                    <th style="text-align:left;">Period</th>
+                    <th style="text-align:right;">Total</th>
+                    <th style="text-align:left;">Status</th>
+                    <th style="text-align:right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsBody"></tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <!-- SUMMARY -->
-        <div class="card">
-          <h3 style="margin:0 0 8px 0">Summary</h3>
-          <p class="muted" id="summaryHint">—</p>
-          <div style="overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.18);">
-            <table style="width:100%; border-collapse:collapse; min-width:720px;">
-              <thead>
-                <tr>
-                  <th style="text-align:left; padding:10px 12px;">Employee</th>
-                  <th class="right" style="padding:10px 12px;">Jobs</th>
-                  <th class="right" style="padding:10px 12px;">Total Pay</th>
-                  <th class="right" style="padding:10px 12px;">Exceptions</th>
-                  <th style="text-align:left; padding:10px 12px;">Last Update</th>
-                </tr>
-              </thead>
-              <tbody id="summaryBody"></tbody>
-            </table>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="section-title">
+                  <span class="step-label">4</span>
+                  <h2>Export</h2>
+                </div>
+                <p class="muted">Open the payroll export workbook. Each week gets its own tab.</p>
+              </div>
+            </div>
+            <button class="btn wide" id="btnExportQB2">Open Payroll Export Sheet</button>
           </div>
-        </div>
 
-        <!-- PAYMENTS -->
-        <div class="card">
-          <h3 style="margin:0 0 8px 0">Payments</h3>
-          <p class="muted" id="paymentsHint">One line per employee for this period.</p>
-          <div style="overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.18);">
-            <table style="width:100%; border-collapse:collapse; min-width:720px;">
-              <thead>
-                <tr>
-                  <th style="text-align:left; padding:10px 12px;">Employee</th>
-                  <th style="text-align:left; padding:10px 12px;">Period</th>
-                  <th style="text-align:right; padding:10px 12px;">Total</th>
-                  <th style="text-align:left; padding:10px 12px;">Status</th>
-                  <th style="text-align:right; padding:10px 12px;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="paymentsBody"></tbody>
-            </table>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="section-title">
+                  <span class="step-label">5</span>
+                  <h2>History</h2>
+                </div>
+                <p class="muted">View past payroll weeks without changing the current week.</p>
+              </div>
+            </div>
+            <button class="btn secondary wide" id="btnPastPayroll">Past Payroll</button>
           </div>
-          <div class="small" style="margin-top:10px;" id="paymentsTotals"></div>
-        </div>
 
-        <!-- JOB BREAKDOWN -->
-        <div class="card hidden" id="payoutCard">
-          <h3 style="margin:0 0 8px 0">Job Breakdown</h3>
-          <p class="muted" id="payoutHint">—</p>
-          <div style="overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.18);">
-            <table style="width:100%; border-collapse:collapse; min-width:720px;">
-              <thead>
-                <tr>
-                  <th style="text-align:left; padding:10px 12px;">Employee</th>
-                  <th style="text-align:left; padding:10px 12px;">Date</th>
-                  <th style="text-align:left; padding:10px 12px;">Job</th>
-                  <th style="text-align:right; padding:10px 12px;">Pay</th>
-                </tr>
-              </thead>
-              <tbody id="payoutBody"></tbody>
-            </table>
+          <div class="card hidden full" id="pastPayrollCard">
+            <h3>Past Payroll</h3>
+            <p class="muted" id="pastPayrollHint">Choose a saved payroll period to view its summary and payments.</p>
+            <div class="action-row">
+              <select class="payroll-select" id="pastPayrollSelect">
+                <option value="">Loading periods…</option>
+              </select>
+              <button class="btn secondary" id="btnLoadPastPayroll">Load Selected Week</button>
+            </div>
           </div>
-          <div class="small" style="margin-top:10px;" id="payoutTotals"></div>
-        </div>
+
+          <div class="card hidden full" id="payoutCard">
+            <div class="card-head">
+              <div>
+                <h2>Job Breakdown</h2>
+                <p class="muted" id="payoutHint">—</p>
+              </div>
+              <div class="small" id="payoutTotals"></div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">Employee</th>
+                    <th style="text-align:left;">Date</th>
+                    <th style="text-align:left;">Job</th>
+                    <th style="text-align:right;">Pay</th>
+                  </tr>
+                </thead>
+                <tbody id="payoutBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card danger-zone full">
+            <div class="card-head">
+              <div>
+                <h2>Admin Controls</h2>
+                <p class="muted">Use these carefully. These actions affect payroll records.</p>
+              </div>
+              <div class="action-row">
+                <button class="btn danger" id="btnLock">Lock Period</button>
+                <button class="btn secondary" id="btnAddOverride">Add One-Off Job</button>
+              </div>
+            </div>
+
+            <details>
+              <summary>Technical details</summary>
+              <div class="small debug-box" id="debug"></div>
+            </details>
+          </div>
+
+        </section>
 
       </div>
     </div>
   </main>
 
-  <script src="./payroll.js?v=99"></script>
+  <script src="./payroll.js?v=100"></script>
 </body>
 </html>
