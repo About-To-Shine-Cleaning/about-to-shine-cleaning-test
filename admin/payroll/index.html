@@ -232,6 +232,8 @@
             <div class="quick-actions" aria-label="Primary payroll actions">
               <button class="btn" id="btnGenerate">Generate Payroll</button>
               <button class="btn secondary" id="btnExportQB">Open Payroll Export Sheet</button>
+              <button class="btn danger" id="btnLock">Lock Period</button>
+              <button class="btn secondary" id="btnAddOverride">Add One-Off Job</button>
             </div>
           </div>
         </section>
@@ -314,24 +316,7 @@
               </table>
             </div>
           </div>
-
-          <div class="card danger-zone full">
-            <div class="card-head">
-              <div>
-                <h2>Admin Controls</h2>
-                <p class="muted">Use these carefully. These actions affect payroll records.</p>
-              </div>
-              <div class="action-row">
-                <button class="btn danger" id="btnLock">Lock Period</button>
-                <button class="btn secondary" id="btnAddOverride">Add One-Off Job</button>
-              </div>
-            </div>
-
-            <details>
-              <summary>Technical details</summary>
-              <div class="small debug-box" id="debug"></div>
-            </details>
-          </div>
+          <div class="hidden" id="debug"></div>
 
         </section>
 
