@@ -1,13 +1,13 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Simple Powerful Payroll Screen
-   - Keeps payroll flow
-   - Allows full_admin / schedule_payroll / payroll / admin
-   - Simple payroll run screen, export route preserved for future/admin use
+   ATS Payroll (Admin UI) — Past Payroll + QB Export version
+   - Keeps original payroll flow
+   - Adds Past Payroll picker
+   - Adds Export QB CSV button
+   - Uses JSONP unified Apps Script backend
 ========================================================= */
 
 (() => {
   const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
-
   const DEVICE_KEY_STORAGE = "ats_device_key_v1";
   const AUTH_STORAGE = "ats_admin_auth_v1";
   const TOKEN_STORAGE = "ats_admin_token_v1";
@@ -29,7 +29,6 @@
   const btnPayouts = document.getElementById("btnPayouts");
   const btnPastPayroll = document.getElementById("btnPastPayroll");
   const btnExportQB = document.getElementById("btnExportQB");
-  const btnExportQB2 = document.getElementById("btnExportQB2");
 
   const pastPayrollCard = document.getElementById("pastPayrollCard");
   const pastPayrollSelect = document.getElementById("pastPayrollSelect");
@@ -89,7 +88,6 @@
     try {
       const url = new URL(window.location.href);
       const t = (url.searchParams.get("t") || "").trim();
-
       if (t) {
         saveTokenToSession(t);
         url.searchParams.delete("t");
@@ -102,25 +100,16 @@
     try {
       const raw = sessionStorage.getItem(AUTH_STORAGE);
       if (!raw) return null;
-
       const obj = JSON.parse(raw);
       if (obj && obj.ok && obj.employeeId && obj.role) return obj;
     } catch (e) {}
-
     return null;
   }
 
   function requireAdmin(authObj) {
     if (!authObj || !authObj.ok) return false;
-
     const role = String(authObj.role || "").trim().toLowerCase();
-
-    return [
-      "full_admin",
-      "schedule_payroll",
-      "payroll",
-      "admin"
-    ].includes(role);
+    return ["full_admin", "schedule_payroll", "payroll", "admin"].includes(role);
   }
 
   function setWho(authObj) {
@@ -166,12 +155,10 @@
   function secureUrl(action, extraQs = "") {
     const t = getTokenFromSession();
     const d = getDeviceKey();
-
     const base =
       `${API_URL}?action=${encodeURIComponent(action)}` +
       `&t=${encodeURIComponent(t)}` +
       `&d=${encodeURIComponent(d)}`;
-
     return extraQs ? base + "&" + extraQs : base;
   }
 
@@ -213,27 +200,19 @@
 
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || p?.period || p?.id || currentPeriodId || "";
-
     if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
     if (periodStartEl) periodStartEl.textContent = p?.startDate || p?.start || "—";
     if (periodEndEl) periodEndEl.textContent = p?.endDate || p?.end || "—";
     if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
     if (periodStatusEl) periodStatusEl.textContent = p?.status || "—";
-
-    if (summaryHint) {
-      summaryHint.textContent = currentPeriodId
-        ? `Review job count and total pay for ${currentPeriodId}.`
-        : "Review job count and total pay before marking anyone paid.";
-    }
+    if (summaryHint) summaryHint.textContent = currentPeriodId ? `Showing summary for ${currentPeriodId}` : "—";
   }
 
   function renderSummary(rows) {
     if (!summaryBody) return;
-
     const data = Array.isArray(rows) ? rows : [];
-
     if (!data.length) {
-      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No payroll summary yet. Click Generate Payroll.</td></tr>`;
+      summaryBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No data yet.</td></tr>`;
       return;
     }
 
@@ -243,14 +222,13 @@
       const pay = Number(r.totalPay || r.total || 0).toFixed(2);
       const exc = Number(r.exceptionCount || r.exceptions || 0);
       const lu = r.lastUpdate || "";
-
       return `
         <tr>
-          <td>${escapeHtml(emp)}</td>
-          <td class="right">${jobs}</td>
-          <td class="right">$${pay}</td>
-          <td class="right">${exc}</td>
-          <td>${escapeHtml(lu)}</td>
+          <td style="padding:10px 12px;">${escapeHtml(emp)}</td>
+          <td class="right" style="padding:10px 12px;">${jobs}</td>
+          <td class="right" style="padding:10px 12px;">$${pay}</td>
+          <td class="right" style="padding:10px 12px;">${exc}</td>
+          <td style="padding:10px 12px;">${escapeHtml(lu)}</td>
         </tr>
       `;
     }).join("");
@@ -265,14 +243,14 @@
 
     if (paymentsHint) {
       paymentsHint.textContent = start && end
-        ? `Mark employees paid for ${start} → ${end}.`
-        : "Mark payroll as paid after you review totals.";
+        ? `Record the actual net payment after QuickBooks for ${start} → ${end}. Gross totals stay unchanged.`
+        : "Record the actual net payment after QuickBooks calculates taxes/deductions.";
     }
 
     if (!data.length) {
       paymentsBody.innerHTML = `
         <tr>
-          <td colspan="7" style="color:#6b7280;padding:10px 12px;">
+          <td colspan="8" style="color:#6b7280;padding:10px 12px;">
             No payment rows yet. Generate payroll first.
           </td>
         </tr>
@@ -281,35 +259,42 @@
       return;
     }
 
-    const grand = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || 0), 0);
+    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || 0), 0);
+    const netTotal = data.reduce((sum, r) => sum + Number(r.netPay || r.finalNetPay || 0), 0);
 
     if (paymentsTotals) {
-      paymentsTotals.textContent = `Grand Total: $${grand.toFixed(2)}`;
+      paymentsTotals.textContent = `Gross Total: $${grossTotal.toFixed(2)}${netTotal ? ` • Net Recorded: $${netTotal.toFixed(2)}` : ""}`;
     }
 
     paymentsBody.innerHTML = data.map(r => {
       const empName = r.employeeName || r.employeeId || "—";
       const periodText = `${r.startDate || start} → ${r.endDate || end}`;
-      const total = Number(r.totalPay || r.total || 0).toFixed(2);
+      const gross = Number(r.totalPay || r.total || 0).toFixed(2);
       const employeeId = r.employeeId || "";
+      const netPay = r.netPay || r.finalNetPay || "";
+      const finalMethod = r.finalPaidMethod || r.paidMethod || "";
+      const finalRef = r.finalReference || r.reference || "";
+      const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
 
-      const isPaid =
-        r.paid ||
+      const isFinalPaid =
+        r.finalPaid ||
+        String(r.status || "").toUpperCase() === "NET_PAID" ||
         String(r.status || "").toUpperCase() === "PAID";
 
-      if (isPaid) {
+      if (isFinalPaid) {
         return `
           <tr>
             <td>${escapeHtml(empName)}</td>
             <td>${escapeHtml(periodText)}</td>
-            <td class="right">$${escapeHtml(total)}</td>
+            <td class="right">$${escapeHtml(gross)}</td>
+            <td class="right">$${Number(netPay || 0).toFixed(2)}</td>
             <td colspan="3">
-              ✔ ${escapeHtml(r.paidMethod || "Paid")}
-              ${r.reference ? ` • ${escapeHtml(r.reference)}` : ""}
-              ${r.paymentNotes ? ` • ${escapeHtml(r.paymentNotes)}` : ""}
+              ✔ ${escapeHtml(finalMethod || "Recorded")}
+              ${finalRef ? ` • ${escapeHtml(finalRef)}` : ""}
+              ${finalNotes ? ` • ${escapeHtml(finalNotes)}` : ""}
             </td>
             <td class="right">
-              <button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">PAID</button>
+              <button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">RECORDED</button>
             </td>
           </tr>
         `;
@@ -319,21 +304,14 @@
         <tr>
           <td>${escapeHtml(empName)}</td>
           <td>${escapeHtml(periodText)}</td>
-          <td class="right">$${escapeHtml(total)}</td>
+          <td class="right">$${escapeHtml(gross)}</td>
+
+          <td class="right">
+            <input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" />
+          </td>
 
           <td>
-            <select
-              class="pay-method"
-              data-emp="${escapeHtml(employeeId)}"
-              style="
-                min-width:120px;
-                padding:8px;
-                border-radius:8px;
-                border:1px solid rgba(255,255,255,.18);
-                background:rgba(255,255,255,.08);
-                color:white;
-              "
-            >
+            <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
               <option value="Check">Check</option>
               <option value="Zelle">Zelle</option>
               <option value="Venmo">Venmo</option>
@@ -344,45 +322,16 @@
           </td>
 
           <td>
-            <input
-              class="check-ref"
-              data-emp="${escapeHtml(employeeId)}"
-              placeholder="Check #"
-              style="
-                width:110px;
-                padding:8px;
-                border-radius:8px;
-                border:1px solid rgba(255,255,255,.18);
-                background:rgba(255,255,255,.08);
-                color:white;
-              "
-            />
+            <input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check #" />
           </td>
 
           <td>
-            <input
-              class="pay-notes"
-              data-emp="${escapeHtml(employeeId)}"
-              placeholder="Notes"
-              style="
-                width:140px;
-                padding:8px;
-                border-radius:8px;
-                border:1px solid rgba(255,255,255,.18);
-                background:rgba(255,255,255,.08);
-                color:white;
-              "
-            />
+            <input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" />
           </td>
 
           <td class="right">
-            <button
-              class="btn mark-paid-inline"
-              data-period="${escapeHtml(r.periodId || currentPeriodId)}"
-              data-emp="${escapeHtml(employeeId)}"
-              style="width:auto; padding:10px 12px; border-radius:12px;"
-            >
-              Mark Paid
+            <button class="btn record-final-pay-inline" data-period="${escapeHtml(r.periodId || currentPeriodId)}" data-emp="${escapeHtml(employeeId)}" style="width:auto; padding:10px 12px; border-radius:12px;">
+              Record Final Payment
             </button>
           </td>
         </tr>
@@ -393,64 +342,65 @@
       sel.addEventListener("change", () => {
         const emp = sel.dataset.emp;
         const refInput = paymentsBody.querySelector(`.check-ref[data-emp="${emp}"]`);
-
         if (!refInput) return;
 
         if (sel.value === "Check") {
           refInput.style.visibility = "visible";
           refInput.disabled = false;
+          refInput.placeholder = "Check #";
         } else {
           refInput.style.visibility = "hidden";
           refInput.disabled = true;
           refInput.value = "";
         }
       });
-
       sel.dispatchEvent(new Event("change"));
     });
 
-    paymentsBody.querySelectorAll(".mark-paid-inline").forEach(btn => {
+    paymentsBody.querySelectorAll(".record-final-pay-inline").forEach(btn => {
       btn.addEventListener("click", async () => {
         const empId = btn.dataset.emp;
         const periodId = btn.dataset.period || currentPeriodId;
-
         if (!empId || !periodId) return;
 
-        const method =
-          paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
+        const netPayRaw = paymentsBody.querySelector(`.net-pay-input[data-emp="${empId}"]`)?.value || "";
+        const netPay = Number(String(netPayRaw).replace(/[$,]/g, ""));
+        if (!netPay || netPay <= 0) {
+          setStatus("Enter the actual net pay amount from QuickBooks before recording final payment.", "err");
+          return;
+        }
 
-        const reference =
-          paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
-
-        const notes =
-          paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
+        const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
+        const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
+        const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
 
         try {
           btn.disabled = true;
           btn.textContent = "Saving...";
-
-          setStatus("Marking as paid…");
+          setStatus("Recording final net payment…");
 
           const res = await jsonp(
             secureUrl(
               "payroll_mark_paid",
               "periodId=" + encodeURIComponent(periodId) +
               "&employeeId=" + encodeURIComponent(empId) +
+              "&netPay=" + encodeURIComponent(netPay.toFixed(2)) +
+              "&finalPaidMethod=" + encodeURIComponent(method) +
+              "&finalReference=" + encodeURIComponent(reference) +
+              "&finalPaymentNotes=" + encodeURIComponent(notes) +
               "&paidMethod=" + encodeURIComponent(method) +
               "&reference=" + encodeURIComponent(reference) +
               "&notes=" + encodeURIComponent(notes)
             )
           );
 
-          if (!res || !res.ok) {
-            throw new Error(res?.error || "payroll_mark_paid failed");
-          }
+          if (!res || !res.ok) throw new Error(res?.error || "record final payment failed");
 
           await refreshPaymentsOnly();
-          setStatus("Paid saved ✅", "ok");
+          setStatus("Final net payment recorded ✅", "ok");
         } catch (err) {
           btn.disabled = false;
-          btn.textContent = "Mark Paid";
+          btn.textContent = "Record Final Payment";
           setStatus(String(err?.message || err), "err");
         }
       });
@@ -472,23 +422,10 @@
     }
 
     const rows = [];
-
     employees.forEach(emp => {
       (emp.jobs || []).forEach(j => {
-        const rawJob =
-          j.clientName ||
-          j.jobName ||
-          j.job ||
-          j.client ||
-          j.jobId ||
-          "";
-
-        const rawPay =
-          j.jobPay ??
-          j.pay ??
-          j.amount ??
-          0;
-
+        const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "";
+        const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
         rows.push({
           employee: emp.employeeName || emp.employeeId,
           date: j.date || "",
@@ -500,10 +437,10 @@
 
     payoutBody.innerHTML = rows.map(r => `
       <tr>
-        <td>${escapeHtml(r.employee)}</td>
-        <td>${escapeHtml(r.date)}</td>
-        <td>${escapeHtml(r.job)}</td>
-        <td class="right">$${escapeHtml(r.pay)}</td>
+        <td style="padding:10px 12px;">${escapeHtml(r.employee)}</td>
+        <td style="padding:10px 12px;">${escapeHtml(r.date)}</td>
+        <td style="padding:10px 12px;">${escapeHtml(r.job)}</td>
+        <td class="right" style="padding:10px 12px;">$${escapeHtml(r.pay)}</td>
       </tr>
     `).join("");
 
@@ -515,20 +452,16 @@
 
   async function refreshPaymentsOnly() {
     if (!currentPeriodId) return;
-
     const pay = await payrollPayments(currentPeriodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
-
     renderPayments(pay.rows, pay.period);
   }
 
   async function loadPeriod(periodId) {
     if (!periodId) return;
-
     currentPeriodId = periodId;
 
     setStatus(`Loading payroll period ${periodId}…`);
-
     const sum = await payrollSummary(periodId);
     if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
 
@@ -544,7 +477,6 @@
 
     const pay = await payrollPayments(periodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
-
     renderPayments(pay.rows, pay.period);
 
     const payoutRes = await payrollPayouts(periodId);
@@ -556,11 +488,9 @@
   }
 
   async function refreshAll() {
-    setStatus("Loading current payroll week…");
-
+    setStatus("Loading current pay period…");
     const cur = await payrollCurrent();
     if (!cur || !cur.ok) throw new Error(cur?.error || "payroll_current failed");
-
     renderPeriod(cur);
 
     if (!currentPeriodId) {
@@ -568,15 +498,12 @@
       return;
     }
 
-    setStatus("Loading payroll summary…");
-
+    setStatus("Loading summary…");
     const sum = await payrollSummary(currentPeriodId);
     if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
-
     renderSummary(sum.rows);
 
-    setStatus("Loading payment rows…");
-
+    setStatus("Loading payments…");
     await refreshPaymentsOnly();
 
     setStatus("Loading job breakdown…");
@@ -592,12 +519,10 @@
     if (!pastPayrollSelect) return;
 
     setStatus("Loading past payroll periods…");
-
     const res = await payrollPeriods();
     if (!res || !res.ok) throw new Error(res?.error || "payroll_periods failed");
 
     const periods = Array.isArray(res.periods) ? res.periods : [];
-
     if (!periods.length) {
       pastPayrollSelect.innerHTML = `<option value="">No saved periods found</option>`;
       if (pastPayrollHint) pastPayrollHint.textContent = "No past payroll periods found yet.";
@@ -611,9 +536,21 @@
       return `<option value="${escapeHtml(id)}" ${id === currentPeriodId ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
 
-    if (pastPayrollHint) {
-      pastPayrollHint.textContent = `${periods.length} saved payroll period(s).`;
-    }
+    if (pastPayrollHint) pastPayrollHint.textContent = `${periods.length} saved payroll period(s).`;
+  }
+
+  function downloadTextFile(filename, text, mime = "text/csv;charset=utf-8") {
+    const blob = new Blob([text || ""], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "export.csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch (e) {}
+      try { a.remove(); } catch (e) {}
+    }, 0);
   }
 
   async function exportCurrentQB() {
@@ -631,7 +568,6 @@
       if (!res || !res.ok) throw new Error(res?.error || "payroll_export_qb failed");
 
       const url = res.url || res.sheetUrl || "";
-
       if (url) {
         if (exportWindow) {
           exportWindow.location.href = url;
@@ -675,16 +611,7 @@
       await fetch(`${API_URL}?action=schedule_override_add&t=${encodeURIComponent(t)}&d=${encodeURIComponent(d)}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          employeeId,
-          date,
-          jobName,
-          jobPay,
-          startTime,
-          endTime,
-          address,
-          notes
-        })
+        body: JSON.stringify({ employeeId, date, jobName, jobPay, startTime, endTime, address, notes })
       });
 
       setStatus("One-off job added ✅", "ok");
@@ -699,7 +626,6 @@
     captureTokenFromUrl();
 
     const authObj = loadSessionAuth();
-
     if (!requireAdmin(authObj)) {
       setStatus("Denied: admin access required.\n\nOpen this from the Admin Panel.", "err");
       if (pillWho) pillWho.textContent = "Denied";
@@ -714,32 +640,26 @@
     }
 
     setStatus("Checking secure API…");
-
     const p = await ping();
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
     await refreshAll();
 
-    // Load past payroll last so the current week, payments, and job breakdown show first.
+    // Load past payroll last so current week, payments, and job breakdown appear first.
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
     if (btnRefresh) {
-      btnRefresh.onclick = () =>
-        refreshAll().catch(err => setStatus(String(err?.message || err), "err"));
+      btnRefresh.onclick = () => refreshAll().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnGenerate) {
       btnGenerate.onclick = async () => {
         try {
           if (!currentPeriodId) return;
-
           setStatus("Generating payroll summary…");
-
           const res = await payrollGenerate(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.message || res?.error || "payroll_generate failed");
-
           await loadPeriod(currentPeriodId);
-          setStatus("Payroll generated ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
@@ -750,59 +670,41 @@
       btnLock.onclick = async () => {
         try {
           if (!currentPeriodId) return;
-
           const ok = confirm(`Lock payroll period ${currentPeriodId}?`);
           if (!ok) return;
-
           setStatus("Locking period…");
-
           const res = await payrollLock(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.error || "payroll_lock failed");
-
           await loadPeriod(currentPeriodId);
-          setStatus("Payroll period locked ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
       };
     }
 
-    if (btnAddOverride) {
-      btnAddOverride.onclick = () => addOneOffJob();
-    }
+    if (btnAddOverride) btnAddOverride.onclick = () => addOneOffJob();
 
     if (btnPastPayroll) {
-      btnPastPayroll.onclick = () =>
-        showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
+      btnPastPayroll.onclick = () => showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnLoadPastPayroll) {
-      btnLoadPastPayroll.onclick = () =>
-        loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
+      btnLoadPastPayroll.onclick = () => loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnExportQB) {
-      btnExportQB.onclick = () =>
-        exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
-    }
-
-    if (btnExportQB2) {
-      btnExportQB2.onclick = () =>
-        exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
+      btnExportQB.onclick = () => exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnPayouts) {
       btnPayouts.onclick = async () => {
         try {
           if (!currentPeriodId) return;
-
           setStatus("Loading job breakdown…");
-
           const res = await payrollPayouts(currentPeriodId);
           if (!res || !res.ok) throw new Error(res?.error || "payroll_payouts failed");
-
           renderPayouts(res.payouts);
-          setStatus("Job breakdown loaded ✅", "ok");
+          setStatus("Ready ✅", "ok");
         } catch (err) {
           setStatus(String(err?.message || err), "err");
         }
@@ -811,9 +713,7 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () =>
-      boot().catch(err => setStatus(String(err?.message || err), "err"))
-    );
+    document.addEventListener("DOMContentLoaded", () => boot().catch(err => setStatus(String(err?.message || err), "err")));
   } else {
     boot().catch(err => setStatus(String(err?.message || err), "err"));
   }
