@@ -1,8 +1,8 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Past Payroll + QB Export version
+   ATS Payroll (Admin UI) — QuickBooks Finalization version
    - Keeps original payroll flow
    - Adds Past Payroll picker
-   - Adds Export QB CSV button
+   - Adds QuickBooks link, audit snapshot, and period-level Entered in QuickBooks finalization
    - Uses JSONP unified Apps Script backend
 ========================================================= */
 
@@ -29,6 +29,7 @@
   const btnPayouts = document.getElementById("btnPayouts");
   const btnPastPayroll = document.getElementById("btnPastPayroll");
   const btnExportQB = document.getElementById("btnExportQB");
+  const btnFinalizeQB = document.getElementById("btnFinalizeQB");
 
   const pastPayrollCard = document.getElementById("pastPayrollCard");
   const pastPayrollSelect = document.getElementById("pastPayrollSelect");
@@ -198,6 +199,11 @@
     return jsonp(secureUrl("payroll_export_qb", `period_id=${encodeURIComponent(periodId)}`));
   }
 
+  async function payrollFinalizeQB(periodId, rows) {
+    const payload = encodeURIComponent(JSON.stringify({ rows: rows || [] }));
+    return jsonp(secureUrl("payroll_finalize_qb", `periodId=${encodeURIComponent(periodId)}&payload=${payload}`));
+  }
+
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || p?.period || p?.id || currentPeriodId || "";
     if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
@@ -243,8 +249,8 @@
 
     if (paymentsHint) {
       paymentsHint.textContent = start && end
-        ? `Record the actual net payment after QuickBooks for ${start} → ${end}. Gross totals stay unchanged.`
-        : "Record the actual net payment after QuickBooks calculates taxes/deductions.";
+        ? `Enter net pay and payment details after QuickBooks for ${start} → ${end}. Click Entered in QuickBooks once after ALL employees are entered.`
+        : "Enter actual net payments from QuickBooks, then click Entered in QuickBooks once.";
     }
 
     if (!data.length) {
@@ -272,14 +278,17 @@
       const gross = Number(r.totalPay || r.total || 0).toFixed(2);
       const employeeId = r.employeeId || "";
       const netPay = r.netPay || r.finalNetPay || "";
-      const finalMethod = r.finalPaidMethod || r.paidMethod || "";
+      const finalMethod = r.finalPaidMethod || r.paidMethod || "Check";
       const finalRef = r.finalReference || r.reference || "";
       const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
+      const statusText = String(r.status || "").toUpperCase();
+      const qbStatus = String(r.qbStatus || "").toUpperCase();
 
       const isFinalPaid =
         r.finalPaid ||
-        String(r.status || "").toUpperCase() === "NET_PAID" ||
-        String(r.status || "").toUpperCase() === "PAID";
+        statusText === "NET_PAID" ||
+        statusText === "PAID" ||
+        qbStatus === "ENTERED_IN_QB";
 
       if (isFinalPaid) {
         return `
@@ -288,14 +297,10 @@
             <td>${escapeHtml(periodText)}</td>
             <td class="right">$${escapeHtml(gross)}</td>
             <td class="right">$${Number(netPay || 0).toFixed(2)}</td>
-            <td colspan="3">
-              ✔ ${escapeHtml(finalMethod || "Recorded")}
-              ${finalRef ? ` • ${escapeHtml(finalRef)}` : ""}
-              ${finalNotes ? ` • ${escapeHtml(finalNotes)}` : ""}
-            </td>
-            <td class="right">
-              <button class="btn secondary" disabled style="width:auto; padding:10px 12px; border-radius:12px;">RECORDED</button>
-            </td>
+            <td>${escapeHtml(finalMethod || "Recorded")}</td>
+            <td>${escapeHtml(finalRef || "")}</td>
+            <td>${escapeHtml(finalNotes || "")}</td>
+            <td>✔ Entered in QuickBooks</td>
           </tr>
         `;
       }
@@ -307,33 +312,29 @@
           <td class="right">$${escapeHtml(gross)}</td>
 
           <td class="right">
-            <input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" />
+            <input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(netPay)}" />
           </td>
 
           <td>
             <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
-              <option value="Check">Check</option>
-              <option value="Zelle">Zelle</option>
-              <option value="Venmo">Venmo</option>
-              <option value="Cash App">Cash App</option>
-              <option value="Cash">Cash</option>
-              <option value="Other">Other</option>
+              <option value="Check" ${finalMethod === "Check" ? "selected" : ""}>Check</option>
+              <option value="Zelle" ${finalMethod === "Zelle" ? "selected" : ""}>Zelle</option>
+              <option value="Venmo" ${finalMethod === "Venmo" ? "selected" : ""}>Venmo</option>
+              <option value="Cash App" ${finalMethod === "Cash App" ? "selected" : ""}>Cash App</option>
+              <option value="Cash" ${finalMethod === "Cash" ? "selected" : ""}>Cash</option>
+              <option value="Other" ${finalMethod === "Other" ? "selected" : ""}>Other</option>
             </select>
           </td>
 
           <td>
-            <input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check #" />
+            <input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check # / Ref" value="${escapeHtml(finalRef)}" />
           </td>
 
           <td>
-            <input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" />
+            <input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" value="${escapeHtml(finalNotes)}" />
           </td>
 
-          <td class="right">
-            <button class="btn record-final-pay-inline" data-period="${escapeHtml(r.periodId || currentPeriodId)}" data-emp="${escapeHtml(employeeId)}" style="width:auto; padding:10px 12px; border-radius:12px;">
-              Record Final Payment
-            </button>
-          </td>
+          <td class="qb-row-status" data-emp="${escapeHtml(employeeId)}">Ready</td>
         </tr>
       `;
     }).join("");
@@ -345,65 +346,12 @@
         if (!refInput) return;
 
         if (sel.value === "Check") {
-          refInput.style.visibility = "visible";
-          refInput.disabled = false;
           refInput.placeholder = "Check #";
         } else {
-          refInput.style.visibility = "hidden";
-          refInput.disabled = true;
-          refInput.value = "";
+          refInput.placeholder = "Ref # optional";
         }
       });
       sel.dispatchEvent(new Event("change"));
-    });
-
-    paymentsBody.querySelectorAll(".record-final-pay-inline").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const empId = btn.dataset.emp;
-        const periodId = btn.dataset.period || currentPeriodId;
-        if (!empId || !periodId) return;
-
-        const netPayRaw = paymentsBody.querySelector(`.net-pay-input[data-emp="${empId}"]`)?.value || "";
-        const netPay = Number(String(netPayRaw).replace(/[$,]/g, ""));
-        if (!netPay || netPay <= 0) {
-          setStatus("Enter the actual net pay amount from QuickBooks before recording final payment.", "err");
-          return;
-        }
-
-        const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
-        const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
-        const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
-
-        try {
-          btn.disabled = true;
-          btn.textContent = "Saving...";
-          setStatus("Recording final net payment…");
-
-          const res = await jsonp(
-            secureUrl(
-              "payroll_mark_paid",
-              "periodId=" + encodeURIComponent(periodId) +
-              "&employeeId=" + encodeURIComponent(empId) +
-              "&netPay=" + encodeURIComponent(netPay.toFixed(2)) +
-              "&finalPaidMethod=" + encodeURIComponent(method) +
-              "&finalReference=" + encodeURIComponent(reference) +
-              "&finalPaymentNotes=" + encodeURIComponent(notes) +
-              "&paidMethod=" + encodeURIComponent(method) +
-              "&reference=" + encodeURIComponent(reference) +
-              "&notes=" + encodeURIComponent(notes)
-            )
-          );
-
-          if (!res || !res.ok) throw new Error(res?.error || "record final payment failed");
-
-          await refreshPaymentsOnly();
-          setStatus("Final net payment recorded ✅", "ok");
-        } catch (err) {
-          btn.disabled = false;
-          btn.textContent = "Record Final Payment";
-          setStatus(String(err?.message || err), "err");
-        }
-      });
     });
   }
 
@@ -553,15 +501,97 @@
     }, 0);
   }
 
+  function collectFinalPaymentRows() {
+    if (!paymentsBody) return [];
+
+    const rows = [];
+    paymentsBody.querySelectorAll(".net-pay-input").forEach(input => {
+      const empId = input.dataset.emp || "";
+      const netPayRaw = input.value || "";
+      const netPay = Number(String(netPayRaw).replace(/[$,]/g, ""));
+
+      const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
+      const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
+      const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
+
+      rows.push({
+        employeeId: empId,
+        netPay,
+        finalPaidMethod: method,
+        finalReference: reference,
+        finalPaymentNotes: notes
+      });
+    });
+
+    return rows;
+  }
+
+  async function finalizeEnteredInQuickBooks() {
+    if (!currentPeriodId) return;
+
+    const rows = collectFinalPaymentRows();
+
+    if (!rows.length) {
+      setStatus("No open payment rows found. This period may already be finalized.", "err");
+      return;
+    }
+
+    for (const row of rows) {
+      if (!row.employeeId) {
+        setStatus("Missing employee ID in one payment row.", "err");
+        return;
+      }
+
+      if (!row.netPay || row.netPay <= 0) {
+        setStatus(`Enter net pay for ${row.employeeId} before clicking Entered in QuickBooks.`, "err");
+        return;
+      }
+
+      if (row.finalPaidMethod === "Check" && !String(row.finalReference || "").trim()) {
+        setStatus(`Enter a check number for ${row.employeeId}.`, "err");
+        return;
+      }
+    }
+
+    const ok = confirm(
+      `Confirm all employees for ${currentPeriodId} have been entered in QuickBooks?\n\n` +
+      "This will mark payroll as entered in QuickBooks, save final net payment details, create/update the audit snapshot, and lock the period."
+    );
+
+    if (!ok) return;
+
+    try {
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = true;
+        btnFinalizeQB.textContent = "Saving...";
+      }
+
+      setStatus(`Finalizing ${currentPeriodId} as Entered in QuickBooks…`);
+
+      const res = await payrollFinalizeQB(currentPeriodId, rows);
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_finalize_qb failed");
+
+      await loadPeriod(currentPeriodId);
+      setStatus("Entered in QuickBooks saved, audit snapshot updated, and period locked ✅", "ok");
+    } catch (err) {
+      setStatus(String(err?.message || err), "err");
+    } finally {
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = false;
+        btnFinalizeQB.textContent = "Entered in QuickBooks";
+      }
+    }
+  }
+
   async function exportCurrentQB() {
     if (!currentPeriodId) return;
 
     const exportWindow = window.open("about:blank", "_blank");
     if (exportWindow) {
-      exportWindow.document.write("<p style='font-family:sans-serif;'>Exporting payroll to QB CSV sheet…</p>");
+      exportWindow.document.write("<p style='font-family:sans-serif;'>Creating payroll audit snapshot…</p>");
     }
 
-    setStatus(`Exporting payroll to QB CSV sheet for ${currentPeriodId}…`);
+    setStatus(`Creating payroll audit snapshot for ${currentPeriodId}…`);
 
     try {
       const res = await payrollExportQB(currentPeriodId);
@@ -579,7 +609,7 @@
         alert("Export saved, but no sheet URL returned.");
       }
 
-      setStatus(`QB CSV sheet exported for ${currentPeriodId} ✅`, "ok");
+      setStatus(`Payroll audit snapshot created for ${currentPeriodId} ✅`, "ok");
     } catch (err) {
       if (exportWindow) exportWindow.close();
       throw err;
@@ -694,6 +724,10 @@
 
     if (btnExportQB) {
       btnExportQB.onclick = () => exportCurrentQB().catch(err => setStatus(String(err?.message || err), "err"));
+    }
+
+    if (btnFinalizeQB) {
+      btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
     }
 
     if (btnPayouts) {
