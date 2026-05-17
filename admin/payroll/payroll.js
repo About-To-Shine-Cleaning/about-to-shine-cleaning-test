@@ -4,6 +4,7 @@
    - Combines payroll review + job breakdown
    - Payroll finalization saves net pay, creates audit snapshot, and locks period
    - Hidden admin tools include past payroll and unlock with PIN/reason
+   - Open QuickBooks opens a right-side popup and tries to resize payroll left
    - Uses JSONP unified Apps Script backend
 ========================================================= */
 
@@ -23,6 +24,7 @@
   const periodPaydayEl = document.getElementById("periodPayday");
   const periodStatusEl = document.getElementById("periodStatus");
 
+  const btnOpenQB = document.getElementById("btnOpenQB");
   const btnFinalizeQB = document.getElementById("btnFinalizeQB");
   const pastPayrollSelect = document.getElementById("pastPayrollSelect");
   const btnLoadPastPayroll = document.getElementById("btnLoadPastPayroll");
@@ -169,6 +171,42 @@
       "payroll_unlock",
       `periodId=${encodeURIComponent(periodId)}&pin=${encodeURIComponent(pin)}&reason=${encodeURIComponent(reason)}`
     ));
+  }
+
+  function openQuickBooksPopup(e) {
+    if (e) e.preventDefault();
+
+    const screenW = window.screen.availWidth || 1920;
+    const screenH = window.screen.availHeight || 1080;
+
+    const qbWidth = Math.floor(screenW * 0.52);
+    const qbHeight = Math.floor(screenH * 0.95);
+    const left = screenW - qbWidth;
+    const top = 20;
+
+    const qbWindow = window.open(
+      "https://www.quickbooks.com",
+      "ATSQuickBooksPayroll",
+      [
+        `width=${qbWidth}`,
+        `height=${qbHeight}`,
+        `left=${left}`,
+        `top=${top}`,
+        "resizable=yes",
+        "scrollbars=yes"
+      ].join(",")
+    );
+
+    if (qbWindow) {
+      try { qbWindow.focus(); } catch (err) {}
+    }
+
+    try {
+      window.moveTo(0, 0);
+      window.resizeTo(screenW - qbWidth, screenH);
+    } catch (err) {
+      console.log("Browser blocked window resize:", err);
+    }
   }
 
   function renderPeriod(p) {
@@ -420,7 +458,7 @@
 
     for (const row of rows) {
       if (!row.employeeId) return setStatus("Missing employee ID in one payment row.", "err");
-      if (!row.netPay || row.netPay <= 0) return setStatus(`Enter net pay for ${row.employeeId} before clicking Entered in QuickBooks.`, "err");
+      if (!row.netPay || row.netPay <= 0) return setStatus(`Enter net pay for ${row.employeeId} before clicking Finalize Payroll.`, "err");
       if (row.finalPaidMethod === "Check" && !String(row.finalReference || "").trim()) return setStatus(`Enter a check number for ${row.employeeId}.`, "err");
     }
 
@@ -499,9 +537,23 @@
     await autoloadCurrentPayroll();
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
-    if (btnLoadPastPayroll) btnLoadPastPayroll.onclick = () => loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
-    if (btnFinalizeQB) btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
-    if (btnUnlockPeriod) btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
+    if (btnOpenQB) {
+      btnOpenQB.onclick = openQuickBooksPopup;
+    }
+
+    if (btnLoadPastPayroll) {
+      btnLoadPastPayroll.onclick = () =>
+        loadPeriod(pastPayrollSelect?.value || "")
+          .catch(err => setStatus(String(err?.message || err), "err"));
+    }
+
+    if (btnFinalizeQB) {
+      btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
+    }
+
+    if (btnUnlockPeriod) {
+      btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
+    }
   }
 
   if (document.readyState === "loading") {
