@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ATS Payroll</title>
+  <title>Payroll Finalization</title>
 
   <style>
     :root{
@@ -33,6 +33,7 @@
     .wrap{max-width:1180px;margin:0 auto;padding:18px}
     .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+    .payroll-title-pill{font-size:20px;font-weight:900;padding:9px 16px}
     .muted{color:var(--muted)}
     .small{font-size:12px;color:var(--muted)}
     .hidden{display:none!important}
@@ -68,7 +69,7 @@
     .btn.danger{background:rgba(239,68,68,.16);color:#fecaca;border:1px solid rgba(239,68,68,.38)}
     .btn.wide{width:100%}
 
-    .status{white-space:pre-wrap;padding:12px;border-radius:16px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);margin-top:14px}
+    .status{white-space:pre-wrap;display:inline-flex;align-items:center;width:auto;max-width:100%;padding:7px 10px;border-radius:999px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.12);margin-top:12px;font-size:12px;color:var(--muted)}
     .status.ok{border-color:rgba(34,197,94,.65)}
     .status.err{border-color:rgba(239,68,68,.65)}
 
@@ -137,7 +138,7 @@
       <div class="wrap">
 
         <div class="top">
-          <div class="pill"><strong>ATS Payroll</strong> <span class="muted">QuickBooks Payroll Run</span></div>
+          <div class="pill payroll-title-pill"><strong>Payroll Finalization</strong></div>
           <div class="pill" id="pillWho">—</div>
         </div>
 
@@ -157,7 +158,7 @@
 
             <div class="quick-actions" aria-label="Primary payroll actions">
               <a class="btn secondary" id="btnOpenQB" href="https://www.quickbooks.com" target="_blank" rel="noopener">Open QuickBooks</a>
-              <button class="btn" id="btnFinalizeQB">Entered in QuickBooks</button>
+              <button class="btn" id="btnFinalizeQB">Finalize Payroll</button>
             </div>
           </div>
         </section>
@@ -192,9 +193,9 @@
             <div class="card-head">
               <div>
                 <div class="section-title">
-                  <h2>QuickBooks Final Entry</h2>
+                  <h2>Payroll Finalization</h2>
                 </div>
-                <p class="muted" id="paymentsHint">Enter net pay and payment details after all gross payroll is entered into QuickBooks, then click Entered in QuickBooks once.</p>
+                <p class="muted" id="paymentsHint">Enter final net pay and payment details after payroll is processed, then click Finalize Payroll once.</p>
               </div>
               <div class="small" id="paymentsTotals"></div>
             </div>
@@ -249,6 +250,6 @@
     </div>
   </main>
 
-  <script src="./payroll.js?v=107"></script>
+  <script src="./payroll.js?v=108"></script>
 </body>
 </html>
