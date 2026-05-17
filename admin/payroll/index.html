@@ -30,7 +30,7 @@
         var(--bg);
       color:var(--text);
     }
-    a{color:inherit}
+    a{color:inherit;text-decoration:none}
     .wrap{max-width:1180px;margin:0 auto;padding:18px}
     .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
@@ -73,6 +73,12 @@
     .quick-actions .btn{
       width:100%;
       max-width:440px;
+    }
+    .quick-actions a.btn{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
 
     .btn{
@@ -133,7 +139,7 @@
     }
 
     .table-wrap{overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.12)}
-    table{width:100%;border-collapse:collapse;min-width:980px}
+    table{width:100%;border-collapse:collapse;min-width:1080px}
     table th,table td{border-bottom:1px solid rgba(255,255,255,.10)}
     th{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
     td{font-size:14px}
@@ -246,7 +252,9 @@
 
             <div class="quick-actions" aria-label="Primary payroll actions">
               <button class="btn" id="btnGenerate">Generate Payroll</button>
-              <button class="btn secondary" id="btnExportQB">Export to QB CSV</button>
+              <a class="btn secondary" id="btnOpenQB" href="https://www.quickbooks.com" target="_blank" rel="noopener">Open QuickBooks</a>
+              <button class="btn" id="btnFinalizeQB">Entered in QuickBooks</button>
+              <button class="btn secondary" id="btnExportQB">Create Payroll Audit Snapshot</button>
               <button class="btn danger" id="btnLock">Lock Period</button>
               <button class="btn secondary" id="btnAddOverride">Add One-Off Job</button>
             </div>
@@ -261,7 +269,7 @@
                 <div class="section-title">
                   <h2>Review Pay</h2>
                 </div>
-                <p class="muted" id="summaryHint">Review job count and total pay before marking anyone paid.</p>
+                <p class="muted" id="summaryHint">Review job count, gross pay, and job breakdown before entering payroll into QuickBooks.</p>
               </div>
             </div>
 
@@ -285,9 +293,9 @@
             <div class="card-head">
               <div>
                 <div class="section-title">
-                  <h2>Record Final Payment</h2>
+                  <h2>QuickBooks Final Entry</h2>
                 </div>
-                <p class="muted" id="paymentsHint">Enter the actual net amount after QuickBooks calculates taxes/deductions.</p>
+                <p class="muted" id="paymentsHint">Enter net pay and payment details after all gross payroll is entered into QuickBooks, then click Entered in QuickBooks once.</p>
               </div>
               <div class="small" id="paymentsTotals"></div>
             </div>
@@ -303,7 +311,7 @@
                     <th style="text-align:left;">Method</th>
                     <th style="text-align:left;">Reference</th>
                     <th style="text-align:left;">Notes</th>
-                    <th style="text-align:right;">Action</th>
+                    <th style="text-align:left;">Status</th>
                   </tr>
                 </thead>
                 <tbody id="paymentsBody"></tbody>
@@ -342,6 +350,6 @@
     </div>
   </main>
 
-  <script src="./payroll.js?v=105"></script>
+  <script src="./payroll.js?v=106"></script>
 </body>
 </html>
