@@ -2,7 +2,7 @@
    ATS Payroll (Admin UI) — Clean QuickBooks Payroll Flow
    - Auto-loads current payroll
    - Combines payroll review + job breakdown
-   - QuickBooks final entry saves net pay, creates audit snapshot, and locks period
+   - Payroll finalization saves net pay, creates audit snapshot, and locks period
    - Hidden admin tools include past payroll and unlock with PIN/reason
    - Uses JSONP unified Apps Script backend
 ========================================================= */
@@ -190,8 +190,8 @@
 
     if (paymentsHint) {
       paymentsHint.textContent = start && end
-        ? `Enter net pay and payment details after QuickBooks for ${start} → ${end}. Click Entered in QuickBooks once after ALL employees are entered.`
-        : "Enter actual net payments from QuickBooks, then click Entered in QuickBooks once.";
+        ? `Enter final net pay and payment details for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
+        : "Enter final net payments, then click Finalize Payroll once.";
     }
 
     if (!data.length) {
@@ -215,7 +215,9 @@
       const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
       const statusText = String(r.status || "").toUpperCase();
       const qbStatus = String(r.qbStatus || "").toUpperCase();
-      const isFinalPaid = r.finalPaid || statusText === "NET_PAID" || statusText === "PAID" || qbStatus === "ENTERED_IN_QB";
+      const periodUnlocked = String(currentPeriodStatus || "").toUpperCase() === "OPEN";
+      const isReopened = qbStatus === "REOPENED" || statusText === "OPEN" || statusText === "REOPENED";
+      const isFinalPaid = !periodUnlocked && !isReopened && (r.finalPaid || statusText === "NET_PAID" || statusText === "PAID" || qbStatus === "ENTERED_IN_QB");
 
       if (isFinalPaid) {
         return `
@@ -343,11 +345,11 @@
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
     renderPayments(pay.rows, pay.period);
 
-    setStatus(`Loaded ${periodId} ✅`, "ok");
+    setStatus(`${periodId} loaded ✅`, "ok");
   }
 
   async function autoloadCurrentPayroll() {
-    setStatus("Loading current payroll…");
+    setStatus("Loading…");
     const cur = await payrollCurrent();
     if (!cur || !cur.ok) throw new Error(cur?.error || "payroll_current failed");
     renderPeriod(cur);
@@ -359,7 +361,7 @@
 
     // Auto-generate current payroll when period is open. If locked, load existing records.
     if (String(cur.status || "").toUpperCase() !== "LOCKED") {
-      setStatus("Updating current payroll from clock-out logs…");
+      setStatus("Updating…");
       const gen = await payrollGenerate(currentPeriodId);
       if (!gen || !gen.ok) {
         if (String(gen?.error || "") !== "period_locked") throw new Error(gen?.message || gen?.error || "payroll_generate failed");
@@ -423,23 +425,23 @@
     }
 
     const ok = confirm(
-      `Confirm all employees for ${currentPeriodId} have been entered in QuickBooks?\n\n` +
+      `Confirm payroll finalization for ${currentPeriodId}?\n\n` +
       "This will save final net payment details, update the master payroll audit sheet, and lock the period."
     );
     if (!ok) return;
 
     try {
-      if (btnFinalizeQB) { btnFinalizeQB.disabled = true; btnFinalizeQB.textContent = "Saving..."; }
-      setStatus(`Finalizing ${currentPeriodId} as Entered in QuickBooks…`);
+      if (btnFinalizeQB) { btnFinalizeQB.disabled = true; btnFinalizeQB.textContent = "Finalizing..."; }
+      setStatus(`Finalizing payroll for ${currentPeriodId}…`);
       const res = await payrollFinalizeQB(currentPeriodId, rows);
       if (!res || !res.ok) throw new Error(res?.error || "payroll_finalize_qb failed");
       currentPeriodStatus = "LOCKED";
       await loadPeriod(currentPeriodId);
-      setStatus("Entered in QuickBooks saved, master payroll audit sheet updated, and period locked ✅", "ok");
+      setStatus("Payroll finalized, audit records updated, and period locked ✅", "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnFinalizeQB) { btnFinalizeQB.disabled = false; btnFinalizeQB.textContent = "Entered in QuickBooks"; }
+      if (btnFinalizeQB) { btnFinalizeQB.disabled = false; btnFinalizeQB.textContent = "Finalize Payroll"; }
     }
   }
 
@@ -462,9 +464,10 @@
       if (!res || !res.ok) throw new Error(res?.error || "payroll_unlock failed");
       if (unlockPin) unlockPin.value = "";
       if (unlockReason) unlockReason.value = "";
+      currentPeriodStatus = "OPEN";
       await showPastPayrollPicker();
       await loadPeriod(periodId);
-      setStatus(`Payroll period ${periodId} unlocked ✅`, "ok");
+      setStatus(`${periodId} unlocked for corrections ✅`, "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
