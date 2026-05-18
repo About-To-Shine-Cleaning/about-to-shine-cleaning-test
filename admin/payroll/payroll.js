@@ -1,8 +1,8 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Clean QuickBooks Payroll Flow
+   ATS Payroll (Admin UI) — Gross / Taxes-Adjustments / Net Flow
    - Auto-loads current payroll
    - Combines payroll review + job breakdown
-   - Payroll finalization saves net pay, creates audit snapshot, and locks period
+   - Payroll finalization saves tax adjustments + net pay, creates audit snapshot, and locks period
    - Hidden admin tools include past payroll and unlock with PIN/reason
    - Open QuickBooks opens a right-side popup and tries to resize payroll left
    - Uses JSONP unified Apps Script backend
@@ -178,7 +178,6 @@
 
     const screenW = window.screen.availWidth || 1920;
     const screenH = window.screen.availHeight || 1080;
-
     const qbWidth = Math.floor(screenW * 0.52);
     const qbHeight = Math.floor(screenH * 0.95);
     const left = screenW - qbWidth;
@@ -187,14 +186,7 @@
     const qbWindow = window.open(
       "https://www.quickbooks.com",
       "ATSQuickBooksPayroll",
-      [
-        `width=${qbWidth}`,
-        `height=${qbHeight}`,
-        `left=${left}`,
-        `top=${top}`,
-        "resizable=yes",
-        "scrollbars=yes"
-      ].join(",")
+      [`width=${qbWidth}`, `height=${qbHeight}`, `left=${left}`, `top=${top}`, "resizable=yes", "scrollbars=yes"].join(",")
     );
 
     if (qbWindow) {
@@ -228,26 +220,30 @@
 
     if (paymentsHint) {
       paymentsHint.textContent = start && end
-        ? `Enter final net pay and payment details for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
-        : "Enter final net payments, then click Finalize Payroll once.";
+        ? `Enter Taxes/Adjustments and final net pay for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
+        : "Enter Taxes/Adjustments and final net payments, then click Finalize Payroll once.";
     }
 
     if (!data.length) {
-      paymentsBody.innerHTML = `<tr><td colspan="8" style="color:#6b7280;padding:10px 12px;">No payment rows yet.</td></tr>`;
+      paymentsBody.innerHTML = `<tr><td colspan="9" style="color:#6b7280;padding:10px 12px;">No payment rows yet.</td></tr>`;
       if (paymentsTotals) paymentsTotals.textContent = "";
       return;
     }
 
-    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || 0), 0);
+    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || r.grossPay || 0), 0);
+    const taxTotal = data.reduce((sum, r) => sum + Number(r.taxAdjustments || r.taxesAdjustments || 0), 0);
     const netTotal = data.reduce((sum, r) => sum + Number(r.netPay || r.finalNetPay || 0), 0);
-    if (paymentsTotals) paymentsTotals.textContent = `Gross Total: ${money(grossTotal)}${netTotal ? ` • Net Recorded: ${money(netTotal)}` : ""}`;
+    if (paymentsTotals) {
+      paymentsTotals.textContent = `Gross: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net: ${money(netTotal)}` : ""}`;
+    }
 
     paymentsBody.innerHTML = data.map(r => {
       const empName = r.employeeName || r.employeeId || "—";
       const periodText = `${r.startDate || start} → ${r.endDate || end}`;
-      const gross = Number(r.totalPay || r.total || 0).toFixed(2);
+      const gross = Number(r.totalPay || r.total || r.grossPay || 0).toFixed(2);
       const employeeId = r.employeeId || "";
       const netPay = r.netPay || r.finalNetPay || "";
+      const taxAdjustments = r.taxAdjustments || r.taxesAdjustments || "";
       const finalMethod = r.finalPaidMethod || r.paidMethod || "Check";
       const finalRef = r.finalReference || r.reference || "";
       const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
@@ -263,6 +259,7 @@
             <td>${escapeHtml(empName)}</td>
             <td>${escapeHtml(periodText)}</td>
             <td class="right">$${escapeHtml(gross)}</td>
+            <td class="right">${taxAdjustments === "" ? "" : money(taxAdjustments)}</td>
             <td class="right">$${Number(netPay || 0).toFixed(2)}</td>
             <td>${escapeHtml(finalMethod || "Recorded")}</td>
             <td>${escapeHtml(finalRef || "")}</td>
@@ -277,6 +274,7 @@
           <td>${escapeHtml(empName)}</td>
           <td>${escapeHtml(periodText)}</td>
           <td class="right">$${escapeHtml(gross)}</td>
+          <td class="right"><input class="pay-input tax-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(taxAdjustments)}" /></td>
           <td class="right"><input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(netPay)}" /></td>
           <td>
             <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
@@ -359,13 +357,6 @@
     payoutCard.classList.remove("hidden");
   }
 
-  async function refreshPaymentsOnly() {
-    if (!currentPeriodId) return;
-    const pay = await payrollPayments(currentPeriodId);
-    if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
-    renderPayments(pay.rows, pay.period);
-  }
-
   async function loadPeriod(periodId) {
     if (!periodId) return;
     currentPeriodId = periodId;
@@ -397,7 +388,6 @@
       return;
     }
 
-    // Auto-generate current payroll when period is open. If locked, load existing records.
     if (String(cur.status || "").toUpperCase() !== "LOCKED") {
       setStatus("Updating…");
       const gen = await payrollGenerate(currentPeriodId);
@@ -437,11 +427,14 @@
     paymentsBody.querySelectorAll(".net-pay-input").forEach(input => {
       const empId = input.dataset.emp || "";
       const netPay = Number(String(input.value || "").replace(/[$,]/g, ""));
+      const taxInput = paymentsBody.querySelector(`.tax-adjustment-input[data-emp="${empId}"]`);
+      const taxAdjustmentsRaw = taxInput ? String(taxInput.value || "").replace(/[$,]/g, "") : "";
+      const taxAdjustments = taxAdjustmentsRaw === "" ? "" : Number(taxAdjustmentsRaw);
       const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
       const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
       const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
 
-      rows.push({ employeeId: empId, netPay, finalPaidMethod: method, finalReference: reference, finalPaymentNotes: notes });
+      rows.push({ employeeId: empId, taxAdjustments, taxesAdjustments: taxAdjustments, netPay, finalPaidMethod: method, finalReference: reference, finalPaymentNotes: notes });
     });
 
     return rows;
@@ -459,12 +452,13 @@
     for (const row of rows) {
       if (!row.employeeId) return setStatus("Missing employee ID in one payment row.", "err");
       if (!row.netPay || row.netPay <= 0) return setStatus(`Enter net pay for ${row.employeeId} before clicking Finalize Payroll.`, "err");
+      if (row.taxAdjustments !== "" && Number.isNaN(Number(row.taxAdjustments))) return setStatus(`Enter a valid Taxes/Adjustments amount for ${row.employeeId}.`, "err");
       if (row.finalPaidMethod === "Check" && !String(row.finalReference || "").trim()) return setStatus(`Enter a check number for ${row.employeeId}.`, "err");
     }
 
     const ok = confirm(
       `Confirm payroll finalization for ${currentPeriodId}?\n\n` +
-      "This will save final net payment details, update the master payroll audit sheet, and lock the period."
+      "This will save Taxes/Adjustments, final net payment details, update the master payroll audit sheet, and lock the period."
     );
     if (!ok) return;
 
@@ -537,23 +531,14 @@
     await autoloadCurrentPayroll();
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
-    if (btnOpenQB) {
-      btnOpenQB.onclick = openQuickBooksPopup;
-    }
-
+    if (btnOpenQB) btnOpenQB.onclick = openQuickBooksPopup;
     if (btnLoadPastPayroll) {
       btnLoadPastPayroll.onclick = () =>
         loadPeriod(pastPayrollSelect?.value || "")
           .catch(err => setStatus(String(err?.message || err), "err"));
     }
-
-    if (btnFinalizeQB) {
-      btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
-    }
-
-    if (btnUnlockPeriod) {
-      btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
-    }
+    if (btnFinalizeQB) btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
+    if (btnUnlockPeriod) btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
   }
 
   if (document.readyState === "loading") {
