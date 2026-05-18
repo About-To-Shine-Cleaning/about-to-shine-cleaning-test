@@ -1,8 +1,8 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Gross / Taxes-Adjustments / Net Flow
+   ATS Payroll (Admin UI) — Clean QuickBooks Payroll Flow
    - Auto-loads current payroll
    - Combines payroll review + job breakdown
-   - Payroll finalization saves tax adjustments + net pay, creates audit snapshot, and locks period
+   - Payroll finalization saves Taxes/Adjustments + Net Pay, creates audit snapshot, and locks period
    - Hidden admin tools include past payroll and unlock with PIN/reason
    - Open QuickBooks opens a right-side popup and tries to resize payroll left
    - Uses JSONP unified Apps Script backend
@@ -44,6 +44,21 @@
 
   let currentPeriodId = "";
   let currentPeriodStatus = "";
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function normalizeStatusLabel(status, qbStatus) {
+    const s = String(status || "").toUpperCase();
+    const qb = String(qbStatus || "").toUpperCase();
+
+    if (s === "LOCKED" || qb === "ENTERED_IN_QB") return "FINALIZED";
+    if (s === "NET_PAID" || s === "PAID") return "FINALIZED";
+    if (s === "REOPENED" || qb === "REOPENED") return "REOPENED";
+    if (s === "OPEN") return "OPEN";
+    return s || "OPEN";
+  }
 
   function setStatus(msg, kind) {
     if (!statusBox) return;
@@ -186,7 +201,14 @@
     const qbWindow = window.open(
       "https://www.quickbooks.com",
       "ATSQuickBooksPayroll",
-      [`width=${qbWidth}`, `height=${qbHeight}`, `left=${left}`, `top=${top}`, "resizable=yes", "scrollbars=yes"].join(",")
+      [
+        `width=${qbWidth}`,
+        `height=${qbHeight}`,
+        `left=${left}`,
+        `top=${top}`,
+        "resizable=yes",
+        "scrollbars=yes"
+      ].join(",")
     );
 
     if (qbWindow) {
@@ -208,7 +230,7 @@
     if (periodStartEl) periodStartEl.textContent = p?.startDate || p?.start || "—";
     if (periodEndEl) periodEndEl.textContent = p?.endDate || p?.end || "—";
     if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
-    if (periodStatusEl) periodStatusEl.textContent = currentPeriodStatus || "—";
+    if (periodStatusEl) periodStatusEl.textContent = normalizeStatusLabel(currentPeriodStatus);
   }
 
   function renderPayments(rows, period) {
@@ -221,7 +243,7 @@
     if (paymentsHint) {
       paymentsHint.textContent = start && end
         ? `Enter Taxes/Adjustments and final net pay for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
-        : "Enter Taxes/Adjustments and final net payments, then click Finalize Payroll once.";
+        : "Enter Taxes/Adjustments and final net pay, then click Finalize Payroll once.";
     }
 
     if (!data.length) {
@@ -230,20 +252,20 @@
       return;
     }
 
-    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.total || r.grossPay || 0), 0);
-    const taxTotal = data.reduce((sum, r) => sum + Number(r.taxAdjustments || r.taxesAdjustments || 0), 0);
+    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.grossPay || r.total || 0), 0);
+    const taxTotal = data.reduce((sum, r) => sum + Number(r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || 0), 0);
     const netTotal = data.reduce((sum, r) => sum + Number(r.netPay || r.finalNetPay || 0), 0);
     if (paymentsTotals) {
-      paymentsTotals.textContent = `Gross: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net: ${money(netTotal)}` : ""}`;
+      paymentsTotals.textContent = `Gross Total: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net Recorded: ${money(netTotal)}` : ""}`;
     }
 
     paymentsBody.innerHTML = data.map(r => {
       const empName = r.employeeName || r.employeeId || "—";
       const periodText = `${r.startDate || start} → ${r.endDate || end}`;
-      const gross = Number(r.totalPay || r.total || r.grossPay || 0).toFixed(2);
+      const gross = Number(r.totalPay || r.grossPay || r.total || 0).toFixed(2);
       const employeeId = r.employeeId || "";
+      const taxAdjustments = r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || "";
       const netPay = r.netPay || r.finalNetPay || "";
-      const taxAdjustments = r.taxAdjustments || r.taxesAdjustments || "";
       const finalMethod = r.finalPaidMethod || r.paidMethod || "Check";
       const finalRef = r.finalReference || r.reference || "";
       const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
@@ -252,6 +274,7 @@
       const periodUnlocked = String(currentPeriodStatus || "").toUpperCase() === "OPEN";
       const isReopened = qbStatus === "REOPENED" || statusText === "OPEN" || statusText === "REOPENED";
       const isFinalPaid = !periodUnlocked && !isReopened && (r.finalPaid || statusText === "NET_PAID" || statusText === "PAID" || qbStatus === "ENTERED_IN_QB");
+      const cleanStatus = normalizeStatusLabel(statusText, qbStatus);
 
       if (isFinalPaid) {
         return `
@@ -259,12 +282,12 @@
             <td>${escapeHtml(empName)}</td>
             <td>${escapeHtml(periodText)}</td>
             <td class="right">$${escapeHtml(gross)}</td>
-            <td class="right">${taxAdjustments === "" ? "" : money(taxAdjustments)}</td>
+            <td class="right">$${Number(taxAdjustments || 0).toFixed(2)}</td>
             <td class="right">$${Number(netPay || 0).toFixed(2)}</td>
             <td>${escapeHtml(finalMethod || "Recorded")}</td>
             <td>${escapeHtml(finalRef || "")}</td>
             <td>${escapeHtml(finalNotes || "")}</td>
-            <td>✔ Entered in QuickBooks</td>
+            <td>✔ ${escapeHtml(cleanStatus)}</td>
           </tr>
         `;
       }
@@ -288,7 +311,7 @@
           </td>
           <td><input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check # / Ref" value="${escapeHtml(finalRef)}" /></td>
           <td><input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" value="${escapeHtml(finalNotes)}" /></td>
-          <td class="qb-row-status" data-emp="${escapeHtml(employeeId)}">Ready</td>
+          <td class="qb-row-status" data-emp="${escapeHtml(employeeId)}">${escapeHtml(cleanStatus === "FINALIZED" ? "Ready" : cleanStatus)}</td>
         </tr>
       `;
     }).join("");
@@ -365,13 +388,15 @@
     const sum = await payrollSummary(periodId);
     if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
 
-    renderPeriod({ periodId, startDate: sum.startDate || "", endDate: sum.endDate || "", status: sum.status || currentPeriodStatus || "—", payday: "" });
+    const periodStatus = sum.status || sum.periodStatus || currentPeriodStatus || "OPEN";
+    renderPeriod({ periodId, startDate: sum.startDate || "", endDate: sum.endDate || "", status: periodStatus, payday: "" });
 
     const payoutRes = await payrollPayouts(periodId);
     if (payoutRes && payoutRes.ok) renderPayouts(payoutRes.payouts);
 
     const pay = await payrollPayments(periodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
+    if (pay.period && (pay.period.status || pay.periodStatus)) currentPeriodStatus = pay.period.status || pay.periodStatus;
     renderPayments(pay.rows, pay.period);
 
     setStatus(`${periodId} loaded ✅`, "ok");
@@ -413,7 +438,7 @@
 
     pastPayrollSelect.innerHTML = periods.map(p => {
       const id = p.periodId || p.period || "";
-      const label = `${id} • ${p.status || "OPEN"}`;
+      const label = `${id} • ${normalizeStatusLabel(p.status || "OPEN")}`;
       return `<option value="${escapeHtml(id)}" ${id === currentPeriodId ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
 
@@ -426,15 +451,14 @@
 
     paymentsBody.querySelectorAll(".net-pay-input").forEach(input => {
       const empId = input.dataset.emp || "";
-      const netPay = Number(String(input.value || "").replace(/[$,]/g, ""));
       const taxInput = paymentsBody.querySelector(`.tax-adjustment-input[data-emp="${empId}"]`);
-      const taxAdjustmentsRaw = taxInput ? String(taxInput.value || "").replace(/[$,]/g, "") : "";
-      const taxAdjustments = taxAdjustmentsRaw === "" ? "" : Number(taxAdjustmentsRaw);
+      const netPay = Number(String(input.value || "").replace(/[$,]/g, ""));
+      const taxAdjustments = Number(String((taxInput && taxInput.value) || "").replace(/[$,]/g, ""));
       const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
       const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
       const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
 
-      rows.push({ employeeId: empId, taxAdjustments, taxesAdjustments: taxAdjustments, netPay, finalPaidMethod: method, finalReference: reference, finalPaymentNotes: notes });
+      rows.push({ employeeId: empId, taxAdjustments, netPay, finalPaidMethod: method, finalReference: reference, finalPaymentNotes: notes });
     });
 
     return rows;
@@ -452,7 +476,7 @@
     for (const row of rows) {
       if (!row.employeeId) return setStatus("Missing employee ID in one payment row.", "err");
       if (!row.netPay || row.netPay <= 0) return setStatus(`Enter net pay for ${row.employeeId} before clicking Finalize Payroll.`, "err");
-      if (row.taxAdjustments !== "" && Number.isNaN(Number(row.taxAdjustments))) return setStatus(`Enter a valid Taxes/Adjustments amount for ${row.employeeId}.`, "err");
+      if (row.taxAdjustments < 0 || Number.isNaN(row.taxAdjustments)) return setStatus(`Enter valid Taxes/Adjustments for ${row.employeeId}.`, "err");
       if (row.finalPaidMethod === "Check" && !String(row.finalReference || "").trim()) return setStatus(`Enter a check number for ${row.employeeId}.`, "err");
     }
 
@@ -468,6 +492,7 @@
       const res = await payrollFinalizeQB(currentPeriodId, rows);
       if (!res || !res.ok) throw new Error(res?.error || "payroll_finalize_qb failed");
       currentPeriodStatus = "LOCKED";
+      await sleep(400);
       await loadPeriod(currentPeriodId);
       setStatus("Payroll finalized, audit records updated, and period locked ✅", "ok");
     } catch (err) {
@@ -494,9 +519,14 @@
       setStatus(`Unlocking ${periodId}…`);
       const res = await payrollUnlock(periodId, pin, reason);
       if (!res || !res.ok) throw new Error(res?.error || "payroll_unlock failed");
+
       if (unlockPin) unlockPin.value = "";
       if (unlockReason) unlockReason.value = "";
+      currentPeriodId = periodId;
       currentPeriodStatus = "OPEN";
+      renderPeriod({ periodId, status: "OPEN" });
+
+      await sleep(650);
       await showPastPayrollPicker();
       await loadPeriod(periodId);
       setStatus(`${periodId} unlocked for corrections ✅`, "ok");
@@ -532,11 +562,13 @@
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
     if (btnOpenQB) btnOpenQB.onclick = openQuickBooksPopup;
+
     if (btnLoadPastPayroll) {
       btnLoadPastPayroll.onclick = () =>
         loadPeriod(pastPayrollSelect?.value || "")
           .catch(err => setStatus(String(err?.message || err), "err"));
     }
+
     if (btnFinalizeQB) btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
     if (btnUnlockPeriod) btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
   }
