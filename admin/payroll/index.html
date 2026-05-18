@@ -103,7 +103,7 @@
     .payroll-select.compact{max-width:360px}
     .pay-input,.pay-method,.admin-input,.admin-textarea{width:100%;min-width:105px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:var(--text);outline:none}
     .pay-method option{color:#111827;background:#fff}
-    .net-pay-input{max-width:110px;text-align:right}
+    .net-pay-input,.tax-adjustment-input{max-width:110px;text-align:right}
     .check-ref{max-width:120px}
     .pay-notes{min-width:140px}
     .admin-input{max-width:220px}
@@ -195,15 +195,17 @@
       #finalizationCard tbody td:nth-child(1)::before{content:"Employee"}
       #finalizationCard tbody td:nth-child(2)::before{content:"Period"}
       #finalizationCard tbody td:nth-child(3)::before{content:"Gross"}
-      #finalizationCard tbody td:nth-child(4)::before{content:"Net Paid"}
-      #finalizationCard tbody td:nth-child(5)::before{content:"Method"}
-      #finalizationCard tbody td:nth-child(6)::before{content:"Reference"}
-      #finalizationCard tbody td:nth-child(7)::before{content:"Notes"}
-      #finalizationCard tbody td:nth-child(8)::before{content:"Status"}
+      #finalizationCard tbody td:nth-child(4)::before{content:"Taxes / Adj"}
+      #finalizationCard tbody td:nth-child(5)::before{content:"Net Paid"}
+      #finalizationCard tbody td:nth-child(6)::before{content:"Method"}
+      #finalizationCard tbody td:nth-child(7)::before{content:"Reference"}
+      #finalizationCard tbody td:nth-child(8)::before{content:"Notes"}
+      #finalizationCard tbody td:nth-child(9)::before{content:"Status"}
 
       .pay-input,
       .pay-method,
       .net-pay-input,
+      .tax-adjustment-input,
       .check-ref,
       .pay-notes{
         max-width:58%;
@@ -305,7 +307,7 @@
                 <div class="section-title">
                   <h2>Payroll Finalization</h2>
                 </div>
-                <p class="muted" id="paymentsHint">Enter final net pay and payment details after payroll is processed, then click Finalize Payroll once.</p>
+                <p class="muted" id="paymentsHint">Enter Taxes/Adjustments and final net pay after payroll is processed, then click Finalize Payroll once.</p>
               </div>
               <div class="small" id="paymentsTotals"></div>
             </div>
@@ -317,6 +319,7 @@
                     <th style="text-align:left;">Employee</th>
                     <th style="text-align:left;">Period</th>
                     <th style="text-align:right;">Gross</th>
+                    <th style="text-align:right;">Taxes / Adj</th>
                     <th style="text-align:right;">Net Paid</th>
                     <th style="text-align:left;">Method</th>
                     <th style="text-align:left;">Reference</th>
@@ -360,6 +363,6 @@
     </div>
   </main>
 
-  <script src="./payroll.js?v=110"></script>
+  <script src="./payroll.js?v=111"></script>
 </body>
 </html>
