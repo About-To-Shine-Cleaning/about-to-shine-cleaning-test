@@ -132,8 +132,14 @@
       .replaceAll("'", "&#039;");
   }
 
+  function cleanMoneyNumber(v) {
+    const raw = String(v ?? "").replace(/[$,]/g, "").trim();
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function money(v) {
-    return "$" + Number(v || 0).toFixed(2);
+    return "$" + cleanMoneyNumber(v).toFixed(2);
   }
 
   function jsonp(url) {
@@ -252,9 +258,9 @@
       return;
     }
 
-    const grossTotal = data.reduce((sum, r) => sum + Number(r.totalPay || r.grossPay || r.total || 0), 0);
-    const taxTotal = data.reduce((sum, r) => sum + Number(r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || 0), 0);
-    const netTotal = data.reduce((sum, r) => sum + Number(r.netPay || r.finalNetPay || 0), 0);
+    const grossTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.totalPay || r.grossPay || r.total || 0), 0);
+    const taxTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || 0), 0);
+    const netTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.netPay || r.finalNetPay || 0), 0);
     if (paymentsTotals) {
       paymentsTotals.textContent = `Gross Total: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net Recorded: ${money(netTotal)}` : ""}`;
     }
@@ -282,8 +288,8 @@
             <td>${escapeHtml(empName)}</td>
             <td>${escapeHtml(periodText)}</td>
             <td class="right">$${escapeHtml(gross)}</td>
-            <td class="right">$${Number(taxAdjustments || 0).toFixed(2)}</td>
-            <td class="right">$${Number(netPay || 0).toFixed(2)}</td>
+            <td class="right">${money(taxAdjustments)}</td>
+            <td class="right">${money(netPay)}</td>
             <td>${escapeHtml(finalMethod || "Recorded")}</td>
             <td>${escapeHtml(finalRef || "")}</td>
             <td>${escapeHtml(finalNotes || "")}</td>
@@ -452,8 +458,8 @@
     paymentsBody.querySelectorAll(".net-pay-input").forEach(input => {
       const empId = input.dataset.emp || "";
       const taxInput = paymentsBody.querySelector(`.tax-adjustment-input[data-emp="${empId}"]`);
-      const netPay = Number(String(input.value || "").replace(/[$,]/g, ""));
-      const taxAdjustments = Number(String((taxInput && taxInput.value) || "").replace(/[$,]/g, ""));
+      const netPay = cleanMoneyNumber(input.value || "");
+      const taxAdjustments = cleanMoneyNumber((taxInput && taxInput.value) || "");
       const method = paymentsBody.querySelector(`.pay-method[data-emp="${empId}"]`)?.value || "";
       const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
       const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
