@@ -40,12 +40,21 @@
     .hidden{display:none!important}
     .right{text-align:right}
 
-    .hero{background:linear-gradient(135deg,rgba(75,46,131,.55),rgba(37,99,235,.28));border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 16px 50px rgba(0,0,0,.22);width:100%;max-width:100%}
+    .hero{
+      background:linear-gradient(135deg,rgba(75,46,131,.55),rgba(37,99,235,.28));
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:18px;
+      box-shadow:0 16px 50px rgba(0,0,0,.22);
+      width:100%;
+      max-width:100%;
+    }
     .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center}
     @media (max-width:820px){.hero-grid{grid-template-columns:1fr}}
 
     .period-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);font-weight:800}
-    .period-id{font-size:24px;font-weight:900;margin:4px 0 8px;word-break:break-word;overflow-wrap:anywhere}
+    .period-readable{font-size:30px;font-weight:950;line-height:1.05;margin:6px 0 3px;word-break:break-word;overflow-wrap:anywhere}
+    .period-id{font-size:12px;color:var(--muted);font-weight:700;margin:0 0 8px;word-break:break-word;overflow-wrap:anywhere}
     .period-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
     .meta-chip{border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.16);border-radius:999px;padding:7px 10px;font-size:13px}
 
@@ -74,6 +83,41 @@
     .card h3{font-size:16px}
     .section-title{display:flex;gap:9px;align-items:center}
 
+    /* Card layout replaces wide payroll tables */
+    .payroll-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:12px}
+    .payroll-employee-card{background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.14);border-radius:20px;overflow:hidden;min-width:0}
+    .payroll-employee-card summary{list-style:none;cursor:pointer}
+    .payroll-employee-card summary::-webkit-details-marker{display:none}
+    .payroll-card-main{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px;background:linear-gradient(135deg,rgba(75,46,131,.35),rgba(37,99,235,.18));border-bottom:1px solid rgba(255,255,255,.08)}
+    .payroll-person{display:flex;align-items:center;gap:12px;min-width:0}
+    .payroll-avatar{width:42px;height:42px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.26);color:var(--gold2);font-weight:950;flex:0 0 auto}
+    .payroll-name{font-size:17px;font-weight:900;color:#fff;line-height:1.15;overflow:hidden;text-overflow:ellipsis}
+    .payroll-sub{font-size:12px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+    .payroll-total{text-align:right;flex:0 0 auto}
+    .payroll-total-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--muted)}
+    .payroll-total-amount{font-size:22px;font-weight:950;color:var(--gold2)}
+    .payroll-expand-note{font-size:11px;color:var(--muted);margin-top:3px}
+    .payroll-card-body{padding:12px 15px 15px}
+    .job-line{display:grid;grid-template-columns:82px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+    .job-line:last-child{border-bottom:0}
+    .job-date{font-size:12px;color:var(--muted)}
+    .job-name{font-size:14px;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .job-pay{font-size:14px;font-weight:850;color:#fff;text-align:right}
+    .empty-card{padding:15px;color:var(--muted)}
+
+    .finalization-list{display:grid;gap:12px;margin-top:12px}
+    .final-employee-card{background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.14);border-radius:20px;overflow:hidden}
+    .final-top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px;background:linear-gradient(135deg,rgba(75,46,131,.30),rgba(37,99,235,.16));border-bottom:1px solid rgba(255,255,255,.08)}
+    .final-name-block{display:flex;align-items:center;gap:12px;min-width:0}
+    .final-name{font-size:17px;font-weight:950;color:#fff}
+    .final-period{font-size:12px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+    .final-status{font-size:12px;font-weight:950;color:#bbf7d0;border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.10);padding:6px 10px;border-radius:999px;white-space:nowrap}
+    .final-body{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:14px 15px 15px;align-items:end}
+    .final-field{min-width:0}
+    .final-field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--muted);margin-bottom:6px}
+    .final-value{font-size:15px;font-weight:800;color:#fff;min-height:35px;display:flex;align-items:center}
+    .final-value.gold{color:var(--gold2)}
+
     .table-wrap{overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.12);max-width:100%;-webkit-overflow-scrolling:touch}
     table{width:100%;border-collapse:collapse;min-width:980px}
     table th,table td{border-bottom:1px solid rgba(255,255,255,.10)}
@@ -88,11 +132,11 @@
     summary{cursor:pointer;font-weight:850;color:var(--gold2)}
     .past-row,.admin-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
     .payroll-select.compact{max-width:360px}
-    .pay-input,.pay-method,.admin-input,.admin-textarea{width:100%;min-width:105px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:var(--text);outline:none}
+    .pay-input,.pay-method,.admin-input,.admin-textarea{width:100%;min-width:0;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:var(--text);outline:none}
     .pay-method option{color:#111827;background:#fff}
-    .net-pay-input,.tax-adjustment-input{max-width:110px;text-align:right}
-    .check-ref{max-width:120px}
-    .pay-notes{min-width:140px}
+    .net-pay-input,.tax-adjustment-input{max-width:none;text-align:right}
+    .check-ref{max-width:none}
+    .pay-notes{min-width:0}
     .admin-input{max-width:220px}
     .admin-textarea{min-height:74px;min-width:280px;flex:1}
     .employee-total{font-weight:850;color:var(--gold2)}
@@ -108,20 +152,40 @@
     .job-suggestion span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
     .selected-job-pill{margin-top:6px;font-size:12px;color:var(--gold2);border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.10);border-radius:999px;padding:6px 9px;display:inline-flex}
 
+    @media (max-width:980px){
+      .final-body{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .add-job-grid{grid-template-columns:1fr}
+    }
+
     @media (max-width:720px){
-      .wrap{padding:12px}.top{align-items:stretch}.top .pill{width:100%;justify-content:center}.payroll-title-pill{font-size:20px}#pillWho{font-size:14px}
-      .hero{border-radius:22px;padding:16px}.period-title{font-size:12px}.period-id{font-size:30px;line-height:1.08;margin-top:10px}.period-meta{gap:8px}.meta-chip{font-size:14px;padding:8px 12px}.quick-actions{padding-top:16px}.quick-actions .btn{max-width:none;width:100%}
-      .card{border-radius:22px;padding:14px}.card h2{font-size:20px}.card-head{display:block}.card-head .muted{font-size:15px;line-height:1.35;overflow-wrap:anywhere}#payoutTotals,#paymentsTotals{margin-top:8px;display:block}
-      .table-wrap{overflow:visible;border:0;background:transparent;border-radius:0}
-      table,thead,tbody,tr,th,td{display:block;width:100%;min-width:0}
-      table{min-width:0;border-collapse:separate;border-spacing:0}thead{display:none}
-      tbody tr{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:10px 12px;margin:0 0 12px;overflow:hidden}
-      tbody td{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.08);padding:9px 0;text-align:right!important;font-size:15px;min-height:34px}
-      tbody td:last-child{border-bottom:0}
-      tbody td::before{content:"";flex:0 0 42%;text-align:left;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
-      #payoutCard tbody td:nth-child(1)::before{content:"Employee"}#payoutCard tbody td:nth-child(2)::before{content:"Date"}#payoutCard tbody td:nth-child(3)::before{content:"Client / Job"}#payoutCard tbody td:nth-child(4)::before{content:"Job Pay"}#payoutCard tbody td:nth-child(5)::before{content:"Employee Total"}
-      #finalizationCard tbody td:nth-child(1)::before{content:"Employee"}#finalizationCard tbody td:nth-child(2)::before{content:"Period"}#finalizationCard tbody td:nth-child(3)::before{content:"Gross"}#finalizationCard tbody td:nth-child(4)::before{content:"Taxes / Adj"}#finalizationCard tbody td:nth-child(5)::before{content:"Net Paid"}#finalizationCard tbody td:nth-child(6)::before{content:"Method"}#finalizationCard tbody td:nth-child(7)::before{content:"Reference"}#finalizationCard tbody td:nth-child(8)::before{content:"Notes"}#finalizationCard tbody td:nth-child(9)::before{content:"Status"}
-      .pay-input,.pay-method,.net-pay-input,.tax-adjustment-input,.check-ref,.pay-notes{max-width:58%;min-width:0;text-align:right}.pay-method{text-align:left}.add-job-grid{grid-template-columns:1fr}.job-suggestions{width:calc(100vw - 48px)}.past-row,.admin-row{display:block}.past-row > *,.admin-row > *{margin-top:10px;max-width:none;width:100%}.admin-textarea{min-width:0;width:100%}
+      .wrap{padding:12px}
+      .top{align-items:stretch}
+      .top .pill{width:100%;justify-content:center}
+      .payroll-title-pill{font-size:20px}
+      #pillWho{font-size:14px}
+      .hero{border-radius:22px;padding:16px}
+      .period-title{font-size:12px}
+      .period-readable{font-size:27px;line-height:1.08;margin-top:10px}
+      .period-id{font-size:11px}
+      .period-meta{gap:8px}
+      .meta-chip{font-size:14px;padding:8px 12px}
+      .quick-actions{padding-top:16px}
+      .quick-actions .btn{max-width:none;width:100%}
+      .card{border-radius:22px;padding:14px}
+      .card h2{font-size:20px}
+      .card-head{display:block}
+      .card-head .muted{font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+      #payoutTotals,#paymentsTotals{margin-top:8px;display:block}
+      .payroll-card-grid{grid-template-columns:1fr}
+      .payroll-card-main,.final-top{align-items:flex-start}
+      .payroll-total-amount{font-size:20px}
+      .job-line{grid-template-columns:74px 1fr auto}
+      .final-body{grid-template-columns:1fr}
+      .final-status{font-size:11px;padding:5px 8px}
+      .past-row,.admin-row{display:block}
+      .past-row > *, .admin-row > *{margin-top:10px;max-width:none;width:100%}
+      .admin-textarea{min-width:0;width:100%}
+      .job-suggestions{width:calc(100vw - 48px)}
     }
   </style>
 
@@ -141,12 +205,12 @@
   <main class="ats-main"><div class="ats-container"><div class="wrap">
     <div class="top"><div class="pill payroll-title-pill"><strong>ATS Payroll</strong></div><div class="pill" id="pillWho">—</div></div>
 
-    <section class="hero"><div class="hero-grid"><div><div class="period-title">Current Payroll Week</div><div class="period-id" id="periodId">—</div><div class="period-meta"><span class="meta-chip">Start: <strong id="periodStart">—</strong></span><span class="meta-chip">End: <strong id="periodEnd">—</strong></span><span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span><span class="meta-chip">Status: <strong id="periodStatus">—</strong></span></div><div class="status" id="statusBox">Loading current payroll…</div></div><div class="quick-actions" aria-label="Primary payroll actions"><button class="btn secondary" id="btnOpenQB" type="button">Open QuickBooks</button><button class="btn" id="btnFinalizeQB">Finalize Payroll</button></div></div></section>
+    <section class="hero"><div class="hero-grid"><div><div class="period-title">Current Payroll Week</div><div class="period-readable" id="periodReadable">—</div><div class="period-id" id="periodId">—</div><div class="period-meta"><span class="meta-chip">Start: <strong id="periodStart">—</strong></span><span class="meta-chip">End: <strong id="periodEnd">—</strong></span><span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span><span class="meta-chip">Status: <strong id="periodStatus">—</strong></span></div><div class="status" id="statusBox">Loading current payroll…</div></div><div class="quick-actions" aria-label="Primary payroll actions"><button class="btn secondary" id="btnOpenQB" type="button">Open QuickBooks</button><button class="btn" id="btnFinalizeQB">Finalize Payroll</button></div></div></section>
 
     <section class="step-grid">
-      <div class="card full" id="payoutCard"><div class="card-head"><div><h2>Payroll Review</h2><p class="muted" id="payoutHint">Review each job and employee total before entering gross payroll into QuickBooks.</p></div><div class="small" id="payoutTotals"></div></div><div class="table-wrap"><table><thead><tr><th style="text-align:left;">Employee</th><th style="text-align:left;">Date</th><th style="text-align:left;">Client / Job</th><th style="text-align:right;">Job Pay</th><th style="text-align:right;">Employee Total</th></tr></thead><tbody id="payoutBody"></tbody></table></div></div>
+      <div class="card full" id="payoutCard"><div class="card-head"><div><h2>Payroll Review</h2><p class="muted" id="payoutHint">Review each job and employee total before entering gross payroll into QuickBooks.</p></div><div class="small" id="payoutTotals"></div></div><div class="payroll-card-grid" id="payoutBody"></div></div>
 
-      <div class="card full" id="finalizationCard"><div class="card-head"><div><div class="section-title"><h2>Payroll Finalization</h2></div><p class="muted" id="paymentsHint">Enter Taxes/Adjustments and final net pay after payroll is processed, then click Finalize Payroll once.</p></div><div class="small" id="paymentsTotals"></div></div><div class="table-wrap"><table><thead><tr><th style="text-align:left;">Employee</th><th style="text-align:left;">Period</th><th style="text-align:right;">Gross</th><th style="text-align:right;">Taxes / Adj</th><th style="text-align:right;">Net Paid</th><th style="text-align:left;">Method</th><th style="text-align:left;">Reference</th><th style="text-align:left;">Notes</th><th style="text-align:left;">Status</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></div>
+      <div class="card full" id="finalizationCard"><div class="card-head"><div><div class="section-title"><h2>Payroll Finalization</h2></div><p class="muted" id="paymentsHint">Enter Taxes/Adjustments and final net pay after payroll is processed, then click Finalize Payroll once.</p></div><div class="small" id="paymentsTotals"></div></div><div class="finalization-list" id="paymentsBody"></div></div>
 
       <div class="card full"><details id="adminTools"><summary>Payroll Admin Tools</summary><div class="small" style="margin-top:10px;">Use these only for history or corrections.</div>
         <div class="add-job-box" id="addJobBox"><div class="small"><strong>Add Job to Employee</strong> — use this before finalizing payroll when a completed job is missing.</div><div class="add-job-grid"><div class="add-job-field"><label for="addJobDate">Date</label><input class="admin-input full" id="addJobDate" type="date" /></div><div class="add-job-field"><label for="addJobEmployee">Employee</label><select class="payroll-select compact" id="addJobEmployee"><option value="">Choose employee…</option></select></div><div class="add-job-field"><label for="addJobSearch">Client / Job</label><input class="admin-input full" id="addJobSearch" type="text" placeholder="Start typing client/job…" autocomplete="off" /><div class="job-suggestions hidden" id="addJobSuggestions"></div><div class="selected-job-pill hidden" id="addJobSelected">No job selected</div></div><div class="add-job-field"><label for="addJobNotes">Notes</label><input class="admin-input full" id="addJobNotes" type="text" placeholder="Optional reason/notes" /></div><button class="btn secondary" id="btnAddJobToEmployee" type="button">Add Job</button></div></div>
@@ -159,6 +223,6 @@
     </section>
   </div></div></main>
 
-  <script src="./payroll.js?v=113"></script>
+  <script src="./payroll.js?v=114"></script>
 </body>
 </html>
