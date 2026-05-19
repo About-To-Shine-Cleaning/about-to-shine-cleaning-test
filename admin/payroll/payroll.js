@@ -4,6 +4,8 @@
    - Combines payroll review + job breakdown
    - Payroll finalization saves Taxes/Adjustments + Net Pay, creates audit snapshot, and locks period
    - Hidden admin tools include Add Job to Employee, past payroll, and unlock with PIN/reason
+   - Add Job employee list loads from active/named Employees route first, then falls back to payroll rows
+   - Add Job client search loads from clock_jobs_list and shows clear diagnostics if empty
    - Open QuickBooks opens a right-side popup and tries to resize payroll left
    - Uses JSONP unified Apps Script backend
 ========================================================= */
@@ -57,6 +59,8 @@
   let payrollEmployees = [];
   let allJobs = [];
   let selectedAddJob = null;
+  let employeeRouteLoaded = false;
+  let jobsRouteLoaded = false;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -194,6 +198,7 @@
   async function payrollPayouts(periodId) { return jsonp(secureUrl("payroll_payouts", `period_id=${encodeURIComponent(periodId)}`)); }
   async function payrollPayments(periodId) { return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
   async function payrollPeriods() { return jsonp(secureUrl("payroll_periods")); }
+  async function payrollEmployeesList() { return jsonp(secureUrl("payroll_employees")); }
   async function clockJobsList() { return jsonp(secureUrl("clock_jobs_list")); }
 
   async function payrollAddJob(periodId, payload) {
@@ -262,19 +267,65 @@
     if (periodStatusEl) periodStatusEl.textContent = normalizeStatusLabel(currentPeriodStatus);
   }
 
-  function renderAddJobEmployees(rows) {
-    const data = Array.isArray(rows) ? rows : [];
+  function normalizeEmployeeList(list) {
     const seen = {};
-    payrollEmployees = data
-      .map(r => ({ employeeId: r.employeeId || "", employeeName: r.employeeName || r.employee || r.employeeId || "" }))
-      .filter(e => e.employeeId && !seen[e.employeeId] && (seen[e.employeeId] = true));
+    return (Array.isArray(list) ? list : [])
+      .map(e => ({
+        employeeId: String(e.employeeId || e.id || e.EmployeeID || e["Employee ID"] || "").trim().toUpperCase(),
+        employeeName: String(e.employeeName || e.name || e.EmployeeName || e["Employee Name"] || "").trim(),
+        active: e.active
+      }))
+      .filter(e => e.employeeId && e.employeeName && !seen[e.employeeId] && (seen[e.employeeId] = true));
+  }
+
+  function renderAddJobEmployees(rows) {
+    const fallback = normalizeEmployeeList(rows);
+    if (!payrollEmployees.length && fallback.length) payrollEmployees = fallback;
 
     if (!addJobEmployee) return;
     const current = addJobEmployee.value;
+
     addJobEmployee.innerHTML = `<option value="">Choose employee…</option>` + payrollEmployees.map(e =>
       `<option value="${escapeHtml(e.employeeId)}">${escapeHtml(e.employeeId)} • ${escapeHtml(e.employeeName)}</option>`
     ).join("");
+
     if (current && payrollEmployees.some(e => e.employeeId === current)) addJobEmployee.value = current;
+  }
+
+  async function loadPayrollEmployeesList() {
+    const res = await payrollEmployeesList();
+    if (!res || !res.ok) throw new Error(res?.error || "payroll_employees failed");
+
+    const list = res.employees || res.rows || res.employeeRows || [];
+    payrollEmployees = normalizeEmployeeList(list);
+    employeeRouteLoaded = true;
+    renderAddJobEmployees([]);
+  }
+
+  function normalizeJobList(list) {
+    const seen = {};
+    return (Array.isArray(list) ? list : [])
+      .map(j => {
+        const clientName = String(j.clientName || j.client || j.name || j.jobName || "").trim();
+        const name = String(j.name || j.jobName || clientName || "").trim();
+        const id = String(j.id || j.jobId || j.clientId || name.replace(/\s+/g, "_")).trim();
+        const pay = cleanMoneyNumber(j.pay ?? j.jobPay ?? j.amount ?? j.fullPay ?? j.halfPay ?? 0);
+        return {
+          id,
+          name,
+          clientName,
+          pay,
+          address: String(j.address || "").trim()
+        };
+      })
+      .filter(j => j.id && j.name && j.pay > 0 && !seen[j.id] && (seen[j.id] = true));
+  }
+
+  async function loadClockJobsList() {
+    const res = await clockJobsList();
+    if (!res || !res.ok) throw new Error(res?.error || "clock_jobs_list failed");
+    allJobs = normalizeJobList(res.jobs || res.rows || res.clientRows || []);
+    jobsRouteLoaded = true;
   }
 
   function renderPayments(rows, period) {
@@ -507,12 +558,6 @@
     if (currentPeriodEnd) addJobDate.max = currentPeriodEnd;
   }
 
-  async function loadClockJobsList() {
-    const res = await clockJobsList();
-    if (!res || !res.ok) throw new Error(res?.error || "clock_jobs_list failed");
-    allJobs = Array.isArray(res.jobs) ? res.jobs : [];
-  }
-
   function clearSelectedAddJob() {
     selectedAddJob = null;
     if (addJobSelected) {
@@ -545,12 +590,24 @@
       return;
     }
 
+    if (!jobsRouteLoaded) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>Job list still loading</strong><span>Wait a second, then type again. If this stays, Code.gs is missing clock_jobs_list.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
+    if (!allJobs.length) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No jobs loaded</strong><span>Code.gs route returned no jobs. Check Master_Schedule has active clients with JobPay, FullPay, or HalfPay.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
     const matches = allJobs
       .filter(job => String(`${job.name || ""} ${job.clientName || ""}`).toLowerCase().includes(q))
       .slice(0, 10);
 
     if (!matches.length) {
-      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No matching job found</strong><span>Check spelling or make sure the client has FullPay/HalfPay in Master_Schedule.</span></div>`;
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No matching job found</strong><span>Try a shorter search or check the client name/pay in Master_Schedule.</span></div>`;
       addJobSuggestions.classList.remove("hidden");
       return;
     }
@@ -755,10 +812,17 @@
     const p = await ping();
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
+    await Promise.allSettled([
+      loadPayrollEmployeesList(),
+      loadClockJobsList()
+    ]);
+
     await autoloadCurrentPayroll();
-    loadClockJobsList().catch(err => setStatus(String(err?.message || err), "err"));
+    renderAddJobEmployees(payrollEmployees);
     wireAddJobControls();
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
+
+    setDebug(`employees=${payrollEmployees.length}; jobs=${allJobs.length}; employeeRouteLoaded=${employeeRouteLoaded}; jobsRouteLoaded=${jobsRouteLoaded}`);
 
     if (btnOpenQB) btnOpenQB.onclick = openQuickBooksPopup;
 
