@@ -1,12 +1,9 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Clean QuickBooks Payroll Flow
+   ATS Payroll (Admin UI) — Card Layout Version
    - Auto-loads current payroll
-   - Combines payroll review + job breakdown
-   - Payroll finalization saves Taxes/Adjustments + Net Pay, creates audit snapshot, and locks period
-   - Hidden admin tools include Add Job to Employee, past payroll, and unlock with PIN/reason
-   - Add Job employee list loads from active/named Employees route first, then falls back to payroll rows
-   - Add Job client search loads from clock_jobs_list and shows clear diagnostics if empty
-   - Open QuickBooks opens a right-side popup and tries to resize payroll left
+   - Renders Payroll Review as expandable employee cards
+   - Renders Payroll Finalization as employee cards instead of wide table
+   - Keeps Add Job to Employee, Past Payroll, Unlock, QB popup, and finalize routes working
    - Uses JSONP unified Apps Script backend
 ========================================================= */
 
@@ -21,6 +18,7 @@
   const debugEl = document.getElementById("debug");
 
   const periodIdEl = document.getElementById("periodId");
+  const periodReadableEl = document.getElementById("periodReadable");
   const periodStartEl = document.getElementById("periodStart");
   const periodEndEl = document.getElementById("periodEnd");
   const periodPaydayEl = document.getElementById("periodPayday");
@@ -159,6 +157,42 @@
     return "$" + cleanMoneyNumber(v).toFixed(2);
   }
 
+  function employeeInitials(name) {
+    const parts = String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return "?";
+    return parts.slice(0, 2).map(p => p.charAt(0).toUpperCase()).join("");
+  }
+
+  function formatDisplayDate(ymd) {
+    const s = String(ymd || "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s || "—";
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function formatDisplayRange(start, end) {
+    const s = String(start || "").trim();
+    const e = String(end || "").trim();
+    if (!s || !e) return "—";
+
+    const sm = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const em = e.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!sm || !em) return `${s} → ${e}`;
+
+    const sd = new Date(Number(sm[1]), Number(sm[2]) - 1, Number(sm[3]));
+    const ed = new Date(Number(em[1]), Number(em[2]) - 1, Number(em[3]));
+
+    if (sd.getFullYear() === ed.getFullYear() && sd.getMonth() === ed.getMonth()) {
+      return `${sd.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${ed.toLocaleDateString(undefined, { day: "numeric", year: "numeric" })}`;
+    }
+
+    return `${formatDisplayDate(s)} – ${formatDisplayDate(e)}`;
+  }
+
   function jsonp(url) {
     return new Promise((resolve, reject) => {
       const cb = "cb_" + Math.random().toString(36).slice(2);
@@ -260,22 +294,32 @@
     currentPeriodStatus = p?.status || currentPeriodStatus || "";
     currentPeriodStart = p?.startDate || p?.start || currentPeriodStart || "";
     currentPeriodEnd = p?.endDate || p?.end || currentPeriodEnd || "";
+
+    if (periodReadableEl) periodReadableEl.textContent = formatDisplayRange(currentPeriodStart, currentPeriodEnd);
     if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
-    if (periodStartEl) periodStartEl.textContent = currentPeriodStart || "—";
-    if (periodEndEl) periodEndEl.textContent = currentPeriodEnd || "—";
+    if (periodStartEl) periodStartEl.textContent = formatDisplayDate(currentPeriodStart);
+    if (periodEndEl) periodEndEl.textContent = formatDisplayDate(currentPeriodEnd);
     if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
     if (periodStatusEl) periodStatusEl.textContent = normalizeStatusLabel(currentPeriodStatus);
   }
 
   function normalizeEmployeeList(list) {
     const seen = {};
+    const placeholderPattern = /^employee\s+(one|two|three|four|five|six|seven|eight|nine|ten)$/i;
+
     return (Array.isArray(list) ? list : [])
       .map(e => ({
         employeeId: String(e.employeeId || e.id || e.EmployeeID || e["Employee ID"] || "").trim().toUpperCase(),
         employeeName: String(e.employeeName || e.name || e.EmployeeName || e["Employee Name"] || "").trim(),
         active: e.active
       }))
-      .filter(e => e.employeeId && e.employeeName && !seen[e.employeeId] && (seen[e.employeeId] = true));
+      .filter(e =>
+        e.employeeId &&
+        e.employeeName &&
+        !placeholderPattern.test(e.employeeName) &&
+        !seen[e.employeeId] &&
+        (seen[e.employeeId] = true)
+      );
   }
 
   function renderAddJobEmployees(rows) {
@@ -332,19 +376,19 @@
     if (!paymentsBody) return;
 
     const data = Array.isArray(rows) ? rows : [];
-    const start = period?.startDate || data[0]?.startDate || "";
-    const end = period?.endDate || data[0]?.endDate || "";
+    const start = period?.startDate || data[0]?.startDate || currentPeriodStart || "";
+    const end = period?.endDate || data[0]?.endDate || currentPeriodEnd || "";
 
     if (paymentsHint) {
       paymentsHint.textContent = start && end
-        ? `Enter Taxes/Adjustments and final net pay for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
+        ? `Enter Taxes/Adjustments and final net pay for ${formatDisplayRange(start, end)}. Click Finalize Payroll once after ALL employees are finalized.`
         : "Enter Taxes/Adjustments and final net pay, then click Finalize Payroll once.";
     }
 
     renderAddJobEmployees(data);
 
     if (!data.length) {
-      paymentsBody.innerHTML = `<tr><td colspan="9" style="color:#6b7280;padding:10px 12px;">No payment rows yet.</td></tr>`;
+      paymentsBody.innerHTML = `<div class="empty-card">No payment rows yet.</div>`;
       if (paymentsTotals) paymentsTotals.textContent = "";
       return;
     }
@@ -358,9 +402,11 @@
 
     paymentsBody.innerHTML = data.map(r => {
       const empName = r.employeeName || r.employeeId || "—";
-      const periodText = `${r.startDate || start} → ${r.endDate || end}`;
-      const gross = Number(r.totalPay || r.grossPay || r.total || 0).toFixed(2);
       const employeeId = r.employeeId || "";
+      const startDate = r.startDate || start;
+      const endDate = r.endDate || end;
+      const periodText = `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`;
+      const gross = Number(r.totalPay || r.grossPay || r.total || 0).toFixed(2);
       const taxAdjustments = r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || "";
       const netPay = r.netPay || r.finalNetPay || "";
       const finalMethod = r.finalPaidMethod || r.paidMethod || "Check";
@@ -375,41 +421,60 @@
 
       if (isFinalPaid) {
         return `
-          <tr>
-            <td>${escapeHtml(empName)}</td>
-            <td>${escapeHtml(periodText)}</td>
-            <td class="right">$${escapeHtml(gross)}</td>
-            <td class="right">${money(taxAdjustments)}</td>
-            <td class="right">${money(netPay)}</td>
-            <td>${escapeHtml(finalMethod || "Recorded")}</td>
-            <td>${escapeHtml(finalRef || "")}</td>
-            <td>${escapeHtml(finalNotes || "")}</td>
-            <td>✔ ${escapeHtml(cleanStatus)}</td>
-          </tr>
+          <div class="final-employee-card">
+            <div class="final-top">
+              <div class="final-name-block">
+                <div class="payroll-avatar">${escapeHtml(employeeInitials(empName))}</div>
+                <div>
+                  <div class="final-name">${escapeHtml(empName)}</div>
+                  <div class="final-period">${escapeHtml(periodText)}</div>
+                </div>
+              </div>
+              <div class="final-status">✔ ${escapeHtml(cleanStatus)}</div>
+            </div>
+            <div class="final-body">
+              <div class="final-field"><label>Gross</label><div class="final-value">$${escapeHtml(gross)}</div></div>
+              <div class="final-field"><label>Taxes / Adj</label><div class="final-value">${money(taxAdjustments)}</div></div>
+              <div class="final-field"><label>Net Paid</label><div class="final-value gold">${money(netPay)}</div></div>
+              <div class="final-field"><label>Method</label><div class="final-value">${escapeHtml(finalMethod || "Recorded")}</div></div>
+              <div class="final-field"><label>Reference</label><div class="final-value">${escapeHtml(finalRef || "")}</div></div>
+              <div class="final-field"><label>Notes</label><div class="final-value">${escapeHtml(finalNotes || "")}</div></div>
+            </div>
+          </div>
         `;
       }
 
       return `
-        <tr>
-          <td>${escapeHtml(empName)}</td>
-          <td>${escapeHtml(periodText)}</td>
-          <td class="right">$${escapeHtml(gross)}</td>
-          <td class="right"><input class="pay-input tax-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(taxAdjustments)}" /></td>
-          <td class="right"><input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(netPay)}" /></td>
-          <td>
-            <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
-              <option value="Check" ${finalMethod === "Check" ? "selected" : ""}>Check</option>
-              <option value="Zelle" ${finalMethod === "Zelle" ? "selected" : ""}>Zelle</option>
-              <option value="Venmo" ${finalMethod === "Venmo" ? "selected" : ""}>Venmo</option>
-              <option value="Cash App" ${finalMethod === "Cash App" ? "selected" : ""}>Cash App</option>
-              <option value="Cash" ${finalMethod === "Cash" ? "selected" : ""}>Cash</option>
-              <option value="Other" ${finalMethod === "Other" ? "selected" : ""}>Other</option>
-            </select>
-          </td>
-          <td><input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check # / Ref" value="${escapeHtml(finalRef)}" /></td>
-          <td><input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" value="${escapeHtml(finalNotes)}" /></td>
-          <td class="qb-row-status" data-emp="${escapeHtml(employeeId)}">${escapeHtml(cleanStatus === "FINALIZED" ? "Ready" : cleanStatus)}</td>
-        </tr>
+        <div class="final-employee-card">
+          <div class="final-top">
+            <div class="final-name-block">
+              <div class="payroll-avatar">${escapeHtml(employeeInitials(empName))}</div>
+              <div>
+                <div class="final-name">${escapeHtml(empName)}</div>
+                <div class="final-period">${escapeHtml(periodText)}</div>
+              </div>
+            </div>
+            <div class="final-status">${escapeHtml(cleanStatus === "FINALIZED" ? "READY" : cleanStatus)}</div>
+          </div>
+          <div class="final-body">
+            <div class="final-field"><label>Gross</label><div class="final-value">$${escapeHtml(gross)}</div></div>
+            <div class="final-field"><label>Taxes / Adj</label><input class="pay-input tax-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(taxAdjustments)}" /></div>
+            <div class="final-field"><label>Net Paid</label><input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(netPay)}" /></div>
+            <div class="final-field">
+              <label>Method</label>
+              <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
+                <option value="Check" ${finalMethod === "Check" ? "selected" : ""}>Check</option>
+                <option value="Zelle" ${finalMethod === "Zelle" ? "selected" : ""}>Zelle</option>
+                <option value="Venmo" ${finalMethod === "Venmo" ? "selected" : ""}>Venmo</option>
+                <option value="Cash App" ${finalMethod === "Cash App" ? "selected" : ""}>Cash App</option>
+                <option value="Cash" ${finalMethod === "Cash" ? "selected" : ""}>Cash</option>
+                <option value="Other" ${finalMethod === "Other" ? "selected" : ""}>Other</option>
+              </select>
+            </div>
+            <div class="final-field"><label>Reference</label><input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check # / Ref" value="${escapeHtml(finalRef)}" /></div>
+            <div class="final-field"><label>Notes</label><input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" value="${escapeHtml(finalNotes)}" /><div class="small qb-row-status" data-emp="${escapeHtml(employeeId)}">${escapeHtml(cleanStatus)}</div></div>
+          </div>
+        </div>
       `;
     }).join("");
 
@@ -431,48 +496,56 @@
     const grandTotal = Number(payouts?.grandTotal || 0);
 
     if (!employees.length) {
-      payoutBody.innerHTML = `<tr><td colspan="5" style="color:#6b7280;padding:10px 12px;">No job lines found for this period.</td></tr>`;
+      payoutBody.innerHTML = `<div class="empty-card">No job lines found for this period.</div>`;
       payoutHint.textContent = currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—";
       payoutTotals.textContent = `Grand Total: ${money(grandTotal)}`;
       payoutCard.classList.remove("hidden");
       return;
     }
 
-    const rows = [];
-    employees.forEach(emp => {
+    payoutBody.innerHTML = employees.map(emp => {
       const jobs = Array.isArray(emp.jobs) ? emp.jobs : [];
       const employeeTotal = Number(emp.totalPay || jobs.reduce((sum, j) => sum + Number(j.jobPay ?? j.pay ?? j.amount ?? 0), 0));
+      const hasManyJobs = jobs.length > 2;
 
-      if (!jobs.length) {
-        rows.push({ employee: emp.employeeName || emp.employeeId, date: "", job: "No job lines", pay: 0, employeeTotal, showTotal: true });
-        return;
-      }
+      return `
+        <details class="payroll-employee-card" ${hasManyJobs ? "" : "open"}>
+          <summary>
+            <div class="payroll-card-main">
+              <div class="payroll-person">
+                <div class="payroll-avatar">${escapeHtml(employeeInitials(emp.employeeName || emp.employeeId))}</div>
+                <div>
+                  <div class="payroll-name">${escapeHtml(emp.employeeName || emp.employeeId || "—")}</div>
+                  <div class="payroll-sub">${jobs.length} job${jobs.length === 1 ? "" : "s"}${hasManyJobs ? " • click to expand" : ""}</div>
+                </div>
+              </div>
+              <div class="payroll-total">
+                <div class="payroll-total-label">Total</div>
+                <div class="payroll-total-amount">${money(employeeTotal)}</div>
+                <div class="payroll-expand-note">${hasManyJobs ? "View jobs" : ""}</div>
+              </div>
+            </div>
+          </summary>
+          <div class="payroll-card-body">
+            ${jobs.length ? jobs.map(j => {
+              const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
+              const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
+              return `
+                <div class="job-line">
+                  <div class="job-date">${escapeHtml(formatDisplayDate(j.date || ""))}</div>
+                  <div class="job-name">${escapeHtml(rawJob)}</div>
+                  <div class="job-pay">${money(rawPay)}</div>
+                </div>
+              `;
+            }).join("") : `<div class="empty-card">No job lines found.</div>`}
+          </div>
+        </details>
+      `;
+    }).join("");
 
-      jobs.forEach((j, idx) => {
-        const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "";
-        const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
-        rows.push({
-          employee: emp.employeeName || emp.employeeId,
-          date: j.date || "",
-          job: rawJob,
-          pay: Number(rawPay || 0),
-          employeeTotal,
-          showTotal: idx === 0
-        });
-      });
-    });
-
-    payoutBody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${escapeHtml(r.employee)}</td>
-        <td>${escapeHtml(r.date)}</td>
-        <td>${escapeHtml(r.job)}</td>
-        <td class="right">${money(r.pay)}</td>
-        <td class="right employee-total">${r.showTotal ? money(r.employeeTotal) : ""}</td>
-      </tr>
-    `).join("");
-
-    payoutHint.textContent = currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—";
+    payoutHint.textContent = currentPeriodStart && currentPeriodEnd
+      ? `Payroll review for ${formatDisplayRange(currentPeriodStart, currentPeriodEnd)}`
+      : (currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—");
     payoutTotals.textContent = `Grand Total: ${money(grandTotal)}`;
     payoutCard.classList.remove("hidden");
   }
