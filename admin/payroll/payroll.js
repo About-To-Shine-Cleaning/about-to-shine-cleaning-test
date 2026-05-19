@@ -3,7 +3,7 @@
    - Auto-loads current payroll
    - Combines payroll review + job breakdown
    - Payroll finalization saves Taxes/Adjustments + Net Pay, creates audit snapshot, and locks period
-   - Hidden admin tools include past payroll and unlock with PIN/reason
+   - Hidden admin tools include Add Job to Employee, past payroll, and unlock with PIN/reason
    - Open QuickBooks opens a right-side popup and tries to resize payroll left
    - Uses JSONP unified Apps Script backend
 ========================================================= */
@@ -33,6 +33,14 @@
   const unlockReason = document.getElementById("unlockReason");
   const btnUnlockPeriod = document.getElementById("btnUnlockPeriod");
 
+  const addJobDate = document.getElementById("addJobDate");
+  const addJobEmployee = document.getElementById("addJobEmployee");
+  const addJobSearch = document.getElementById("addJobSearch");
+  const addJobSuggestions = document.getElementById("addJobSuggestions");
+  const addJobSelected = document.getElementById("addJobSelected");
+  const addJobNotes = document.getElementById("addJobNotes");
+  const btnAddJobToEmployee = document.getElementById("btnAddJobToEmployee");
+
   const payoutCard = document.getElementById("payoutCard");
   const payoutHint = document.getElementById("payoutHint");
   const payoutBody = document.getElementById("payoutBody");
@@ -44,6 +52,11 @@
 
   let currentPeriodId = "";
   let currentPeriodStatus = "";
+  let currentPeriodStart = "";
+  let currentPeriodEnd = "";
+  let payrollEmployees = [];
+  let allJobs = [];
+  let selectedAddJob = null;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -181,6 +194,14 @@
   async function payrollPayouts(periodId) { return jsonp(secureUrl("payroll_payouts", `period_id=${encodeURIComponent(periodId)}`)); }
   async function payrollPayments(periodId) { return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
   async function payrollPeriods() { return jsonp(secureUrl("payroll_periods")); }
+  async function clockJobsList() { return jsonp(secureUrl("clock_jobs_list")); }
+
+  async function payrollAddJob(periodId, payload) {
+    const qs = new URLSearchParams();
+    qs.set("periodId", periodId || "");
+    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
+    return jsonp(secureUrl("payroll_add_job", qs.toString()));
+  }
 
   async function payrollFinalizeQB(periodId, rows) {
     const payload = encodeURIComponent(JSON.stringify({ rows: rows || [] }));
@@ -232,11 +253,28 @@
   function renderPeriod(p) {
     currentPeriodId = p?.periodId || p?.period || p?.id || currentPeriodId || "";
     currentPeriodStatus = p?.status || currentPeriodStatus || "";
+    currentPeriodStart = p?.startDate || p?.start || currentPeriodStart || "";
+    currentPeriodEnd = p?.endDate || p?.end || currentPeriodEnd || "";
     if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
-    if (periodStartEl) periodStartEl.textContent = p?.startDate || p?.start || "—";
-    if (periodEndEl) periodEndEl.textContent = p?.endDate || p?.end || "—";
+    if (periodStartEl) periodStartEl.textContent = currentPeriodStart || "—";
+    if (periodEndEl) periodEndEl.textContent = currentPeriodEnd || "—";
     if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
     if (periodStatusEl) periodStatusEl.textContent = normalizeStatusLabel(currentPeriodStatus);
+  }
+
+  function renderAddJobEmployees(rows) {
+    const data = Array.isArray(rows) ? rows : [];
+    const seen = {};
+    payrollEmployees = data
+      .map(r => ({ employeeId: r.employeeId || "", employeeName: r.employeeName || r.employee || r.employeeId || "" }))
+      .filter(e => e.employeeId && !seen[e.employeeId] && (seen[e.employeeId] = true));
+
+    if (!addJobEmployee) return;
+    const current = addJobEmployee.value;
+    addJobEmployee.innerHTML = `<option value="">Choose employee…</option>` + payrollEmployees.map(e =>
+      `<option value="${escapeHtml(e.employeeId)}">${escapeHtml(e.employeeId)} • ${escapeHtml(e.employeeName)}</option>`
+    ).join("");
+    if (current && payrollEmployees.some(e => e.employeeId === current)) addJobEmployee.value = current;
   }
 
   function renderPayments(rows, period) {
@@ -251,6 +289,8 @@
         ? `Enter Taxes/Adjustments and final net pay for ${start} → ${end}. Click Finalize Payroll once after ALL employees are finalized.`
         : "Enter Taxes/Adjustments and final net pay, then click Finalize Payroll once.";
     }
+
+    renderAddJobEmployees(data);
 
     if (!data.length) {
       paymentsBody.innerHTML = `<tr><td colspan="9" style="color:#6b7280;padding:10px 12px;">No payment rows yet.</td></tr>`;
@@ -396,6 +436,7 @@
 
     const periodStatus = sum.status || sum.periodStatus || currentPeriodStatus || "OPEN";
     renderPeriod({ periodId, startDate: sum.startDate || "", endDate: sum.endDate || "", status: periodStatus, payday: "" });
+    setAddJobDateDefault();
 
     const payoutRes = await payrollPayouts(periodId);
     if (payoutRes && payoutRes.ok) renderPayouts(payoutRes.payouts);
@@ -449,6 +490,156 @@
     }).join("");
 
     if (pastPayrollHint) pastPayrollHint.textContent = `${periods.length} saved payroll period(s).`;
+  }
+
+  function todayYmd() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function setAddJobDateDefault() {
+    if (!addJobDate) return;
+    if (!addJobDate.value) addJobDate.value = currentPeriodStart || todayYmd();
+    if (currentPeriodStart) addJobDate.min = currentPeriodStart;
+    if (currentPeriodEnd) addJobDate.max = currentPeriodEnd;
+  }
+
+  async function loadClockJobsList() {
+    const res = await clockJobsList();
+    if (!res || !res.ok) throw new Error(res?.error || "clock_jobs_list failed");
+    allJobs = Array.isArray(res.jobs) ? res.jobs : [];
+  }
+
+  function clearSelectedAddJob() {
+    selectedAddJob = null;
+    if (addJobSelected) {
+      addJobSelected.textContent = "No job selected";
+      addJobSelected.classList.add("hidden");
+    }
+  }
+
+  function chooseAddJob(job) {
+    selectedAddJob = job || null;
+    if (addJobSearch && job) addJobSearch.value = job.name || job.clientName || "";
+    if (addJobSelected && job) {
+      addJobSelected.textContent = `${job.name || job.clientName || "Selected job"} • ${money(job.pay || 0)}`;
+      addJobSelected.classList.remove("hidden");
+    }
+    hideAddJobSuggestions();
+  }
+
+  function hideAddJobSuggestions() {
+    if (!addJobSuggestions) return;
+    addJobSuggestions.innerHTML = "";
+    addJobSuggestions.classList.add("hidden");
+  }
+
+  function renderAddJobSuggestions(query) {
+    if (!addJobSuggestions) return;
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) {
+      hideAddJobSuggestions();
+      return;
+    }
+
+    const matches = allJobs
+      .filter(job => String(`${job.name || ""} ${job.clientName || ""}`).toLowerCase().includes(q))
+      .slice(0, 10);
+
+    if (!matches.length) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No matching job found</strong><span>Check spelling or make sure the client has FullPay/HalfPay in Master_Schedule.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
+    addJobSuggestions.innerHTML = matches.map((job, idx) => `
+      <div class="job-suggestion" data-idx="${idx}">
+        <strong>${escapeHtml(job.name || job.clientName || "Job")}</strong>
+        <span>${money(job.pay || 0)}${job.address ? " • " + escapeHtml(job.address) : ""}</span>
+      </div>
+    `).join("");
+
+    addJobSuggestions.querySelectorAll(".job-suggestion").forEach(el => {
+      el.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        const idx = Number(el.dataset.idx || 0);
+        chooseAddJob(matches[idx]);
+      });
+    });
+
+    addJobSuggestions.classList.remove("hidden");
+  }
+
+  function promptUnlockForAddJob() {
+    const pin = window.prompt("This payroll period is locked. Enter employee PIN to unlock and add this job:");
+    if (!pin) return null;
+    const reason = window.prompt("Reason for unlocking payroll:", "Add Job to Employee");
+    if (!reason) return null;
+    return { pin, reason };
+  }
+
+  async function addJobToEmployee() {
+    if (!currentPeriodId) return setStatus("No payroll period loaded.", "err");
+    const serviceDate = addJobDate?.value || "";
+    const employeeId = addJobEmployee?.value || "";
+    const notes = addJobNotes?.value || "";
+
+    if (!serviceDate) return setStatus("Choose a date for the job.", "err");
+    if (!employeeId) return setStatus("Choose an employee.", "err");
+    if (!selectedAddJob || !selectedAddJob.id) return setStatus("Start typing and select a client/job first.", "err");
+
+    const basePayload = {
+      serviceDate,
+      employeeId,
+      jobId: selectedAddJob.id,
+      notes
+    };
+
+    try {
+      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = true; btnAddJobToEmployee.textContent = "Adding..."; }
+      setStatus("Adding job to employee…");
+      let res = await payrollAddJob(currentPeriodId, basePayload);
+
+      if (res && !res.ok && res.error === "period_locked_pin_required") {
+        const unlock = promptUnlockForAddJob();
+        if (!unlock) {
+          setStatus("Add job cancelled. Payroll period is still locked.", "err");
+          return;
+        }
+        res = await payrollAddJob(currentPeriodId, { ...basePayload, pin: unlock.pin, reason: unlock.reason });
+      }
+
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_add_job failed");
+
+      currentPeriodStatus = "OPEN";
+      if (addJobSearch) addJobSearch.value = "";
+      if (addJobNotes) addJobNotes.value = "";
+      clearSelectedAddJob();
+      await sleep(500);
+      await showPastPayrollPicker();
+      await loadPeriod(currentPeriodId);
+      setStatus(`Added ${res.jobName || "job"} to ${res.employeeName || employeeId} ✅`, "ok");
+    } catch (err) {
+      setStatus(String(err?.message || err), "err");
+    } finally {
+      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = false; btnAddJobToEmployee.textContent = "Add Job"; }
+    }
+  }
+
+  function wireAddJobControls() {
+    setAddJobDateDefault();
+    if (addJobSearch) {
+      addJobSearch.addEventListener("input", () => {
+        clearSelectedAddJob();
+        renderAddJobSuggestions(addJobSearch.value);
+      });
+      addJobSearch.addEventListener("focus", () => renderAddJobSuggestions(addJobSearch.value));
+      addJobSearch.addEventListener("blur", () => setTimeout(hideAddJobSuggestions, 180));
+    }
+    if (btnAddJobToEmployee) btnAddJobToEmployee.onclick = () => addJobToEmployee();
   }
 
   function collectFinalPaymentRows() {
@@ -565,6 +756,8 @@
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
     await autoloadCurrentPayroll();
+    loadClockJobsList().catch(err => setStatus(String(err?.message || err), "err"));
+    wireAddJobControls();
     showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
 
     if (btnOpenQB) btnOpenQB.onclick = openQuickBooksPopup;
