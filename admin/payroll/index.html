@@ -83,6 +83,18 @@
     .card h3{font-size:16px}
     .section-title{display:flex;gap:9px;align-items:center}
 
+    /* Collapsible payroll sections */
+    .section-toggle-card{padding:0;overflow:hidden}
+    .section-toggle-card > summary{list-style:none;cursor:pointer;padding:15px;border-radius:22px;display:block}
+    .section-toggle-card > summary::-webkit-details-marker{display:none}
+    .section-toggle-card > summary .card-head{margin-bottom:0}
+    .section-toggle-card .section-body{padding:0 15px 15px}
+    .toggle-title{display:flex;align-items:center;gap:10px}
+    .toggle-icon{width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.26);color:var(--gold2);font-size:15px;font-weight:950;line-height:1;transition:transform .16s ease}
+    .section-toggle-card[open] .toggle-icon{transform:rotate(90deg)}
+    .toggle-help{font-size:11px;color:var(--muted);margin-top:3px}
+    .section-toggle-card:not([open]) .section-body{display:none}
+
     /* Card layout replaces wide payroll tables */
     .payroll-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:12px}
     .payroll-employee-card{background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.14);border-radius:20px;overflow:hidden;min-width:0}
@@ -176,6 +188,9 @@
       .card-head{display:block}
       .card-head .muted{font-size:15px;line-height:1.35;overflow-wrap:anywhere}
       #payoutTotals,#paymentsTotals{margin-top:8px;display:block}
+      .section-toggle-card{padding:0}
+      .section-toggle-card > summary{padding:14px}
+      .section-toggle-card .section-body{padding:0 14px 14px}
       .payroll-card-grid{grid-template-columns:1fr}
       .payroll-card-main,.final-top{align-items:flex-start}
       .payroll-total-amount{font-size:20px}
@@ -200,29 +215,137 @@
 </head>
 
 <body class="ats-admin">
-  <header class="ats-header"><div class="ats-header-inner"><a class="ats-brand" href="/admin/" aria-label="Go to Admin Home"><img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" /></a><div class="ats-header-actions"><a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a><button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false"><span></span><span></span><span></span></button></div></div></header>
+  <header class="ats-header">
+    <div class="ats-header-inner">
+      <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
+        <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
+      </a>
+      <div class="ats-header-actions">
+        <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+        <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-  <main class="ats-main"><div class="ats-container"><div class="wrap">
-    <div class="top"><div class="pill payroll-title-pill"><strong>ATS Payroll</strong></div><div class="pill" id="pillWho">—</div></div>
+  <main class="ats-main">
+    <div class="ats-container">
+      <div class="wrap">
+        <div class="top">
+          <div class="pill payroll-title-pill"><strong>ATS Payroll</strong></div>
+          <div class="pill" id="pillWho">—</div>
+        </div>
 
-    <section class="hero"><div class="hero-grid"><div><div class="period-title">Current Payroll Week</div><div class="period-readable" id="periodReadable">—</div><div class="period-id" id="periodId">—</div><div class="period-meta"><span class="meta-chip">Start: <strong id="periodStart">—</strong></span><span class="meta-chip">End: <strong id="periodEnd">—</strong></span><span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span><span class="meta-chip">Status: <strong id="periodStatus">—</strong></span></div><div class="status" id="statusBox">Loading current payroll…</div></div><div class="quick-actions" aria-label="Primary payroll actions"><button class="btn secondary" id="btnOpenQB" type="button">Open QuickBooks</button><button class="btn" id="btnFinalizeQB">Finalize Payroll</button></div></div></section>
+        <section class="hero">
+          <div class="hero-grid">
+            <div>
+              <div class="period-title">Current Payroll Week</div>
+              <div class="period-readable" id="periodReadable">—</div>
+              <div class="period-id" id="periodId">—</div>
+              <div class="period-meta">
+                <span class="meta-chip">Start: <strong id="periodStart">—</strong></span>
+                <span class="meta-chip">End: <strong id="periodEnd">—</strong></span>
+                <span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span>
+                <span class="meta-chip">Status: <strong id="periodStatus">—</strong></span>
+              </div>
+              <div class="status" id="statusBox">Loading current payroll…</div>
+            </div>
+            <div class="quick-actions" aria-label="Primary payroll actions">
+              <button class="btn secondary" id="btnOpenQB" type="button">Open QuickBooks</button>
+              <button class="btn" id="btnFinalizeQB">Finalize Payroll</button>
+            </div>
+          </div>
+        </section>
 
-    <section class="step-grid">
-      <div class="card full" id="payoutCard"><div class="card-head"><div><h2>Payroll Review</h2><p class="muted" id="payoutHint">Review each job and employee total before entering gross payroll into QuickBooks.</p></div><div class="small" id="payoutTotals"></div></div><div class="payroll-card-grid" id="payoutBody"></div></div>
+        <section class="step-grid">
+          <details class="card full section-toggle-card" id="payoutCard" open>
+            <summary>
+              <div class="card-head">
+                <div>
+                  <div class="toggle-title"><span class="toggle-icon">›</span><h2>Payroll Review</h2></div>
+                  <p class="muted" id="payoutHint">Review each job and employee total before entering gross payroll into QuickBooks.</p>
+                  <div class="toggle-help">Tap to minimize / expand</div>
+                </div>
+                <div class="small" id="payoutTotals"></div>
+              </div>
+            </summary>
+            <div class="section-body">
+              <div class="payroll-card-grid" id="payoutBody"></div>
+            </div>
+          </details>
 
-      <div class="card full" id="finalizationCard"><div class="card-head"><div><div class="section-title"><h2>Payroll Finalization</h2></div><p class="muted" id="paymentsHint">Enter Taxes/Adjustments and final net pay after payroll is processed, then click Finalize Payroll once.</p></div><div class="small" id="paymentsTotals"></div></div><div class="finalization-list" id="paymentsBody"></div></div>
+          <details class="card full section-toggle-card" id="finalizationCard" open>
+            <summary>
+              <div class="card-head">
+                <div>
+                  <div class="toggle-title"><span class="toggle-icon">›</span><h2>Payroll Finalization</h2></div>
+                  <p class="muted" id="paymentsHint">Enter Taxes/Adjustments and final net pay after payroll is processed, then click Finalize Payroll once.</p>
+                  <div class="toggle-help">Tap to minimize / expand</div>
+                </div>
+                <div class="small" id="paymentsTotals"></div>
+              </div>
+            </summary>
+            <div class="section-body">
+              <div class="finalization-list" id="paymentsBody"></div>
+            </div>
+          </details>
 
-      <div class="card full"><details id="adminTools"><summary>Payroll Admin Tools</summary><div class="small" style="margin-top:10px;">Use these only for history or corrections.</div>
-        <div class="add-job-box" id="addJobBox"><div class="small"><strong>Add Job to Employee</strong> — use this before finalizing payroll when a completed job is missing.</div><div class="add-job-grid"><div class="add-job-field"><label for="addJobDate">Date</label><input class="admin-input full" id="addJobDate" type="date" /></div><div class="add-job-field"><label for="addJobEmployee">Employee</label><select class="payroll-select compact" id="addJobEmployee"><option value="">Choose employee…</option></select></div><div class="add-job-field"><label for="addJobSearch">Client / Job</label><input class="admin-input full" id="addJobSearch" type="text" placeholder="Start typing client/job…" autocomplete="off" /><div class="job-suggestions hidden" id="addJobSuggestions"></div><div class="selected-job-pill hidden" id="addJobSelected">No job selected</div></div><div class="add-job-field"><label for="addJobNotes">Notes</label><input class="admin-input full" id="addJobNotes" type="text" placeholder="Optional reason/notes" /></div><button class="btn secondary" id="btnAddJobToEmployee" type="button">Add Job</button></div></div>
-        <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0;" />
-        <div class="past-row"><select class="payroll-select compact" id="pastPayrollSelect"><option value="">Load past periods…</option></select><button class="btn secondary" id="btnLoadPastPayroll">Load Past Payroll</button></div><div class="small" id="pastPayrollHint">Past payroll loads here when needed.</div>
-        <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0;" />
-        <div class="small"><strong>Unlock Payroll Period</strong> — requires employee PIN and a reason.</div><div class="admin-row"><input class="admin-input" id="unlockPin" type="password" inputmode="numeric" placeholder="Employee PIN" autocomplete="off" /><textarea class="admin-textarea" id="unlockReason" placeholder="Reason for unlocking payroll"></textarea><button class="btn danger" id="btnUnlockPeriod">Unlock Period</button></div>
-      </details></div>
-      <div class="hidden" id="debug"></div>
-    </section>
-  </div></div></main>
+          <div class="card full">
+            <details id="adminTools">
+              <summary>Payroll Admin Tools</summary>
+              <div class="small" style="margin-top:10px;">Use these only for history or corrections.</div>
 
-  <script src="./payroll.js?v=114"></script>
+              <div class="add-job-box" id="addJobBox">
+                <div class="small"><strong>Add Job to Employee</strong> — use this before finalizing payroll when a completed job is missing.</div>
+                <div class="add-job-grid">
+                  <div class="add-job-field">
+                    <label for="addJobDate">Date</label>
+                    <input class="admin-input full" id="addJobDate" type="date" />
+                  </div>
+                  <div class="add-job-field">
+                    <label for="addJobEmployee">Employee</label>
+                    <select class="payroll-select compact" id="addJobEmployee"><option value="">Choose employee…</option></select>
+                  </div>
+                  <div class="add-job-field">
+                    <label for="addJobSearch">Client / Job</label>
+                    <input class="admin-input full" id="addJobSearch" type="text" placeholder="Start typing client/job…" autocomplete="off" />
+                    <div class="job-suggestions hidden" id="addJobSuggestions"></div>
+                    <div class="selected-job-pill hidden" id="addJobSelected">No job selected</div>
+                  </div>
+                  <div class="add-job-field">
+                    <label for="addJobNotes">Notes</label>
+                    <input class="admin-input full" id="addJobNotes" type="text" placeholder="Optional reason/notes" />
+                  </div>
+                  <button class="btn secondary" id="btnAddJobToEmployee" type="button">Add Job</button>
+                </div>
+              </div>
+
+              <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0;" />
+
+              <div class="past-row">
+                <select class="payroll-select compact" id="pastPayrollSelect"><option value="">Load past periods…</option></select>
+                <button class="btn secondary" id="btnLoadPastPayroll">Load Past Payroll</button>
+              </div>
+              <div class="small" id="pastPayrollHint">Past payroll loads here when needed.</div>
+
+              <hr style="border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 0;" />
+
+              <div class="small"><strong>Unlock Payroll Period</strong> — requires employee PIN and a reason.</div>
+              <div class="admin-row">
+                <input class="admin-input" id="unlockPin" type="password" inputmode="numeric" placeholder="Employee PIN" autocomplete="off" />
+                <textarea class="admin-textarea" id="unlockReason" placeholder="Reason for unlocking payroll"></textarea>
+                <button class="btn danger" id="btnUnlockPeriod">Unlock Period</button>
+              </div>
+            </details>
+          </div>
+
+          <div class="hidden" id="debug"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="./payroll.js?v=115"></script>
 </body>
 </html>
