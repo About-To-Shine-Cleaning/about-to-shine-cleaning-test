@@ -1,6 +1,6 @@
-/* ATS Admin Nav v4 — fixed role-aware global navigation
-   ✅ Correct Clock URL: /clock.html
-   ✅ Strict frontend role handling
+/* ATS Admin Nav v5 — role-aware global navigation
+   ✅ Clock URL: /clock.html
+   ✅ Adds Weekly Board + Client Info
    ✅ Preserves emp=... for clock link only
 */
 (function () {
@@ -9,11 +9,13 @@
   const TOOLS = [
     { key: "admin_home", label: "Admin Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "clock", label: "Clock", href: "/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
+    { key: "weekly_board", label: "Weekly Board", href: "/admin/weekly-board/", roles: ["full_admin", "schedule_payroll"] },
+    { key: "client_info", label: "Client Info", href: "/admin/client-info/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "estimator", label: "Estimator", href: "/admin/estimator/", roles: ["full_admin"] },
     { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/", roles: ["full_admin"] },
     { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "legacy", label: "Legacy Pricing", href: "/admin/legacy/", roles: ["full_admin"] },
-    { key: "schedule", label: "Schedule", href: "/admin/schedule/", roles: ["full_admin", "schedule_payroll"] },
+    { key: "schedule", label: "Old Schedule", href: "/admin/schedule/", roles: ["full_admin", "schedule_payroll"] },
     { key: "admin_tools", label: "Admin Tools", href: "/admin/tools/", roles: ["full_admin"] },
     { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/", roles: ["full_admin"] }
   ];
@@ -22,7 +24,6 @@
     const r = String(role || "").trim().toLowerCase();
     const id = String(employeeId || "").trim().toUpperCase();
 
-    // Safety fallback if backend still sends older "admin" role.
     if (r === "admin") {
       if (id === "E01" || id === "E04") return "full_admin";
       if (id === "E02") return "schedule_payroll";
