@@ -1,12 +1,13 @@
 /* =========================================================
    FILE: /admin/admin.js
    TYPE: .js
-   ATS Admin Panel — v1.9.2 fixed role display
+   ATS Admin Panel — v1.9.3 role/card cleanup
    ✅ Correct Clock URL: /clock.html
-   ✅ Strict frontend role handling
-   ✅ Role-based admin cards
-   ✅ Visible header now shows ONLY E## • Name, not role
-   ✅ Removed markdown code fence that broke JavaScript
+   ✅ E01/E04 full admin
+   ✅ E02 schedule/payroll + weekly board editor + my weekly board via clock
+   ✅ E03/E05 clock + client info + my weekly board via clock
+   ✅ Old Schedule hidden from GUI cards
+   ✅ Visible header shows ONLY E## • Name, not role
 ========================================================= */
 
 (() => {
@@ -18,10 +19,37 @@
   const TOKEN_LOCAL   = "ats_admin_token_local_v1";
 
   const ROLE_TOOLS = {
-    full_admin: ["clock", "estimator", "estimate_form", "payroll", "legacy", "schedule", "admin_tools", "site_report"],
-    schedule_payroll: ["clock", "payroll", "schedule"],
-    payroll: ["clock", "payroll"],
-    clock_only: ["clock"]
+    full_admin: [
+      "clock",
+      "my_weekly_board",
+      "client_info",
+      "weekly_board",
+      "estimator",
+      "estimate_form",
+      "payroll",
+      "legacy",
+      "admin_tools",
+      "site_report"
+    ],
+    schedule_payroll: [
+      "clock",
+      "my_weekly_board",
+      "client_info",
+      "weekly_board",
+      "payroll"
+    ],
+    payroll: [
+      "clock",
+      "my_weekly_board",
+      "client_info",
+      "weekly_board",
+      "payroll"
+    ],
+    clock_only: [
+      "clock",
+      "my_weekly_board",
+      "client_info"
+    ]
   };
 
   const statusEl = document.getElementById("status");
@@ -30,6 +58,7 @@
   const debugEl = document.getElementById("debug");
 
   const clockBtn = document.getElementById("clockBtn");
+  const myWeeklyBoardBtn = document.getElementById("myWeeklyBoardBtn");
 
   const desktopLogin = document.getElementById("desktopLogin");
   const desktopToken = document.getElementById("desktopToken");
@@ -178,7 +207,9 @@
 
     if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
 
-    if (clockBtn) clockBtn.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
+    const clockHref = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
+    if (clockBtn) clockBtn.href = clockHref;
+    if (myWeeklyBoardBtn) myWeeklyBoardBtn.href = clockHref + "#myWeeklyBoardCard";
 
     applyCardPermissions(role);
 
