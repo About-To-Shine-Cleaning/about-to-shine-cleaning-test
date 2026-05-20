@@ -65,6 +65,18 @@
 
         <!-- 📍 MAP LINK -->
         <div id="jobAddressLink" style="margin-top:10px;"></div>
+        <section id="clientSpecsCard" style="display:none;margin-top:18px;padding:16px;border-radius:16px;border:1px solid rgba(0,0,0,.12);background:#f8fafc;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <h3 style="margin:0;">Client Specs</h3>
+    <button class="button" id="btnToggleClientSpecs" type="button" style="padding:8px 12px;">
+      Hide
+    </button>
+  </div>
+
+  <div id="clientSpecsBody" style="margin-top:12px;">
+    Loading client info...
+  </div>
+</section>
 
         <button class="button" id="btnClockIn" onclick="clockIn()" style="margin-top:12px;">
           Clock In
@@ -110,6 +122,6 @@
 </main>
 
 <link href="/assets/css/style.css" rel="stylesheet"/>
-<script defer src="/assets/js/clock.js?v=200"></script>
+<script defer src="/assets/js/clock.js?v=201"></script>
 </body>
 </html>
