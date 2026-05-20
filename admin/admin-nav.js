@@ -1,6 +1,8 @@
-/* ATS Admin Nav v5 — role-aware global navigation
+/* ATS Admin Nav v6 — role-aware global navigation
    ✅ Clock URL: /clock.html
-   ✅ Adds Weekly Board + Client Info
+   ✅ Weekly Board editor visible to admin/payroll/scheduler roles only
+   ✅ Client Info visible to all authenticated roles
+   ✅ Old Schedule hidden from GUI/menu but files remain untouched
    ✅ Preserves emp=... for clock link only
 */
 (function () {
@@ -9,13 +11,12 @@
   const TOOLS = [
     { key: "admin_home", label: "Admin Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "clock", label: "Clock", href: "/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "weekly_board", label: "Weekly Board", href: "/admin/weekly-board/", roles: ["full_admin", "schedule_payroll"] },
+    { key: "weekly_board", label: "Weekly Board Editor", href: "/admin/weekly-board/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "client_info", label: "Client Info", href: "/admin/client-info/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "estimator", label: "Estimator", href: "/admin/estimator/", roles: ["full_admin"] },
     { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/", roles: ["full_admin"] },
     { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "legacy", label: "Legacy Pricing", href: "/admin/legacy/", roles: ["full_admin"] },
-    { key: "schedule", label: "Old Schedule", href: "/admin/schedule/", roles: ["full_admin", "schedule_payroll"] },
     { key: "admin_tools", label: "Admin Tools", href: "/admin/tools/", roles: ["full_admin"] },
     { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/", roles: ["full_admin"] }
   ];
