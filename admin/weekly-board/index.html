@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Weekly Assignment Board | ATS Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<link rel="stylesheet" href="/admin/admin-layout.css"/>
+<link rel="stylesheet" href="/assets/css/style.css"/>
+
+<script defer src="/admin/admin-nav.js"></script>
+<script defer src="./weekly-board.js?v=1"></script>
+
+<style>
+.week-board{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:14px;
+  margin-top:24px;
+}
+
+.day-card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  min-height:260px;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+}
+
+.day-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+
+.day-name{
+  font-size:15px;
+  font-weight:800;
+}
+
+.day-date{
+  font-size:12px;
+  opacity:.7;
+}
+
+.assignment{
+  background:rgba(0,0,0,.14);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:10px;
+}
+
+.assignment strong{
+  display:block;
+  margin-bottom:4px;
+}
+
+.assignment button{
+  margin-top:8px;
+}
+
+.add-assignment{
+  margin-top:auto;
+}
+
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.65);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+.modal-backdrop.open{
+  display:flex;
+}
+
+.modal{
+  width:min(700px,92vw);
+  background:#232857;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;
+  padding:24px;
+}
+
+.modal-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.modal input,
+.modal select{
+  width:100%;
+}
+
+.assignment-list{
+  margin-top:18px;
+}
+
+@media(max-width:1100px){
+  .week-board{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media(max-width:700px){
+  .week-board{
+    grid-template-columns:1fr;
+  }
+
+  .modal-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body class="ats-admin">
+
+<header class="ats-header">
+  <div class="ats-header-inner">
+
+    <a class="ats-brand" href="/admin/">
+      <img src="/assets/images/logo-v2.png" alt="">
+    </a>
+
+    <div class="ats-header-actions">
+      <button class="ats-burger" type="button">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<main class="ats-main">
+<div class="ats-container">
+
+<section class="ats-card">
+
+<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+  <div>
+    <div class="ats-eyebrow">Weekly Assignment Board</div>
+    <h1 id="weekLabel">Loading week...</h1>
+  </div>
+
+  <button class="button" id="btnSaveWeek">
+    Save Weekly Board
+  </button>
+</div>
+
+<div class="week-board" id="weekBoard"></div>
+
+</section>
+
+</div>
+</main>
+
+<div class="modal-backdrop" id="assignmentModal">
+
+<div class="modal">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+    <h2 id="modalTitle">Assignments</h2>
+
+    <button class="button button-secondary" id="closeModal">
+      Close
+    </button>
+  </div>
+
+  <div class="modal-grid">
+
+    <div>
+      <label>Employee</label>
+      <select id="employeeSelect"></select>
+    </div>
+
+    <div>
+      <label>Client</label>
+      <input type="text" id="clientSearch" placeholder="Start typing client name...">
+      <div id="clientSuggestions"></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:18px;">
+    <button class="button" id="btnAddAssignment">
+      Add Assignment
+    </button>
+  </div>
+
+  <div class="assignment-list" id="assignmentList"></div>
+
+</div>
+</div>
+
+</body>
+</html>
