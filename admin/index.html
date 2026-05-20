@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="/assets/images/logo-v2.png">
   <link rel="apple-touch-icon" href="/assets/images/logo-v2.png">
   <link rel="stylesheet" href="/admin/admin-layout.css" />
-  <script defer src="/admin/admin-nav.js?v=6"></script>
+  <script defer src="/admin/admin-nav.js?v=7"></script>
 
   <style>
     :root{
@@ -120,6 +120,34 @@
             <div class="small">Available to all active employees.</div>
           </div>
 
+          <div class="card hidden" data-tool="my_weekly_board">
+            <h3>My Weekly Board</h3>
+            <p>View your assigned jobs for the current Saturday–Friday week.</p>
+            <a class="btn" id="myWeeklyBoardBtn" href="#" rel="noopener">Open My Weekly Board</a>
+            <div class="small">Read-only employee schedule view.</div>
+          </div>
+
+          <div class="card hidden" data-tool="client_info">
+            <h3>Client Info</h3>
+            <p>Search client specs, addresses, access notes, and special instructions.</p>
+            <a class="btn" href="/admin/client-info/" rel="noopener">Open Client Info</a>
+            <div class="small">Available to active employees.</div>
+          </div>
+
+          <div class="card hidden" data-tool="weekly_board">
+            <h3>Weekly Board Editor</h3>
+            <p>Build and save the weekly assignment board for employees.</p>
+            <a class="btn" href="/admin/weekly-board/" rel="noopener">Open Weekly Board</a>
+            <div class="small">Admin, payroll, and scheduler access.</div>
+          </div>
+
+          <div class="card hidden" data-tool="payroll">
+            <h3>Payroll</h3>
+            <p>Generate, review, lock, and export payroll.</p>
+            <a class="btn" href="/admin/payroll/" rel="noopener">Open Payroll</a>
+            <div class="small">Payroll role, schedule/payroll, or full admin.</div>
+          </div>
+
           <div class="card hidden" data-tool="estimator">
             <h3>Residential Estimator</h3>
             <p>Open the walkthrough estimator inside the admin panel.</p>
@@ -132,20 +160,6 @@
             <p>Mobile paper-style estimate form with PDF generation.</p>
             <a class="btn" href="/admin/estimate-form/" rel="noopener">Open Estimate Form</a>
             <div class="small">Full admin only.</div>
-          </div>
-
-          <div class="card hidden" data-tool="payroll">
-            <h3>Payroll</h3>
-            <p>Generate, review, lock, and export payroll.</p>
-            <a class="btn" href="/admin/payroll/" rel="noopener">Open Payroll</a>
-            <div class="small">Payroll role, schedule/payroll, or full admin.</div>
-          </div>
-
-          <div class="card hidden" data-tool="schedule">
-            <h3>Schedule</h3>
-            <p>Tap a day, choose cleaner + client, and update weekly assignments.</p>
-            <a class="btn" href="/admin/schedule/" rel="noopener">Open Schedule</a>
-            <div class="small">Schedule/payroll or full admin.</div>
           </div>
 
           <div class="card hidden" data-tool="legacy">
@@ -175,6 +189,6 @@
     </div>
   </main>
 
-  <script src="/admin/admin.js?v=6"></script>
+  <script src="/admin/admin.js?v=7"></script>
 </body>
 </html>
