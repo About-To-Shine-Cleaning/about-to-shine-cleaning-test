@@ -6,12 +6,103 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="About To Shine Cleaning in the Lehigh Valley — request a free quote for residential or commercial cleaning." name="description"/>
 <meta content="noindex,nofollow,noarchive" name="robots"/>
+
 <link href="/About-To-Shine-Cleaning/assets/css/style.css" rel="stylesheet"/>
 <link href="assets/css/site-brand.css" rel="stylesheet"/>
 <link href="assets/images/logo-v2.png" rel="icon" type="image/png"/>
 <link href="assets/images/logo-v2.png" rel="apple-touch-icon"/>
 <link rel="stylesheet" href="/admin/admin-layout.css" />
-<script defer src="/admin/admin-nav.js"></script>
+<script defer src="/admin/admin-nav.js?v=7"></script>
+
+<style>
+  .clock-client-specs{
+    display:none;
+    margin-top:18px;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid rgba(0,0,0,.12);
+    background:#f8fafc;
+  }
+
+  .my-week-board-card{
+    margin-top:22px;
+    border-radius:18px;
+    border:1px solid rgba(0,0,0,.12);
+    background:#f8fafc;
+    overflow:hidden;
+  }
+
+  .my-week-board-toggle{
+    width:100%;
+    border:0;
+    background:#eef2ff;
+    color:#172554;
+    padding:14px 16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    cursor:pointer;
+    text-align:left;
+    font-weight:900;
+  }
+
+  .my-week-board-body{
+    display:none;
+    padding:14px 16px 16px;
+  }
+
+  .my-week-board-card.open .my-week-board-body{
+    display:block;
+  }
+
+  .my-week-day{
+    border:1px solid rgba(15,23,42,.12);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:12px;
+    background:#fff;
+  }
+
+  .my-week-day-title{
+    font-weight:900;
+    color:#111827;
+    margin-bottom:8px;
+  }
+
+  .my-week-job{
+    border-top:1px solid rgba(15,23,42,.08);
+    padding:10px 0;
+  }
+
+  .my-week-job:first-of-type{
+    border-top:0;
+  }
+
+  .my-week-client-btn{
+    background:transparent;
+    border:0;
+    padding:0;
+    color:#1d4ed8;
+    font-weight:900;
+    cursor:pointer;
+    text-align:left;
+    font-size:1rem;
+  }
+
+  .my-week-meta{
+    margin-top:4px;
+    color:#4b5563;
+    font-size:.92rem;
+    line-height:1.35;
+  }
+
+  .my-week-shared{
+    margin-top:5px;
+    color:#6b7280;
+    font-size:.88rem;
+  }
+</style>
 </head>
 
 <body class="ats-admin ats-clock">
@@ -37,7 +128,6 @@
 
       <div aria-live="polite" id="clock-status" role="status" style="margin:12px 0;"></div>
 
-      <!-- Hidden for later schedule-based workflow -->
       <section id="todayJobsCard" style="display:none;">
         <h3 style="margin-top:0;">Today’s Jobs</h3>
         <div id="todayJobsList">Loading today’s jobs...</div>
@@ -46,7 +136,6 @@
       <div>
         <label for="jobSearch">Current Cleaning</label>
 
-        <!-- 🔍 SEARCH -->
         <input
           type="text"
           id="jobSearch"
@@ -55,28 +144,26 @@
           style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #ccc;"
         >
 
-        <!-- 🔍 AUTOCOMPLETE RESULTS -->
         <div id="jobResults" style="margin-top:10px;"></div>
 
-        <!-- Hidden dropdown kept for compatibility -->
         <select id="jobSelect" style="display:none;">
           <option value="">-- Select Current Cleaning --</option>
         </select>
 
-        <!-- 📍 MAP LINK -->
         <div id="jobAddressLink" style="margin-top:10px;"></div>
-        <section id="clientSpecsCard" style="display:none;margin-top:18px;padding:16px;border-radius:16px;border:1px solid rgba(0,0,0,.12);background:#f8fafc;">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-    <h3 style="margin:0;">Client Specs</h3>
-    <button class="button" id="btnToggleClientSpecs" type="button" style="padding:8px 12px;">
-      Hide
-    </button>
-  </div>
 
-  <div id="clientSpecsBody" style="margin-top:12px;">
-    Loading client info...
-  </div>
-</section>
+        <section id="clientSpecsCard" class="clock-client-specs">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+            <h3 style="margin:0;">Client Specs</h3>
+            <button class="button" id="btnToggleClientSpecs" type="button" style="padding:8px 12px;">
+              Hide
+            </button>
+          </div>
+
+          <div id="clientSpecsBody" style="margin-top:12px;">
+            Loading client info...
+          </div>
+        </section>
 
         <button class="button" id="btnClockIn" onclick="clockIn()" style="margin-top:12px;">
           Clock In
@@ -88,6 +175,16 @@
         <button class="button" id="btnBreakEnd" onclick="endBreak()">End Break</button>
         <button class="button" id="btnClockOut" onclick="clockOut()">Clock Out</button>
       </div>
+
+      <section id="myWeeklyBoardCard" class="my-week-board-card">
+        <button id="myWeeklyBoardToggle" class="my-week-board-toggle" type="button" aria-expanded="false">
+          <span>My Weekly Board</span>
+          <span id="myWeeklyBoardCount">Loading...</span>
+        </button>
+        <div id="myWeeklyBoardBody" class="my-week-board-body">
+          Loading weekly board...
+        </div>
+      </section>
 
       <section style="margin-top:22px;">
         <label for="jobNotes"><strong>Job Notes (optional)</strong></label>
@@ -122,6 +219,6 @@
 </main>
 
 <link href="/assets/css/style.css" rel="stylesheet"/>
-<script defer src="/assets/js/clock.js?v=201"></script>
+<script defer src="/assets/js/clock.js?v=202"></script>
 </body>
 </html>
