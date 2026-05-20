@@ -1,235 +1,326 @@
-const API =
-  "YOUR_APPS_SCRIPT_WEBAPP_URL";
+// =========================================================
+// FILE: /admin/weekly-board/weekly-board.js
+// TYPE: .js
+// ATS Weekly Assignment Board
+// =========================================================
+
+const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+
+const DEVICE_KEY_STORAGE = "ats_device_key_v1";
+const TOKEN_STORAGE = "ats_admin_token_v1";
+const TOKEN_LOCAL = "ats_admin_token_local_v1";
 
 const boardEl = document.getElementById("weekBoard");
 const weekLabel = document.getElementById("weekLabel");
-
 const modal = document.getElementById("assignmentModal");
 const modalTitle = document.getElementById("modalTitle");
-
 const employeeSelect = document.getElementById("employeeSelect");
 const clientSearch = document.getElementById("clientSearch");
 const clientSuggestions = document.getElementById("clientSuggestions");
-
 const assignmentList = document.getElementById("assignmentList");
+const btnSaveWeek = document.getElementById("btnSaveWeek");
+const closeModalBtn = document.getElementById("closeModal");
+const btnAddAssignment = document.getElementById("btnAddAssignment");
+
+const DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 let currentDay = null;
 let selectedClient = null;
-
 let employees = [];
 let clients = [];
 let assignments = [];
+let currentWeekStart = "";
 
-const DAYS = ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
-
-init();
-
-async function init(){
-  await loadEmployees();
-  await loadClients();
-
-  buildWeekBoard();
-
-  document.getElementById("closeModal")
-    .addEventListener("click", closeModal);
-
-  document.getElementById("btnAddAssignment")
-    .addEventListener("click", addAssignment);
-
-  clientSearch.addEventListener("input", handleClientSearch);
-
-  document.getElementById("btnSaveWeek")
-    .addEventListener("click", saveBoard);
+function getDeviceKey() {
+  let key = localStorage.getItem(DEVICE_KEY_STORAGE);
+  if (!key) {
+    key = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_KEY_STORAGE, key);
+  }
+  return key;
 }
 
-function getWeekStart(){
+function getToken() {
+  try {
+    const s = (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
+    if (s) return s;
+  } catch (e) {}
+
+  try {
+    const l = (localStorage.getItem(TOKEN_LOCAL) || "").trim();
+    if (l) return l;
+  } catch (e) {}
+
+  return "";
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function setMessage(msg, isError) {
+  if (!weekLabel) return;
+  if (isError) weekLabel.textContent = msg;
+}
+
+function jsonp(action, paramsObj = {}) {
+  return new Promise((resolve, reject) => {
+    const token = getToken();
+    const device = getDeviceKey();
+
+    if (!token) {
+      reject(new Error("Missing admin token. Open this from the Admin Panel first."));
+      return;
+    }
+
+    const cb = "cb_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    script.async = true;
+
+    const params = new URLSearchParams({
+      action,
+      t: token,
+      d: device,
+      callback: cb,
+      ...paramsObj
+    });
+
+    window[cb] = function (data) {
+      try { resolve(data); }
+      finally {
+        try { delete window[cb]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+      }
+    };
+
+    script.onerror = function () {
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+      reject(new Error("JSONP failed: " + action));
+    };
+
+    script.src = API_URL + "?" + params.toString();
+    document.body.appendChild(script);
+  });
+}
+
+function getWeekStart() {
   const d = new Date();
-
-  while(d.getDay() !== 6){
-    d.setDate(d.getDate()-1);
-  }
-
+  d.setHours(12, 0, 0, 0);
+  while (d.getDay() !== 6) d.setDate(d.getDate() - 1);
   return d;
 }
 
-function formatDate(date){
-  return date.toISOString().split("T")[0];
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-function buildWeekBoard(){
+function prettyDate(ymd) {
+  const d = new Date(ymd + "T12:00:00");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
 
+async function init() {
+  try {
+    const start = getWeekStart();
+    currentWeekStart = formatDate(start);
+
+    await Promise.all([
+      loadEmployees(),
+      loadClients(),
+      loadBoard(currentWeekStart)
+    ]);
+
+    buildWeekBoard();
+
+    closeModalBtn?.addEventListener("click", closeModal);
+    btnAddAssignment?.addEventListener("click", addAssignment);
+    clientSearch?.addEventListener("input", handleClientSearch);
+    btnSaveWeek?.addEventListener("click", saveBoard);
+
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+  } catch (err) {
+    console.error(err);
+    setMessage(String(err?.message || err), true);
+    alert(String(err?.message || err));
+  }
+}
+
+async function loadEmployees() {
+  const data = await jsonp("board_employees");
+  if (!data || !data.ok) throw new Error(data?.error || "board_employees failed");
+
+  employees = Array.isArray(data.rows) ? data.rows : [];
+
+  if (employeeSelect) {
+    employeeSelect.innerHTML = employees.map(emp => `
+      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>
+    `).join("");
+  }
+}
+
+async function loadClients() {
+  const data = await jsonp("board_clients");
+  if (!data || !data.ok) throw new Error(data?.error || "board_clients failed");
+  clients = Array.isArray(data.rows) ? data.rows : [];
+}
+
+async function loadBoard(weekStart) {
+  const data = await jsonp("weekly_board_get", { weekStart });
+  if (!data || !data.ok) throw new Error(data?.error || "weekly_board_get failed");
+  assignments = Array.isArray(data.rows) ? data.rows : [];
+}
+
+function buildWeekBoard() {
+  if (!boardEl) return;
   boardEl.innerHTML = "";
 
-  const start = getWeekStart();
-
+  const start = new Date(currentWeekStart + "T12:00:00");
   const end = new Date(start);
-  end.setDate(end.getDate()+6);
+  end.setDate(end.getDate() + 6);
 
-  weekLabel.textContent =
-    `${start.toLocaleDateString()} → ${end.toLocaleDateString()}`;
+  if (weekLabel) weekLabel.textContent = `${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
 
-  DAYS.forEach((day,index)=>{
-
+  DAYS.forEach((day, index) => {
     const current = new Date(start);
-    current.setDate(current.getDate()+index);
-
+    current.setDate(current.getDate() + index);
     const dateStr = formatDate(current);
 
     const card = document.createElement("div");
     card.className = "day-card";
-
     card.innerHTML = `
       <div class="day-header">
         <div>
-          <div class="day-name">${day}</div>
-          <div class="day-date">${dateStr}</div>
+          <div class="day-name">${escapeHtml(day)}</div>
+          <div class="day-date">${escapeHtml(dateStr)}</div>
         </div>
-
-        <button class="button button-small">
-          Edit
-        </button>
+        <button class="button button-small" type="button">Edit</button>
       </div>
-
-      <div id="assignments-${dateStr}"></div>
+      <div id="assignments-${escapeHtml(dateStr)}"></div>
     `;
 
-    card.querySelector("button")
-      .addEventListener("click",()=>openDay(dateStr,day));
-
+    card.querySelector("button")?.addEventListener("click", () => openDay(dateStr, day));
     boardEl.appendChild(card);
-
     renderAssignments(dateStr);
   });
 }
 
-function openDay(dateStr,day){
-
+function openDay(dateStr, day) {
   currentDay = dateStr;
-
-  modalTitle.textContent =
-    `${day} • ${dateStr}`;
-
+  selectedClient = null;
+  if (clientSearch) clientSearch.value = "";
+  if (clientSuggestions) clientSuggestions.innerHTML = "";
+  if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
   renderModalAssignments();
-
-  modal.classList.add("open");
+  modal?.classList.add("open");
 }
 
-function closeModal(){
-  modal.classList.remove("open");
+function closeModal() {
+  modal?.classList.remove("open");
 }
 
-function renderAssignments(dateStr){
+function groupedByEmployee(rows) {
+  const map = {};
+  rows.forEach(r => {
+    const key = r.employeeId || r.employeeName || "Unassigned";
+    if (!map[key]) map[key] = { employeeName: r.employeeName || key, items: [] };
+    map[key].items.push(r);
+  });
+  return map;
+}
 
-  const container =
-    document.getElementById(`assignments-${dateStr}`);
+function renderAssignments(dateStr) {
+  const container = document.getElementById(`assignments-${dateStr}`);
+  if (!container) return;
 
-  if(!container) return;
+  const rows = assignments.filter(x => x.serviceDate === dateStr && String(x.active || "YES").toUpperCase() !== "NO");
 
-  const rows =
-    assignments.filter(x=>x.serviceDate === dateStr);
+  if (!rows.length) {
+    container.innerHTML = `<div style="opacity:.65;font-size:13px;">No assignments yet.</div>`;
+    return;
+  }
 
-  container.innerHTML = "";
-
-  rows.forEach(row=>{
-
-    const div = document.createElement("div");
-    div.className = "assignment";
-
-    div.innerHTML = `
-      <strong>${row.employeeName}</strong>
-      ${row.clientName}
+  const grouped = groupedByEmployee(rows);
+  container.innerHTML = Object.keys(grouped).map(key => {
+    const group = grouped[key];
+    return `
+      <div class="assignment">
+        <strong>${escapeHtml(group.employeeName)}</strong>
+        ${group.items.map(item => `<div>• ${escapeHtml(item.clientName)}</div>`).join("")}
+      </div>
     `;
+  }).join("");
+}
 
-    container.appendChild(div);
+function renderModalAssignments() {
+  if (!assignmentList) return;
+
+  const rows = assignments
+    .map((row, realIndex) => ({ row, realIndex }))
+    .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
+
+  if (!rows.length) {
+    assignmentList.innerHTML = `<div style="opacity:.7;margin-top:12px;">No assignments for this day yet.</div>`;
+    return;
+  }
+
+  assignmentList.innerHTML = rows.map(x => `
+    <div class="assignment">
+      <strong>${escapeHtml(x.row.employeeName)}</strong>
+      ${escapeHtml(x.row.clientName)}
+      <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
+    </div>
+  `).join("");
+
+  assignmentList.querySelectorAll("[data-remove-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.removeIndex);
+      assignments.splice(index, 1);
+      renderModalAssignments();
+      renderAssignments(currentDay);
+    });
   });
 }
 
-function renderModalAssignments(){
+function handleClientSearch() {
+  if (!clientSuggestions || !clientSearch) return;
 
-  const rows =
-    assignments.filter(x=>x.serviceDate === currentDay);
-
-  assignmentList.innerHTML = "";
-
-  rows.forEach((row,index)=>{
-
-    const div = document.createElement("div");
-    div.className = "assignment";
-
-    div.innerHTML = `
-      <strong>${row.employeeName}</strong>
-      ${row.clientName}
-
-      <button class="button button-secondary">
-        Remove
-      </button>
-    `;
-
-    div.querySelector("button")
-      .addEventListener("click",()=>{
-        assignments.splice(index,1);
-        renderModalAssignments();
-        renderAssignments(currentDay);
-      });
-
-    assignmentList.appendChild(div);
-  });
-}
-
-async function loadEmployees(){
-
-  const data =
-    await api("board_employees");
-
-  employees = data.rows || [];
-
-  employeeSelect.innerHTML =
-    employees.map(emp=>`
-      <option value="${emp.employeeId}">
-        ${emp.employeeName}
-      </option>
-    `).join("");
-}
-
-async function loadClients(){
-
-  const data =
-    await api("board_clients");
-
-  clients = data.rows || [];
-}
-
-function handleClientSearch(){
-
-  const q =
-    clientSearch.value.trim().toLowerCase();
-
+  const q = clientSearch.value.trim().toLowerCase();
+  selectedClient = null;
   clientSuggestions.innerHTML = "";
+  if (!q) return;
 
-  if(!q) return;
+  const matches = clients
+    .filter(x => String(x.clientName || "").toLowerCase().includes(q))
+    .slice(0, 8);
 
-  const matches =
-    clients
-      .filter(x=>
-        x.clientName.toLowerCase().includes(q)
-      )
-      .slice(0,8);
+  if (!matches.length) {
+    clientSuggestions.innerHTML = `<div style="opacity:.7;margin-top:8px;">No matching clients.</div>`;
+    return;
+  }
 
-  matches.forEach(client=>{
-
+  matches.forEach(client => {
     const div = document.createElement("div");
     div.className = "assignment";
+    div.style.cursor = "pointer";
+    div.innerHTML = `
+      <strong>${escapeHtml(client.clientName)}</strong>
+      <div style="opacity:.75;font-size:13px;">${escapeHtml(client.address || "")}</div>
+    `;
 
-    div.textContent =
-      client.clientName;
-
-    div.addEventListener("click",()=>{
-
+    div.addEventListener("click", () => {
       selectedClient = client;
-
-      clientSearch.value =
-        client.clientName;
-
+      clientSearch.value = client.clientName;
       clientSuggestions.innerHTML = "";
     });
 
@@ -237,80 +328,60 @@ function handleClientSearch(){
   });
 }
 
-function addAssignment(){
+function addAssignment() {
+  if (!currentDay) return alert("Choose a day first.");
+  if (!selectedClient) return alert("Select a client from the search results.");
 
-  if(!selectedClient){
-    alert("Select a client");
-    return;
-  }
-
-  const employeeId =
-    employeeSelect.value;
-
-  const employee =
-    employees.find(x=>x.employeeId === employeeId);
+  const employeeId = employeeSelect?.value || "";
+  const employee = employees.find(x => x.employeeId === employeeId);
+  if (!employee) return alert("Select an employee.");
 
   assignments.push({
+    weekStart: currentWeekStart,
     serviceDate: currentDay,
-    employeeId,
+    dayName: DAYS[new Date(currentDay + "T12:00:00").getDay() === 0 ? 1 : 0] || "",
+    employeeId: employee.employeeId,
     employeeName: employee.employeeName,
-    clientName: selectedClient.clientName
+    clientName: selectedClient.clientName,
+    address: selectedClient.address || "",
+    notes: "",
+    active: "YES"
   });
+
+  selectedClient = null;
+  if (clientSearch) clientSearch.value = "";
+  if (clientSuggestions) clientSuggestions.innerHTML = "";
 
   renderModalAssignments();
   renderAssignments(currentDay);
-
-  clientSearch.value = "";
-  selectedClient = null;
 }
 
-async function saveBoard(){
+async function saveBoard() {
+  try {
+    btnSaveWeek.disabled = true;
+    btnSaveWeek.textContent = "Saving...";
 
-  try{
-
-    await api("save_weekly_board",{
-      assignments
+    const res = await jsonp("weekly_board_save", {
+      weekStart: currentWeekStart,
+      payload: JSON.stringify({ assignments })
     });
 
-    alert("Weekly board saved");
+    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
 
-  }catch(err){
-
+    alert("Weekly board saved ✅");
+    await loadBoard(currentWeekStart);
+    buildWeekBoard();
+  } catch (err) {
     console.error(err);
-    alert("Failed saving board");
+    alert(String(err?.message || err));
+  } finally {
+    btnSaveWeek.disabled = false;
+    btnSaveWeek.textContent = "Save Weekly Board";
   }
 }
 
-function api(action,payload={}){
-
-  return new Promise((resolve,reject)=>{
-
-    const cb =
-      "cb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-
-    window[cb] = function(data){
-
-      delete window[cb];
-      script.remove();
-
-      resolve(data);
-    };
-
-    const script =
-      document.createElement("script");
-
-    const params =
-      new URLSearchParams({
-        action,
-        callback: cb,
-        payload: JSON.stringify(payload)
-      });
-
-    script.src =
-      `${API}?${params.toString()}`;
-
-    script.onerror = reject;
-
-    document.body.appendChild(script);
-  });
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
 }
