@@ -230,17 +230,16 @@ function renderJobResults(term) {
     const address = escapeHtml(job.address || "");
 
     return `
-      <button
-        type="button"
-        class="button job-result-btn"
-        data-job-id="${id}"
-        style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
-      >
-        <strong>${name}</strong>
-        <br><small style="opacity:.8;">Pay: $${pay}</small>
-        ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
-      </button>
-    `;
+  <button
+    type="button"
+    class="button job-result-btn"
+    data-job-id="${id}"
+    style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
+  >
+    <strong>${name}</strong>
+    ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
+  </button>
+`;
   }).join("");
 }
 
