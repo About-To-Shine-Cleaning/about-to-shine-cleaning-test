@@ -1,7 +1,8 @@
 // =========================================================
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
-// ATS Weekly Assignment Board
+// ATS Weekly Assignment Board EDITOR
+// Admin / Payroll / Scheduler only
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -9,6 +10,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-
 const DEVICE_KEY_STORAGE = "ats_device_key_v1";
 const TOKEN_STORAGE = "ats_admin_token_v1";
 const TOKEN_LOCAL = "ats_admin_token_local_v1";
+const AUTH_STORAGE = "ats_admin_auth_v1";
 
 const boardEl = document.getElementById("weekBoard");
 const weekLabel = document.getElementById("weekLabel");
@@ -30,6 +32,7 @@ let employees = [];
 let clients = [];
 let assignments = [];
 let currentWeekStart = "";
+let auth = null;
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -54,6 +57,31 @@ function getToken() {
   return "";
 }
 
+function normalizeRole(role, employeeId) {
+  const r = String(role || "").trim().toLowerCase();
+  const id = String(employeeId || "").trim().toUpperCase();
+
+  if (r === "admin") {
+    if (id === "E01" || id === "E04") return "full_admin";
+    if (id === "E02") return "schedule_payroll";
+    return "clock_only";
+  }
+
+  if (r === "full_admin") return "full_admin";
+  if (r === "schedule_payroll") return "schedule_payroll";
+  if (r === "payroll") return "payroll";
+  if (r === "clock_only") return "clock_only";
+
+  if (id === "E01" || id === "E04") return "full_admin";
+  if (id === "E02") return "schedule_payroll";
+  return "clock_only";
+}
+
+function canEditWeeklyBoard(authObj) {
+  const role = normalizeRole(authObj?.role, authObj?.employeeId);
+  return role === "full_admin" || role === "schedule_payroll" || role === "payroll";
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")
@@ -65,7 +93,8 @@ function escapeHtml(s) {
 
 function setMessage(msg, isError) {
   if (!weekLabel) return;
-  if (isError) weekLabel.textContent = msg;
+  weekLabel.textContent = msg;
+  if (isError) weekLabel.style.color = "#ffb4b4";
 }
 
 function jsonp(action, paramsObj = {}) {
@@ -130,6 +159,26 @@ function prettyDate(ymd) {
 
 async function init() {
   try {
+    const authRes = await jsonp("auth");
+    if (!authRes || !authRes.ok) throw new Error(authRes?.error || "Not authorized");
+    auth = authRes;
+
+    try { sessionStorage.setItem(AUTH_STORAGE, JSON.stringify(authRes)); } catch (e) {}
+    window.dispatchEvent(new Event("ats-auth-ready"));
+
+    if (!canEditWeeklyBoard(auth)) {
+      setMessage("Weekly Board editor is not available for this role.", true);
+      if (boardEl) {
+        boardEl.innerHTML = `
+          <div class="assignment" style="grid-column:1/-1;">
+            This page is for office/admin editing only. Your read-only weekly board is on the clock screen.
+          </div>
+        `;
+      }
+      if (btnSaveWeek) btnSaveWeek.style.display = "none";
+      return;
+    }
+
     const start = getWeekStart();
     currentWeekStart = formatDate(start);
 
@@ -256,7 +305,11 @@ function renderAssignments(dateStr) {
     return `
       <div class="assignment">
         <strong>${escapeHtml(group.employeeName)}</strong>
-        ${group.items.map(item => `<div>• ${escapeHtml(item.clientName)}</div>`).join("")}
+        ${group.items.map(item => `
+          <div class="assignment-client">
+            <span>• ${escapeHtml(item.clientName)}</span>
+          </div>
+        `).join("")}
       </div>
     `;
   }).join("");
@@ -278,6 +331,7 @@ function renderModalAssignments() {
     <div class="assignment">
       <strong>${escapeHtml(x.row.employeeName)}</strong>
       ${escapeHtml(x.row.clientName)}
+      ${x.row.address ? `<div class="assignment-address">${escapeHtml(x.row.address)}</div>` : ""}
       <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
     </div>
   `).join("");
@@ -328,6 +382,11 @@ function handleClientSearch() {
   });
 }
 
+function getDayNameFromYMD(ymd) {
+  const d = new Date(ymd + "T12:00:00");
+  return d.toLocaleDateString(undefined, { weekday: "long" });
+}
+
 function addAssignment() {
   if (!currentDay) return alert("Choose a day first.");
   if (!selectedClient) return alert("Select a client from the search results.");
@@ -339,9 +398,10 @@ function addAssignment() {
   assignments.push({
     weekStart: currentWeekStart,
     serviceDate: currentDay,
-    dayName: DAYS[new Date(currentDay + "T12:00:00").getDay() === 0 ? 1 : 0] || "",
+    dayName: getDayNameFromYMD(currentDay),
     employeeId: employee.employeeId,
     employeeName: employee.employeeName,
+    clientId: selectedClient.clientId || "",
     clientName: selectedClient.clientName,
     address: selectedClient.address || "",
     notes: "",
