@@ -1,5 +1,5 @@
 // ==============================
-// FILE: /clock.js
+// FILE: /assets/js/clock.js
 // TYPE: .js
 // ==============================
 
@@ -43,6 +43,10 @@ const btnBreakStart = document.getElementById("btnBreakStart");
 const btnBreakEnd = document.getElementById("btnBreakEnd");
 const btnClockOut = document.getElementById("btnClockOut");
 
+const clientSpecsCard = document.getElementById("clientSpecsCard");
+const clientSpecsBody = document.getElementById("clientSpecsBody");
+const btnToggleClientSpecs = document.getElementById("btnToggleClientSpecs");
+
 // ==============================
 // Employee from URL
 // ==============================
@@ -64,8 +68,10 @@ let onBreak = sessionStorage.getItem("onBreak") === "true";
 let isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
 let selectedJob = null;
 let allJobs = [];
+let activeClientSpecs = null;
 
 const lastJobKey = `lastJob_${employeeId}`;
+const activeSpecsKey = `activeClientSpecs_${employeeId}`;
 
 // ==============================
 // UI helpers
@@ -106,6 +112,12 @@ function slugJobId(label) {
     .toUpperCase() || "JOB";
 }
 
+function normalizeBaseClientName(name) {
+  return String(name || "")
+    .replace(/[—–-]\s*(Full|\.5|Half)\s*$/i, "")
+    .trim();
+}
+
 function normalizeJob(raw) {
   raw = raw || {};
 
@@ -113,6 +125,7 @@ function normalizeJob(raw) {
   let name = String(raw.name ?? raw.jobName ?? raw.clientName ?? raw.client ?? "").trim();
   let pay = String(raw.pay ?? raw.jobPay ?? raw.amount ?? "").trim();
   let address = String(raw.address ?? "").trim();
+  let clientName = String(raw.clientName ?? raw.client ?? "").trim();
 
   // Defensive fix for shifted backend/job-list data:
   // Example bad incoming object: { id: "Ziad — Full", name: "60", pay: "" }
@@ -125,10 +138,12 @@ function normalizeJob(raw) {
 
   if (!name && id && !isNumericValue(id)) name = id;
   if (!id && name) id = slugJobId(name);
+  if (!clientName) clientName = normalizeBaseClientName(name);
 
   return {
     id,
     name,
+    clientName,
     pay: isNumericValue(pay) ? Number(pay) : 0,
     address
   };
@@ -164,6 +179,129 @@ function updateButtons() {
 }
 
 // ==============================
+// JSONP helper
+// ==============================
+function jsonp(action, paramsObj = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = "cb_" + Math.random().toString(36).slice(2);
+    const qs = new URLSearchParams({
+      action,
+      ...paramsObj,
+      callback: cb
+    });
+
+    const script = document.createElement("script");
+    script.async = true;
+
+    window[cb] = function (res) {
+      try { resolve(res); }
+      finally {
+        try { delete window[cb]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+      }
+    };
+
+    script.onerror = function () {
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+      reject(new Error("JSONP failed: " + action));
+    };
+
+    script.src = UNIFIED_URL + "?" + qs.toString();
+    document.body.appendChild(script);
+  });
+}
+
+// ==============================
+// Client Specs Panel
+// ==============================
+function formatSpecLine(label, value) {
+  const clean = String(value || "").trim();
+  if (!clean) return "";
+  return `
+    <div style="margin:0 0 12px;">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#4b5563;margin-bottom:4px;">${escapeHtml(label)}</div>
+      <div style="white-space:pre-wrap;line-height:1.45;">${escapeHtml(clean)}</div>
+    </div>
+  `;
+}
+
+function renderClientSpecs(specs) {
+  if (!clientSpecsCard || !clientSpecsBody) return;
+
+  if (!specs || !specs.ok) {
+    clientSpecsBody.innerHTML = `<div style="color:#6b7280;">No client specs found for this job.</div>`;
+    clientSpecsCard.style.display = "block";
+    return;
+  }
+
+  const address = specs.address || "";
+  const mapHtml = address
+    ? `<p style="margin:8px 0 14px;"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open address in Maps</a></p>`
+    : "";
+
+  clientSpecsBody.innerHTML = `
+    <div style="font-size:18px;font-weight:850;margin-bottom:4px;">${escapeHtml(specs.clientName || selectedJob?.clientName || selectedJob?.name || "Client")}</div>
+    ${address ? `<div style="margin-bottom:8px;color:#374151;">${escapeHtml(address)}</div>` : ""}
+    ${mapHtml}
+    ${formatSpecLine("Frequency", specs.frequency)}
+    ${formatSpecLine("Specs", specs.specs)}
+    ${formatSpecLine("Special Info", specs.specialInfo)}
+    ${formatSpecLine("Payout", specs.payout ? "Recorded internally" : "")}
+  `;
+
+  clientSpecsCard.style.display = "block";
+}
+
+function hideClientSpecs() {
+  activeClientSpecs = null;
+  try { sessionStorage.removeItem(activeSpecsKey); } catch (e) {}
+  if (clientSpecsCard) clientSpecsCard.style.display = "none";
+  if (clientSpecsBody) clientSpecsBody.innerHTML = "";
+}
+
+async function loadClientSpecsForSelectedJob() {
+  if (!selectedJob) return;
+
+  if (clientSpecsCard && clientSpecsBody) {
+    clientSpecsCard.style.display = "block";
+    clientSpecsBody.innerHTML = "Loading client info...";
+  }
+
+  try {
+    const res = await jsonp("client_specs", {
+      clientName: selectedJob.clientName || normalizeBaseClientName(selectedJob.name || ""),
+      jobName: selectedJob.name || "",
+      jobId: selectedJob.id || ""
+    });
+
+    activeClientSpecs = res;
+    try { sessionStorage.setItem(activeSpecsKey, JSON.stringify(res)); } catch (e) {}
+    renderClientSpecs(res);
+  } catch (err) {
+    renderClientSpecs({ ok: false });
+  }
+}
+
+if (btnToggleClientSpecs) {
+  btnToggleClientSpecs.addEventListener("click", function () {
+    if (!clientSpecsBody) return;
+    const hidden = clientSpecsBody.style.display === "none";
+    clientSpecsBody.style.display = hidden ? "block" : "none";
+    btnToggleClientSpecs.textContent = hidden ? "Hide" : "Show";
+  });
+}
+
+// Restore specs if page refreshes while still clocked in
+try {
+  const rawSpecs = sessionStorage.getItem(activeSpecsKey);
+  if (rawSpecs && isClockedIn) {
+    activeClientSpecs = JSON.parse(rawSpecs);
+    renderClientSpecs(activeClientSpecs);
+  }
+} catch (e) {}
+
+// ==============================
 // Job selection helpers
 // ==============================
 function setSelectedJobFromOption(opt) {
@@ -171,6 +309,7 @@ function setSelectedJobFromOption(opt) {
     selectedJob = {
       id: opt.dataset.jobId || opt.value,
       name: opt.dataset.jobName || opt.dataset.name || opt.textContent || "",
+      clientName: opt.dataset.clientName || normalizeBaseClientName(opt.dataset.jobName || opt.dataset.name || opt.textContent || ""),
       pay: Number(opt.dataset.jobPay || opt.dataset.pay || 0),
       address: opt.dataset.address || ""
     };
@@ -180,7 +319,7 @@ function setSelectedJobFromOption(opt) {
     if (jobSearch) jobSearch.value = selectedJob.name;
     if (jobResults) jobResults.innerHTML = "";
 
-    setStatus(`Selected: ${selectedJob.name} ($${Number(selectedJob.pay || 0).toFixed(2)})`, "info");
+    setStatus(`Selected: ${selectedJob.name}`, "info");
     showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
@@ -191,6 +330,7 @@ function setSelectedJobFromOption(opt) {
 
     setStatus("Please select a job to continue.", "warn");
     showSelectedJobAddress("");
+    hideClientSpecs();
   }
 
   updateButtons();
@@ -226,20 +366,19 @@ function renderJobResults(term) {
   jobResults.innerHTML = matches.map(job => {
     const id = escapeHtml(job.id);
     const name = escapeHtml(job.name || "");
-    const pay = Number(job.pay || 0).toFixed(2);
     const address = escapeHtml(job.address || "");
 
     return `
-  <button
-    type="button"
-    class="button job-result-btn"
-    data-job-id="${id}"
-    style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
-  >
-    <strong>${name}</strong>
-    ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
-  </button>
-`;
+      <button
+        type="button"
+        class="button job-result-btn"
+        data-job-id="${id}"
+        style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
+      >
+        <strong>${name}</strong>
+        ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
+      </button>
+    `;
   }).join("");
 }
 
@@ -288,6 +427,7 @@ window.loadJobs = function (res) {
     opt.textContent = job.name;
     opt.dataset.jobId = job.id;
     opt.dataset.jobName = job.name;
+    opt.dataset.clientName = job.clientName || normalizeBaseClientName(job.name);
     opt.dataset.jobPay = String(job.pay || 0);
     opt.dataset.name = job.name;
     opt.dataset.pay = String(job.pay || 0);
@@ -408,6 +548,7 @@ window.clockIn = function () {
 
   logEvent("Clock In");
   setStatus(`Clocked In ✅ (${selectedJob.name})`, "ok");
+  loadClientSpecsForSelectedJob();
   updateButtons();
 };
 
@@ -456,6 +597,7 @@ window.clockOut = function () {
 
   if (notesEl) notesEl.value = "";
 
+  hideClientSpecs();
   updateButtons();
 };
 
