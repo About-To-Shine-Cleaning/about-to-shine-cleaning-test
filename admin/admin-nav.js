@@ -1,18 +1,20 @@
-/* ATS Admin Nav v7 — role-aware global navigation
+/* ATS Admin Nav v8 — role-aware global navigation
+   ✅ "Home" label instead of "Admin Home"
+   ✅ My Weekly Board is its own page: /admin/my-weekly-board/
    ✅ Clock URL: /clock.html
    ✅ E01/E04 full admin
-   ✅ E02 payroll + weekly board editor + clock + client info
-   ✅ E03/E05 clock + my weekly board via clock + client info
+   ✅ E02 payroll + weekly board editor + clock + client info + my weekly board
+   ✅ E03/E05 clock + my weekly board + client info
    ✅ Old Schedule hidden from GUI/menu but files remain untouched
-   ✅ Preserves emp=... for clock link only
+   ✅ Preserves emp=... for clock and my weekly board links
 */
 (function () {
   const AUTH_STORAGE = "ats_admin_auth_v1";
 
   const TOOLS = [
-    { key: "admin_home", label: "Admin Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
+    { key: "home", label: "Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "clock", label: "Clock", href: "/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "my_weekly_board", label: "My Weekly Board", href: "/clock.html#myWeeklyBoardCard", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
+    { key: "my_weekly_board", label: "My Weekly Board", href: "/admin/my-weekly-board/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "client_info", label: "Client Info", href: "/admin/client-info/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
     { key: "weekly_board", label: "Weekly Board Editor", href: "/admin/weekly-board/", roles: ["full_admin", "schedule_payroll", "payroll"] },
     { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
@@ -72,10 +74,14 @@
     }
   }
 
+  function shouldCarryEmp(href) {
+    return href.includes("clock.html") || href.includes("/admin/my-weekly-board/");
+  }
+
   function withEmp(href) {
     const empQ = getEmpQuery();
     if (!empQ) return href;
-    if (!href.includes("clock.html")) return href;
+    if (!shouldCarryEmp(href)) return href;
 
     const hash = href.includes("#") ? href.substring(href.indexOf("#")) : "";
     const base = hash ? href.substring(0, href.indexOf("#")) : href;
@@ -117,11 +123,11 @@
     drawer.id = "atsNavDrawer";
     drawer.setAttribute("role", "dialog");
     drawer.setAttribute("aria-modal", "true");
-    drawer.setAttribute("aria-label", "Admin navigation");
+    drawer.setAttribute("aria-label", "Navigation");
 
     drawer.innerHTML = `
       <header>
-        <h2>Admin Tools</h2>
+        <h2>Tools</h2>
         <button class="ats-nav-close" type="button" aria-label="Close menu">✕</button>
       </header>
       <nav class="ats-nav-list"></nav>
