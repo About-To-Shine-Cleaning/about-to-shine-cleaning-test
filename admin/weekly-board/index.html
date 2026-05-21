@@ -279,6 +279,24 @@ body.ats-admin .ats-card{
     padding-right:4px !important;
   }
 }
+   @media(max-width:760px){
+  html,
+  body,
+  body.ats-admin,
+  .ats-main,
+  .ats-container,
+  .ats-card{
+    background-attachment:scroll !important;
+  }
+
+  body.ats-admin::before,
+  body.ats-admin::after,
+  .ats-main::before,
+  .ats-main::after{
+    display:none !important;
+    content:none !important;
+  }
+}
 </style>
 </head>
 
