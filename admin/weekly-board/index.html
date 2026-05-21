@@ -275,6 +275,32 @@ body.ats-admin .ats-card{
     width:100% !important;
     min-width:0 !important;
   }
+/* FIX: modal scrolls internally when many jobs exist */
+.modal-backdrop.open{
+  position:fixed !important;
+  inset:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden !important;
+  padding:12px !important;
+}
+
+.modal{
+  width:min(900px, 96vw) !important;
+  max-height:92dvh !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+
+.assignment-list{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding-right:8px !important;
+  margin-top:18px !important;
 }
 </style>
 </head>
