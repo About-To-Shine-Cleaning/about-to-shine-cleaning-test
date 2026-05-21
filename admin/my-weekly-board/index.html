@@ -15,6 +15,11 @@
 <script defer src="./my-weekly-board.js?v=101"></script>
 
 <style>
+  .my-board-container{
+  width:min(1800px, 96vw) !important;
+  max-width:none !important;
+  margin-inline:auto !important;
+}
   .my-board-shell{
     display:grid;
     gap:18px;
@@ -242,7 +247,7 @@
 </header>
 
 <main class="ats-main">
-  <div class="ats-container">
+  <div class="ats-container my-board-container">
     <section class="ats-card my-board-shell">
       <div class="my-board-header">
         <div>
