@@ -3,6 +3,7 @@
 // TYPE: .js
 // ATS My Weekly Board — read-only employee schedule
 // Adds: direct Clock Into This Job links for weekly-board assignments
+// DO NOT paste this into /admin/weekly-board/weekly-board.js
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -312,4 +313,3 @@ if (document.readyState === "loading") {
     if (statusBox) statusBox.textContent = String(err?.message || err);
   });
 }
- 
