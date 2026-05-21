@@ -1,7 +1,7 @@
 // ==============================
 // FILE: /assets/js/clock.js
 // TYPE: .js
-// ATS Clock + Client Specs + My Weekly Board
+// ATS Clock + Client Specs
 // ==============================
 
 // ==============================
@@ -48,11 +48,6 @@ const clientSpecsCard = document.getElementById("clientSpecsCard");
 const clientSpecsBody = document.getElementById("clientSpecsBody");
 const btnToggleClientSpecs = document.getElementById("btnToggleClientSpecs");
 
-const myWeeklyBoardCard = document.getElementById("myWeeklyBoardCard");
-const myWeeklyBoardToggle = document.getElementById("myWeeklyBoardToggle");
-const myWeeklyBoardBody = document.getElementById("myWeeklyBoardBody");
-const myWeeklyBoardCount = document.getElementById("myWeeklyBoardCount");
-
 // ==============================
 // Employee from URL
 // ==============================
@@ -75,7 +70,6 @@ let isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
 let selectedJob = null;
 let allJobs = [];
 let activeClientSpecs = null;
-let weeklyBoardRows = [];
 
 const lastJobKey = `lastJob_${employeeId}`;
 const activeSpecsKey = `activeClientSpecs_${employeeId}`;
@@ -264,12 +258,11 @@ function hideClientSpecs() {
 }
 
 async function loadClientSpecsForClient(clientName, jobName, jobId) {
-  const res = await jsonp("client_specs", {
+  return jsonp("client_specs", {
     clientName: clientName || "",
     jobName: jobName || clientName || "",
     jobId: jobId || ""
   });
-  return res;
 }
 
 async function loadClientSpecsForSelectedJob() {
@@ -311,118 +304,6 @@ try {
     renderClientSpecs(activeClientSpecs);
   }
 } catch (e) {}
-
-// ==============================
-// My Weekly Board
-// ==============================
-function setupMyWeeklyBoardToggle() {
-  if (!myWeeklyBoardCard || !myWeeklyBoardToggle) return;
-
-  myWeeklyBoardToggle.addEventListener("click", function () {
-    const isOpen = myWeeklyBoardCard.classList.toggle("open");
-    myWeeklyBoardToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  });
-}
-
-function groupWeeklyRowsByDate(rows) {
-  const grouped = {};
-  rows.forEach(row => {
-    const key = row.serviceDate || "";
-    if (!key) return;
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(row);
-  });
-  return grouped;
-}
-
-function formatPrettyDay(ymd) {
-  const d = new Date(ymd + "T12:00:00");
-  return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-}
-
-function renderMyWeeklyBoard(rows) {
-  if (!myWeeklyBoardBody || !myWeeklyBoardCount) return;
-
-  weeklyBoardRows = Array.isArray(rows) ? rows : [];
-  const jobCount = weeklyBoardRows.length;
-  myWeeklyBoardCount.textContent = jobCount ? `${jobCount} job${jobCount === 1 ? "" : "s"}` : "No jobs";
-
-  if (!jobCount) {
-    myWeeklyBoardBody.innerHTML = `<div style="color:#6b7280;">No weekly assignments posted yet.</div>`;
-    return;
-  }
-
-  const grouped = groupWeeklyRowsByDate(weeklyBoardRows);
-  const dates = Object.keys(grouped).sort();
-
-  myWeeklyBoardBody.innerHTML = dates.map(date => {
-    const jobs = grouped[date];
-    return `
-      <div class="my-week-day">
-        <div class="my-week-day-title">${escapeHtml(formatPrettyDay(date))}</div>
-        ${jobs.map(job => {
-          const clientName = escapeHtml(job.clientName || "Client");
-          const address = escapeHtml(job.address || "");
-          const shared = Array.isArray(job.sharedEmployees) ? job.sharedEmployees : [];
-          const sharedText = shared.length ? shared.join(", ") : "";
-          return `
-            <div class="my-week-job">
-              <button class="my-week-client-btn" type="button" data-client-name="${clientName}" data-job-id="${escapeHtml(job.clientId || job.jobId || "")}">${clientName}</button>
-              ${address ? `<div class="my-week-meta"><a href="${getMapUrl(job.address)}" target="_blank" rel="noopener">📍 Open Map</a><br>${address}</div>` : ""}
-              ${sharedText ? `<div class="my-week-shared">With: ${escapeHtml(sharedText)}</div>` : ""}
-            </div>
-          `;
-        }).join("")}
-      </div>
-    `;
-  }).join("");
-}
-
-async function loadMyWeeklyBoard() {
-  if (!myWeeklyBoardBody || !myWeeklyBoardCount) return;
-
-  try {
-    myWeeklyBoardCount.textContent = "Loading...";
-    myWeeklyBoardBody.innerHTML = "Loading weekly board...";
-
-    const res = await jsonp("weekly_board_employee_view", {
-      employeeId,
-      emp: employeeId
-    });
-
-    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_employee_view failed");
-
-    renderMyWeeklyBoard(res.rows || []);
-  } catch (err) {
-    myWeeklyBoardCount.textContent = "Unavailable";
-    myWeeklyBoardBody.innerHTML = `<div style="color:#991b1b;">Weekly board is not available yet.</div>`;
-    console.warn(err);
-  }
-}
-
-if (myWeeklyBoardBody) {
-  myWeeklyBoardBody.addEventListener("click", async function (e) {
-    const btn = e.target.closest("[data-client-name]");
-    if (!btn) return;
-
-    const clientName = btn.dataset.clientName || "";
-    if (!clientName) return;
-
-    if (clientSpecsCard && clientSpecsBody) {
-      clientSpecsCard.style.display = "block";
-      clientSpecsBody.innerHTML = "Loading client info...";
-      clientSpecsCard.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    try {
-      const specs = await loadClientSpecsForClient(clientName, clientName, btn.dataset.jobId || "");
-      activeClientSpecs = specs;
-      renderClientSpecs(specs);
-    } catch (err) {
-      renderClientSpecs({ ok: false });
-    }
-  });
-}
 
 // ==============================
 // Job selection helpers
@@ -723,8 +604,6 @@ window.clockOut = function () {
 
 // Init
 updateButtons();
-setupMyWeeklyBoardToggle();
-loadMyWeeklyBoard();
 
 document.addEventListener("DOMContentLoaded", function () {
   if (jobSearch) jobSearch.focus();
