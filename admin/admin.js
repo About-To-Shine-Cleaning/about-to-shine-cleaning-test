@@ -1,11 +1,12 @@
 /* =========================================================
    FILE: /admin/admin.js
    TYPE: .js
-   ATS Admin Panel — v1.9.3 role/card cleanup
+   ATS Home — v1.9.4
    ✅ Correct Clock URL: /clock.html
+   ✅ My Weekly Board URL: /admin/my-weekly-board/
    ✅ E01/E04 full admin
-   ✅ E02 schedule/payroll + weekly board editor + my weekly board via clock
-   ✅ E03/E05 clock + client info + my weekly board via clock
+   ✅ E02 schedule/payroll + weekly board editor + my weekly board
+   ✅ E03/E05 clock + client info + my weekly board
    ✅ Old Schedule hidden from GUI cards
    ✅ Visible header shows ONLY E## • Name, not role
 ========================================================= */
@@ -207,9 +208,12 @@
 
     if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
 
-    const clockHref = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
+    const empQ = `emp=${encodeURIComponent(employeeId)}`;
+    const clockHref = `/clock.html?${empQ}`;
+    const myWeekHref = `/admin/my-weekly-board/?${empQ}`;
+
     if (clockBtn) clockBtn.href = clockHref;
-    if (myWeeklyBoardBtn) myWeeklyBoardBtn.href = clockHref + "#myWeeklyBoardCard";
+    if (myWeeklyBoardBtn) myWeeklyBoardBtn.href = myWeekHref;
 
     applyCardPermissions(role);
 
