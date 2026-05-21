@@ -355,17 +355,45 @@ textarea{min-height:96px}
     0 4px 14px rgba(0,0,0,.28);
 }
 
-.button:hover{
-  transform:translateY(-1px);
-  background:linear-gradient(180deg,#382a6b 0%, #241b4b 100%);
+/* FORCE ATS DARK BUTTONS */
+.button,
+a.button,
+button.button{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  padding:12px 20px !important;
+  min-width:140px !important;
+
+  border-radius:16px !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+
+  background:linear-gradient(180deg,#24164a 0%, #140d2c 100%) !important;
+
+  color:#ffffff !important;
+  font-weight:700 !important;
+  text-decoration:none !important;
+
+  cursor:pointer !important;
+
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 8px 18px rgba(0,0,0,.34);
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 6px 18px rgba(0,0,0,.38) !important;
+
+  transition:all .18s ease !important;
+}
+
+.button:hover,
+a.button:hover,
+button.button:hover{
+  background:linear-gradient(180deg,#35206b 0%, #1d123d 100%) !important;
+  transform:translateY(-1px);
 }
 
 .button:disabled{
-  opacity:.45;
-  cursor:not-allowed;
+  opacity:.45 !important;
+  cursor:not-allowed !important;
 }
 
 .clock-actions{
