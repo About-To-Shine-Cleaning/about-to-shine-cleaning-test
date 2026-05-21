@@ -401,3 +401,40 @@ button.button:hover{
   gap:12px;
   flex-wrap:wrap;
 }
+.job-result-btn{
+  display:block;
+  width:100%;
+  margin:8px 0;
+  padding:14px 16px;
+
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+
+  background:linear-gradient(180deg,#24164a 0%, #140d2c 100%);
+  color:#fff;
+
+  text-align:left;
+  cursor:pointer;
+
+  transition:.15s ease;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    0 4px 10px rgba(0,0,0,.24);
+}
+
+.job-result-btn:hover{
+  background:linear-gradient(180deg,#35206b 0%, #1d123d 100%);
+  transform:translateY(-1px);
+}
+
+.job-result-btn strong{
+  display:block;
+  font-size:16px;
+  margin-bottom:2px;
+}
+
+.job-result-btn small{
+  opacity:.8;
+  font-size:12px;
+}
