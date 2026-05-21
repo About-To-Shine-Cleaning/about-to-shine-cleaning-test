@@ -335,3 +335,35 @@ textarea{min-height:96px}
 
 .ats-nav-backdrop.open{opacity:1;pointer-events:auto}
 .ats-nav-drawer.open{transform:translateX(0)}
+
+.button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 20px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg,#5e4ea1,#473b7c);
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer;
+  transition:.2s ease;
+  min-width:140px;
+}
+
+.button:hover{
+  transform:translateY(-1px);
+  background:linear-gradient(180deg,#6b5bb8,#52468f);
+}
+
+.button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.clock-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
