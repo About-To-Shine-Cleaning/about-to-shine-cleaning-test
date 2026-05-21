@@ -202,17 +202,29 @@
     line-height:1.45;
   }
 
-  @media(min-width:1600px){
-    body.ats-admin .my-board-week{
-      grid-template-columns:repeat(5,minmax(0,1fr));
-    }
+  @media(min-width:1200px){
+  body.ats-admin .my-board-week{
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:12px;
   }
 
-  @media(min-width:1200px) and (max-width:1599px){
-    body.ats-admin .my-board-week{
-      grid-template-columns:repeat(4,minmax(0,1fr));
-    }
+  .my-day-card{
+    padding:14px;
   }
+
+  .my-job-card{
+    padding:12px;
+  }
+
+  .my-client-btn{
+    font-size:16px;
+  }
+
+  .my-clock-btn{
+    font-size:14px !important;
+    padding:10px 12px !important;
+  }
+}
 
   @media(min-width:900px) and (max-width:1199px){
     body.ats-admin .my-board-week{
