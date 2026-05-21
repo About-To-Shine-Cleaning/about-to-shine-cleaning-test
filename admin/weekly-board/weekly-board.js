@@ -3,7 +3,10 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // Admin / Payroll / Scheduler only
-// Adds: Change Employee + Change Job buttons inside assignment modal
+// Fixed flow:
+// ✅ Change Employee opens an inline picker inside that assignment card
+// ✅ Change Job opens an inline client search with live suggestions
+// ✅ No more prompt boxes / no more select-first confusion
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -34,6 +37,7 @@ let clients = [];
 let assignments = [];
 let currentWeekStart = "";
 let auth = null;
+let editMode = null; // { type: "employee" | "job", index: number }
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -164,13 +168,19 @@ function getDayNameFromYMD(ymd) {
 }
 
 function getEmployeeById(employeeId) {
-  return employees.find(x => String(x.employeeId || "").trim() === String(employeeId || "").trim());
+  return employees.find(x => String(x.employeeId || "").trim().toUpperCase() === String(employeeId || "").trim().toUpperCase());
 }
 
 function clearClientSelection() {
   selectedClient = null;
   if (clientSearch) clientSearch.value = "";
   if (clientSuggestions) clientSuggestions.innerHTML = "";
+}
+
+function getActiveRowsForCurrentDay() {
+  return assignments
+    .map((row, realIndex) => ({ row, realIndex }))
+    .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
 }
 
 async function init() {
@@ -282,6 +292,7 @@ function buildWeekBoard() {
 
 function openDay(dateStr, day) {
   currentDay = dateStr;
+  editMode = null;
   clearClientSelection();
   if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
   renderModalAssignments();
@@ -289,6 +300,7 @@ function openDay(dateStr, day) {
 }
 
 function closeModal() {
+  editMode = null;
   modal?.classList.remove("open");
 }
 
@@ -329,119 +341,118 @@ function renderAssignments(dateStr) {
   }).join("");
 }
 
+function renderEmployeeEditPanel(row, realIndex) {
+  const options = employees.map(emp => `
+    <option value="${escapeHtml(emp.employeeId)}" ${String(emp.employeeId) === String(row.employeeId) ? "selected" : ""}>
+      ${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}
+    </option>
+  `).join("");
+
+  return `
+    <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
+      <strong>Choose new employee</strong>
+      <select data-employee-picker-index="${realIndex}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
+        ${options}
+      </select>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <button class="button button-secondary" type="button" data-apply-employee-index="${realIndex}">Apply Employee</button>
+        <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderJobEditPanel(row, realIndex) {
+  return `
+    <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
+      <strong>Choose new client/job</strong>
+      <input
+        type="text"
+        data-job-search-index="${realIndex}"
+        placeholder="Start typing client name..."
+        autocomplete="off"
+        style="width:100%;margin-top:10px;padding:12px;border-radius:12px;"
+      >
+      <div data-job-suggestions-index="${realIndex}" style="margin-top:10px;"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderModalAssignments() {
   if (!assignmentList) return;
 
-  const rows = assignments
-    .map((row, realIndex) => ({ row, realIndex }))
-    .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
+  const rows = getActiveRowsForCurrentDay();
 
   if (!rows.length) {
     assignmentList.innerHTML = `<div style="opacity:.7;margin-top:12px;">No assignments for this day yet.</div>`;
     return;
   }
 
-  assignmentList.innerHTML = rows.map(x => `
-    <div class="assignment">
-      <strong>${escapeHtml(x.row.employeeName)}</strong>
+  assignmentList.innerHTML = rows.map(x => {
+    const isEmployeeEdit = editMode && editMode.type === "employee" && editMode.index === x.realIndex;
+    const isJobEdit = editMode && editMode.type === "job" && editMode.index === x.realIndex;
 
-      <div style="margin-top:8px;font-size:20px;font-weight:700;">
-        ${escapeHtml(x.row.clientName)}
-      </div>
+    return `
+      <div class="assignment">
+        <strong>${escapeHtml(x.row.employeeName)}</strong>
+        <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
+        ${x.row.address ? `<div class="assignment-address" style="opacity:.85;margin-top:4px;">${escapeHtml(x.row.address)}</div>` : ""}
 
-      ${x.row.address ? `
-        <div class="assignment-address" style="opacity:.85;margin-top:4px;">
-          ${escapeHtml(x.row.address)}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+          <button class="button button-secondary" type="button" data-open-employee-edit="${x.realIndex}">Change Employee</button>
+          <button class="button button-secondary" type="button" data-open-job-edit="${x.realIndex}">Change Job</button>
+          <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
         </div>
-      ` : ""}
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
-
-        <button class="button button-secondary" type="button" data-change-employee-index="${x.realIndex}">
-          Change Employee
-        </button>
-
-        <button class="button button-secondary" type="button" data-change-job-index="${x.realIndex}">
-          Change Job
-        </button>
-
-        <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">
-          Remove
-        </button>
-
+        ${isEmployeeEdit ? renderEmployeeEditPanel(x.row, x.realIndex) : ""}
+        ${isJobEdit ? renderJobEditPanel(x.row, x.realIndex) : ""}
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
-  assignmentList.querySelectorAll("[data-change-employee-index]").forEach(btn => {
+  wireModalAssignmentButtons();
+}
+
+function wireModalAssignmentButtons() {
+  assignmentList.querySelectorAll("[data-open-employee-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const index = Number(btn.dataset.changeEmployeeIndex);
-
-      const current = assignments[index];
-      if (!current) return;
-
-      const currentEmployee = current.employeeName || "Current Employee";
-
-     const list = employees
-  .map(emp => `${emp.employeeId} • ${emp.employeeName}`)
-  .join("\n");
-
-      const selected = prompt(
-        `Move assignment from ${currentEmployee} to which employee?
-
-${list}`,
-        current.employeeId || ""
-      );
-
-      if (!selected) return;
-
-      const employeeId = selected.split("•")[0].trim().toUpperCase();
-      const employee = getEmployeeById(employeeId);
-
-      if (!employee) {
-        alert("Employee not found.");
-        return;
-      }
-
-      current.employeeId = employee.employeeId;
-      current.employeeName = employee.employeeName;
-
+      editMode = { type: "employee", index: Number(btn.dataset.openEmployeeEdit) };
       renderModalAssignments();
-      renderAssignments(currentDay);
     });
   });
 
-  assignmentList.querySelectorAll("[data-change-job-index]").forEach(btn => {
+  assignmentList.querySelectorAll("[data-open-job-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const index = Number(btn.dataset.changeJobIndex);
-
-      const current = assignments[index];
-      if (!current) return;
-
-      const typed = prompt(
-        `Change job for ${current.employeeName}.
-
-Type new client name:` ,
-        current.clientName || ""
-      );
-
-      if (!typed) return;
-
-      const found = clients.find(c =>
-        String(c.clientName || "").trim().toLowerCase() === typed.trim().toLowerCase()
-      );
-
-      if (!found) {
-        alert("Client not found. Type exact client name.");
-        return;
-      }
-
-      current.clientId = found.clientId || "";
-      current.clientName = found.clientName;
-      current.address = found.address || "";
-
+      editMode = { type: "job", index: Number(btn.dataset.openJobEdit) };
       renderModalAssignments();
-      renderAssignments(currentDay);
+      const input = assignmentList.querySelector(`[data-job-search-index="${editMode.index}"]`);
+      if (input) input.focus();
+    });
+  });
+
+  assignmentList.querySelectorAll("[data-cancel-edit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      editMode = null;
+      renderModalAssignments();
+    });
+  });
+
+  assignmentList.querySelectorAll("[data-apply-employee-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.applyEmployeeIndex);
+      const picker = assignmentList.querySelector(`[data-employee-picker-index="${index}"]`);
+      const newEmployeeId = picker?.value || "";
+      applyEmployeeChange(index, newEmployeeId);
+    });
+  });
+
+  assignmentList.querySelectorAll("[data-job-search-index]").forEach(input => {
+    input.addEventListener("input", () => {
+      const index = Number(input.dataset.jobSearchIndex);
+      renderInlineJobSuggestions(index, input.value);
     });
   });
 
@@ -451,6 +462,79 @@ Type new client name:` ,
       removeAssignment(index);
     });
   });
+}
+
+function renderInlineJobSuggestions(index, value) {
+  const box = assignmentList.querySelector(`[data-job-suggestions-index="${index}"]`);
+  if (!box) return;
+
+  const q = String(value || "").trim().toLowerCase();
+  box.innerHTML = "";
+
+  if (!q) return;
+
+  const matches = clients
+    .filter(c => String(c.clientName || "").toLowerCase().includes(q))
+    .slice(0, 10);
+
+  if (!matches.length) {
+    box.innerHTML = `<div style="opacity:.75;">No matching clients.</div>`;
+    return;
+  }
+
+  matches.forEach(client => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "assignment";
+    row.style.display = "block";
+    row.style.width = "100%";
+    row.style.cursor = "pointer";
+    row.style.textAlign = "left";
+    row.style.marginBottom = "8px";
+    row.innerHTML = `
+      <strong>${escapeHtml(client.clientName)}</strong>
+      <div style="opacity:.75;font-size:13px;">${escapeHtml(client.address || "")}</div>
+    `;
+    row.addEventListener("click", () => applyJobChange(index, client));
+    box.appendChild(row);
+  });
+}
+
+function applyEmployeeChange(index, employeeId) {
+  const row = assignments[index];
+  if (!row) return alert("Assignment not found.");
+
+  const employee = getEmployeeById(employeeId);
+  if (!employee) return alert("Employee not found.");
+
+  row.employeeId = employee.employeeId;
+  row.employeeName = employee.employeeName;
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
+
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(currentDay);
+}
+
+function applyJobChange(index, client) {
+  const row = assignments[index];
+  if (!row) return alert("Assignment not found.");
+  if (!client) return alert("Client not found.");
+
+  row.clientId = client.clientId || "";
+  row.clientName = client.clientName;
+  row.address = client.address || "";
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
+
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(currentDay);
 }
 
 function handleClientSearch() {
@@ -515,46 +599,12 @@ function addAssignment() {
   renderAssignments(currentDay);
 }
 
-function changeAssignmentEmployee(index) {
-  const row = assignments[index];
-  if (!row) return alert("Assignment not found.");
-
-  const employeeId = employeeSelect?.value || "";
-  const employee = getEmployeeById(employeeId);
-  if (!employee) return alert("Select the new employee from the Employee dropdown first.");
-
-  row.employeeId = employee.employeeId;
-  row.employeeName = employee.employeeName;
-  row.weekStart = currentWeekStart;
-  row.serviceDate = currentDay;
-  row.dayName = getDayNameFromYMD(currentDay);
-  row.active = row.active || "YES";
-
-  renderModalAssignments();
-  renderAssignments(currentDay);
-}
-
-function changeAssignmentJob(index) {
-  const row = assignments[index];
-  if (!row) return alert("Assignment not found.");
-  if (!selectedClient) return alert("Search and select the new client first, then click Change Job.");
-
-  row.clientId = selectedClient.clientId || "";
-  row.clientName = selectedClient.clientName;
-  row.address = selectedClient.address || "";
-  row.weekStart = currentWeekStart;
-  row.serviceDate = currentDay;
-  row.dayName = getDayNameFromYMD(currentDay);
-  row.active = row.active || "YES";
-
-  clearClientSelection();
-  renderModalAssignments();
-  renderAssignments(currentDay);
-}
-
 function removeAssignment(index) {
   if (!assignments[index]) return;
+  if (!confirm("Remove this assignment?")) return;
+
   assignments.splice(index, 1);
+  editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
 }
