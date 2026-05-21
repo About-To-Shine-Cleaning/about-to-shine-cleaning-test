@@ -2,6 +2,7 @@
 // FILE: /assets/js/clock.js
 // TYPE: .js
 // ATS Clock + Client Specs
+// Adds: accepts My Weekly Board direct job URL params and auto-selects matching job
 // ==============================
 
 // ==============================
@@ -54,6 +55,15 @@ const btnToggleClientSpecs = document.getElementById("btnToggleClientSpecs");
 const params = new URLSearchParams(window.location.search);
 const employeeId = String(params.get("emp") || "").trim().toUpperCase();
 const employeeName = employees[employeeId];
+
+const directJobFromWeeklyBoard = {
+  source: String(params.get("source") || "").trim(),
+  serviceDate: String(params.get("serviceDate") || "").trim(),
+  clientId: String(params.get("clientId") || "").trim(),
+  clientName: String(params.get("clientName") || "").trim(),
+  jobName: String(params.get("jobName") || params.get("clientName") || "").trim(),
+  address: String(params.get("address") || "").trim()
+};
 
 if (!employeeName) {
   if (display) display.textContent = "Unauthorized Access";
@@ -117,6 +127,13 @@ function normalizeBaseClientName(name) {
   return String(name || "")
     .replace(/[—–-]\s*(Full|\.5|Half)\s*$/i, "")
     .trim();
+}
+
+function normalizeMatchKey(name) {
+  return normalizeBaseClientName(name)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 function normalizeJob(raw) {
@@ -308,7 +325,7 @@ try {
 // ==============================
 // Job selection helpers
 // ==============================
-function setSelectedJobFromOption(opt) {
+function setSelectedJobFromOption(opt, sourceMessage) {
   if (opt && opt.value) {
     selectedJob = {
       id: opt.dataset.jobId || opt.value,
@@ -323,7 +340,7 @@ function setSelectedJobFromOption(opt) {
     if (jobSearch) jobSearch.value = selectedJob.name;
     if (jobResults) jobResults.innerHTML = "";
 
-    setStatus(`Selected: ${selectedJob.name}`, "info");
+    setStatus(sourceMessage || `Selected: ${selectedJob.name}`, "info");
     showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
@@ -340,12 +357,91 @@ function setSelectedJobFromOption(opt) {
   updateButtons();
 }
 
-function selectJobById(jobId) {
-  if (!jobSelect) return;
+function selectJobById(jobId, sourceMessage) {
+  if (!jobSelect) return false;
 
   jobSelect.value = jobId;
   const opt = jobSelect.selectedOptions[0];
-  setSelectedJobFromOption(opt);
+  if (!opt || !opt.value) return false;
+
+  setSelectedJobFromOption(opt, sourceMessage);
+  return true;
+}
+
+function findBestJobForDirectWeeklyBoardJob() {
+  if (!directJobFromWeeklyBoard.clientName && !directJobFromWeeklyBoard.jobName && !directJobFromWeeklyBoard.clientId) return null;
+
+  const directClientKey = normalizeMatchKey(directJobFromWeeklyBoard.clientName || directJobFromWeeklyBoard.jobName || "");
+  const directId = String(directJobFromWeeklyBoard.clientId || "").trim();
+
+  let matches = allJobs.filter(job => {
+    const jobClientKey = normalizeMatchKey(job.clientName || job.name || "");
+    const jobNameKey = normalizeMatchKey(job.name || "");
+    return (
+      (directId && String(job.id || "").indexOf(directId) >= 0) ||
+      (directClientKey && jobClientKey === directClientKey) ||
+      (directClientKey && jobNameKey === directClientKey) ||
+      (directClientKey && jobNameKey.indexOf(directClientKey) >= 0) ||
+      (directClientKey && directClientKey.indexOf(jobClientKey) >= 0)
+    );
+  });
+
+  if (!matches.length) return null;
+
+  matches.sort((a, b) => {
+    const aName = String(a.name || "").toLowerCase();
+    const bName = String(b.name || "").toLowerCase();
+
+    const aFull = /full/i.test(aName) ? 0 : 1;
+    const bFull = /full/i.test(bName) ? 0 : 1;
+    if (aFull !== bFull) return aFull - bFull;
+
+    return aName.localeCompare(bName);
+  });
+
+  return matches[0];
+}
+
+function addWeeklyBoardFallbackJob() {
+  const name = directJobFromWeeklyBoard.jobName || directJobFromWeeklyBoard.clientName || "Weekly Board Job";
+  const id = directJobFromWeeklyBoard.clientId || slugJobId(name);
+  const clientName = directJobFromWeeklyBoard.clientName || normalizeBaseClientName(name);
+
+  const fallback = normalizeJob({
+    id,
+    name,
+    clientName,
+    pay: 0,
+    address: directJobFromWeeklyBoard.address || ""
+  });
+
+  allJobs.unshift(fallback);
+  return fallback;
+}
+
+function applyDirectWeeklyBoardJobIfPresent() {
+  if (directJobFromWeeklyBoard.source !== "weekly_board") return false;
+
+  let job = findBestJobForDirectWeeklyBoardJob();
+  if (!job) job = addWeeklyBoardFallbackJob();
+
+  let opt = Array.from(jobSelect.options).find(option => String(option.value || "") === String(job.id || ""));
+
+  if (!opt) {
+    opt = document.createElement("option");
+    opt.value = job.id;
+    opt.textContent = job.name;
+    opt.dataset.jobId = job.id;
+    opt.dataset.jobName = job.name;
+    opt.dataset.clientName = job.clientName || normalizeBaseClientName(job.name);
+    opt.dataset.jobPay = String(job.pay || 0);
+    opt.dataset.name = job.name;
+    opt.dataset.pay = String(job.pay || 0);
+    opt.dataset.address = job.address || directJobFromWeeklyBoard.address || "";
+    jobSelect.appendChild(opt);
+  }
+
+  return selectJobById(job.id, `Selected from Weekly Board: ${job.name}`);
 }
 
 function renderJobResults(term) {
@@ -435,6 +531,11 @@ window.loadJobs = function (res) {
     opt.dataset.address = job.address || "";
     jobSelect.appendChild(opt);
   });
+
+  if (applyDirectWeeklyBoardJobIfPresent()) {
+    updateButtons();
+    return;
+  }
 
   const lastJobId = sessionStorage.getItem(lastJobKey);
   if (lastJobId) {
@@ -606,5 +707,6 @@ window.clockOut = function () {
 updateButtons();
 
 document.addEventListener("DOMContentLoaded", function () {
+  if (directJobFromWeeklyBoard.source === "weekly_board") return;
   if (jobSearch) jobSearch.focus();
 });
