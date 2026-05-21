@@ -375,7 +375,7 @@ function renderJobResults(term) {
     return `
       <button
         type="button"
-        class="button job-result-btn"
+        class="job-result-btn"
         data-job-id="${id}"
         style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
       >
