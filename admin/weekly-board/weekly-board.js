@@ -344,10 +344,19 @@ function renderModalAssignments() {
   assignmentList.innerHTML = rows.map(x => `
     <div class="assignment">
       <strong>${escapeHtml(x.row.employeeName)}</strong>
-      <div>${escapeHtml(x.row.clientName)}</div>
-      ${x.row.address ? `<div class="assignment-address">${escapeHtml(x.row.address)}</div>` : ""}
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <div style="margin-top:8px;font-size:20px;font-weight:700;">
+        ${escapeHtml(x.row.clientName)}
+      </div>
+
+      ${x.row.address ? `
+        <div class="assignment-address" style="opacity:.85;margin-top:4px;">
+          ${escapeHtml(x.row.address)}
+        </div>
+      ` : ""}
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+
         <button class="button button-secondary" type="button" data-change-employee-index="${x.realIndex}">
           Change Employee
         </button>
@@ -359,6 +368,7 @@ function renderModalAssignments() {
         <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">
           Remove
         </button>
+
       </div>
     </div>
   `).join("");
@@ -366,14 +376,73 @@ function renderModalAssignments() {
   assignmentList.querySelectorAll("[data-change-employee-index]").forEach(btn => {
     btn.addEventListener("click", () => {
       const index = Number(btn.dataset.changeEmployeeIndex);
-      changeAssignmentEmployee(index);
+
+      const current = assignments[index];
+      if (!current) return;
+
+      const currentEmployee = current.employeeName || "Current Employee";
+
+      const list = employees
+        .map(emp => `${emp.employeeId} • ${emp.employeeName}`)
+        .join("
+");
+
+      const selected = prompt(
+        `Move assignment from ${currentEmployee} to which employee?
+
+${list}`,
+        current.employeeId || ""
+      );
+
+      if (!selected) return;
+
+      const employeeId = selected.split("•")[0].trim().toUpperCase();
+      const employee = getEmployeeById(employeeId);
+
+      if (!employee) {
+        alert("Employee not found.");
+        return;
+      }
+
+      current.employeeId = employee.employeeId;
+      current.employeeName = employee.employeeName;
+
+      renderModalAssignments();
+      renderAssignments(currentDay);
     });
   });
 
   assignmentList.querySelectorAll("[data-change-job-index]").forEach(btn => {
     btn.addEventListener("click", () => {
       const index = Number(btn.dataset.changeJobIndex);
-      changeAssignmentJob(index);
+
+      const current = assignments[index];
+      if (!current) return;
+
+      const typed = prompt(
+        `Change job for ${current.employeeName}.
+
+Type new client name:` ,
+        current.clientName || ""
+      );
+
+      if (!typed) return;
+
+      const found = clients.find(c =>
+        String(c.clientName || "").trim().toLowerCase() === typed.trim().toLowerCase()
+      );
+
+      if (!found) {
+        alert("Client not found. Type exact client name.");
+        return;
+      }
+
+      current.clientId = found.clientId || "";
+      current.clientName = found.clientName;
+      current.address = found.address || "";
+
+      renderModalAssignments();
+      renderAssignments(currentDay);
     });
   });
 
