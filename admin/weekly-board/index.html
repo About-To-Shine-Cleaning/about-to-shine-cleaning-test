@@ -30,12 +30,14 @@ body.ats-admin{
   background-attachment:scroll !important;
   background-repeat:no-repeat !important;
   background-size:cover !important;
+  background-position:center top !important;
 }
 
 body.ats-admin .ats-main{
   width:100% !important;
   max-width:100% !important;
   overflow-x:hidden !important;
+  background:transparent !important;
 }
 
 body.ats-admin .ats-container{
@@ -51,16 +53,17 @@ body.ats-admin .ats-card{
   max-width:none !important;
   width:100% !important;
   overflow:hidden !important;
+  background:rgba(255,255,255,.04) !important;
+  backdrop-filter:blur(10px);
 }
 
 .week-board{
   display:grid !important;
-  grid-template-columns:repeat(7, minmax(170px, 1fr)) !important;
+  grid-template-columns:repeat(7,minmax(170px,1fr)) !important;
   gap:14px !important;
   margin-top:24px !important;
   width:100% !important;
   max-width:100% !important;
-  overflow:visible !important;
 }
 
 .day-card{
@@ -110,13 +113,13 @@ body.ats-admin .ats-card{
   margin-bottom:4px;
 }
 
-.assignment button{
-  margin-top:8px;
-}
-
 .assignment-client{
   line-height:1.35;
   overflow-wrap:anywhere;
+}
+
+.assignment button{
+  margin-top:8px;
 }
 
 .add-assignment{
@@ -140,7 +143,7 @@ body.ats-admin .ats-card{
 }
 
 .modal{
-  width:min(900px, 96vw) !important;
+  width:min(900px,96vw) !important;
   max-width:96vw !important;
   max-height:92dvh !important;
   background:#232857;
@@ -153,7 +156,6 @@ body.ats-admin .ats-card{
   min-height:0 !important;
 }
 
-/* Keep the title/close controls visible */
 .modal > div:first-child{
   flex:0 0 auto !important;
   margin-bottom:14px !important;
@@ -184,7 +186,6 @@ body.ats-admin .ats-card{
   margin-top:8px;
 }
 
-/* Keep Add Assignment controls from being pushed out by jobs */
 #btnAddAssignment{
   flex:0 0 auto !important;
 }
@@ -206,11 +207,12 @@ body.ats-admin .ats-card{
 
 @media(max-width:1300px){
   .week-board{
-    grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
+    grid-template-columns:repeat(3,minmax(220px,1fr)) !important;
   }
 }
 
 @media(max-width:800px){
+
   body.ats-admin .ats-container{
     width:100% !important;
     padding-left:14px !important;
@@ -223,6 +225,17 @@ body.ats-admin .ats-card{
 }
 
 @media(max-width:760px){
+
+  body.ats-admin{
+    background-attachment:scroll !important;
+    background-size:cover !important;
+    background-position:center top !important;
+  }
+
+  .ats-main{
+    background:transparent !important;
+  }
+
   body.ats-admin .ats-container{
     padding-left:10px !important;
     padding-right:10px !important;
@@ -264,16 +277,6 @@ body.ats-admin .ats-card{
 
   .assignment-list{
     padding-right:4px !important;
-  }
-@media(max-width:760px){
-  body.ats-admin{
-    background-attachment:scroll !important;
-    background-size:cover !important;
-    background-position:center top !important;
-  }
-
-  .ats-main{
-    background:transparent !important;
   }
 }
 </style>
