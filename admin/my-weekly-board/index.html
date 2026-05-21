@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>My Weekly Board | About To Shine Cleaning</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
+
+<link rel="stylesheet" href="/admin/admin-layout.css"/>
+<link rel="stylesheet" href="/assets/css/style.css"/>
+<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
+<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
+
+<script defer src="/admin/admin-nav.js?v=8"></script>
+<script defer src="./my-weekly-board.js?v=1"></script>
+
+<style>
+  .my-board-shell{
+    display:grid;
+    gap:18px;
+  }
+
+  .my-board-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .my-board-meta{
+    opacity:.78;
+    line-height:1.45;
+    margin-top:6px;
+  }
+
+  .my-board-week{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:14px;
+    margin-top:18px;
+  }
+
+  .my-day-card{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:18px;
+    padding:14px;
+    min-height:170px;
+  }
+
+  .my-day-title{
+    font-weight:900;
+    margin-bottom:2px;
+  }
+
+  .my-day-date{
+    font-size:12px;
+    opacity:.72;
+    margin-bottom:12px;
+  }
+
+  .my-job-card{
+    background:rgba(0,0,0,.16);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:10px;
+  }
+
+  .my-client-btn{
+    appearance:none;
+    border:0;
+    background:transparent;
+    color:#fff;
+    padding:0;
+    margin:0;
+    text-align:left;
+    font:inherit;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+
+  .my-job-address,
+  .my-job-shared,
+  .my-job-notes{
+    margin-top:7px;
+    font-size:13px;
+    opacity:.82;
+    line-height:1.4;
+  }
+
+  .my-job-address a{
+    color:#ffe96b;
+    font-weight:800;
+  }
+
+  .empty-day{
+    opacity:.55;
+    font-size:13px;
+    line-height:1.4;
+  }
+
+  .spec-card{
+    display:none;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:18px;
+    padding:16px;
+  }
+
+  .spec-card.open{
+    display:block;
+  }
+
+  .spec-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .spec-line{
+    margin:0 0 14px;
+  }
+
+  .spec-label{
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    opacity:.72;
+    margin-bottom:4px;
+  }
+
+  .spec-value{
+    white-space:pre-wrap;
+    line-height:1.45;
+  }
+
+  @media(max-width:1200px){
+    .my-board-week{grid-template-columns:repeat(3,1fr);}
+  }
+
+  @media(max-width:800px){
+    .my-board-week{grid-template-columns:1fr;}
+    .my-day-card{min-height:0;}
+  }
+</style>
+</head>
+
+<body class="ats-admin">
+<header class="ats-header">
+  <div class="ats-header-inner">
+    <a class="ats-brand" href="/admin/" aria-label="Go to Home">
+      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
+    </a>
+    <div class="ats-header-actions">
+      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="ats-main">
+  <div class="ats-container">
+    <section class="ats-card my-board-shell">
+      <div class="my-board-header">
+        <div>
+          <div class="ats-eyebrow">Employee Weekly Board</div>
+          <h1 id="pageTitle">My Weekly Board</h1>
+          <div class="my-board-meta" id="weekLabel">Loading week...</div>
+        </div>
+        <a class="button" id="clockLink" href="/clock.html">Open Clock</a>
+      </div>
+
+      <div id="statusBox" aria-live="polite">Loading assignments...</div>
+      <div id="weekBoard" class="my-board-week"></div>
+    </section>
+
+    <section class="ats-card spec-card" id="clientSpecsCard">
+      <div class="spec-head">
+        <h2 style="margin:0;" id="specTitle">Client Specs</h2>
+        <button class="button button-secondary" type="button" id="closeSpecsBtn">Close</button>
+      </div>
+      <div id="clientSpecsBody">Loading client info...</div>
+    </section>
+  </div>
+</main>
+</body>
+</html>
