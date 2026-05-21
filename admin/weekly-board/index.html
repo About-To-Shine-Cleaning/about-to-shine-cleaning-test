@@ -12,160 +12,12 @@
 <script defer src="./weekly-board.js?v=3"></script>
 
 <style>
-.week-board{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:14px;
-  margin-top:24px;
-}
+/* =========================================================
+   ATS WEEKLY BOARD EDITOR — MOBILE / MODAL CONTROL FIX
+   Patch target: /admin/weekly-board/index.html
+   Purpose: keep modal controls visible and make job list scroll inside modal
+   ========================================================= */
 
-.day-card{
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:18px;
-  min-height:260px;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-}
-
-.day-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-
-.day-name{
-  font-size:15px;
-  font-weight:800;
-}
-
-.day-date{
-  font-size:12px;
-  opacity:.7;
-}
-
-.assignment{
-  background:rgba(0,0,0,.14);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:10px;
-}
-
-.assignment strong{
-  display:block;
-  margin-bottom:4px;
-}
-
-.assignment button{
-  margin-top:8px;
-}
-
-.add-assignment{
-  margin-top:auto;
-}
-
-.modal-backdrop{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.65);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-
-.modal-backdrop.open{
-  display:flex;
-}
-
-.modal{
-  width:min(700px,92vw);
-  background:#232857;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:24px;
-  padding:24px;
-}
-
-.modal-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-
-.modal input,
-.modal select{
-  width:100%;
-}
-
-.assignment-list{
-  margin-top:18px;
-}
-
-@media(max-width:1100px){
-  .week-board{
-    grid-template-columns:repeat(2,1fr);
-  }
-}
-
-@media(max-width:700px){
-  .week-board{
-    grid-template-columns:1fr;
-  }
-
-  .modal-grid{
-    grid-template-columns:1fr;
-  }
-}
-/* WEEKLY BOARD EDITOR FULL WIDTH FIX */
-body.ats-admin .ats-main{
-  width:100% !important;
-}
-
-body.ats-admin .ats-container{
-  max-width:none !important;
-  width:96vw !important;
-  margin:0 auto !important;
-  padding-left:24px !important;
-  padding-right:24px !important;
-}
-
-body.ats-admin .ats-card{
-  max-width:none !important;
-  width:100% !important;
-}
-
-.week-board{
-  display:grid !important;
-  grid-template-columns:repeat(7, minmax(170px, 1fr)) !important;
-  gap:14px !important;
-  width:100% !important;
-  overflow:visible !important;
-}
-
-.day-card{
-  min-width:0 !important;
-}
-
-@media(max-width:1300px){
-  .week-board{
-    grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
-  }
-}
-
-@media(max-width:800px){
-  body.ats-admin .ats-container{
-    width:100% !important;
-    padding-left:14px !important;
-    padding-right:14px !important;
-  }
-
-  .week-board{
-    grid-template-columns:1fr !important;
-  }
-/* MOBILE / RESIZE STABILITY FIX */
 html,
 body{
   width:100%;
@@ -185,52 +37,131 @@ body.ats-admin .ats-main{
 }
 
 body.ats-admin .ats-container{
-  width:100% !important;
-  max-width:1600px !important;
+  max-width:none !important;
+  width:96vw !important;
   margin:0 auto !important;
-  padding-left:16px !important;
-  padding-right:16px !important;
+  padding-left:24px !important;
+  padding-right:24px !important;
   overflow-x:hidden !important;
 }
 
 body.ats-admin .ats-card{
+  max-width:none !important;
   width:100% !important;
-  max-width:100% !important;
   overflow:hidden !important;
 }
 
 .week-board{
+  display:grid !important;
+  grid-template-columns:repeat(7, minmax(170px, 1fr)) !important;
+  gap:14px !important;
+  margin-top:24px !important;
   width:100% !important;
   max-width:100% !important;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)) !important;
+  overflow:visible !important;
 }
 
 .day-card{
-  width:100% !important;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  min-height:260px;
   min-width:0 !important;
   max-width:100% !important;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
 }
 
-/* Modal always fits screen */
-.modal-backdrop.open{
-  align-items:flex-start !important;
+.day-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+  flex:0 0 auto;
+}
+
+.day-name{
+  font-size:15px;
+  font-weight:800;
+}
+
+.day-date{
+  font-size:12px;
+  opacity:.7;
+}
+
+.assignment{
+  background:rgba(0,0,0,.14);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:10px;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+
+.assignment strong{
+  display:block;
+  margin-bottom:4px;
+}
+
+.assignment button{
+  margin-top:8px;
+}
+
+.assignment-client{
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+
+.add-assignment{
+  margin-top:auto;
+}
+
+.modal-backdrop{
+  position:fixed !important;
+  inset:0 !important;
+  background:rgba(0,0,0,.65);
+  display:none;
+  align-items:center !important;
   justify-content:center !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  padding:16px !important;
+  z-index:9999;
+  overflow:hidden !important;
+  padding:12px !important;
+}
+
+.modal-backdrop.open{
+  display:flex !important;
 }
 
 .modal{
-  width:min(900px,100%) !important;
-  max-width:100% !important;
-  max-height:calc(100dvh - 32px) !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  margin:0 auto !important;
+  width:min(900px, 96vw) !important;
+  max-width:96vw !important;
+  max-height:92dvh !important;
+  background:#232857;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;
+  padding:24px;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+  min-height:0 !important;
+}
+
+/* Keep the title/close controls visible */
+.modal > div:first-child{
+  flex:0 0 auto !important;
+  margin-bottom:14px !important;
 }
 
 .modal-grid{
-  grid-template-columns:1fr 1fr !important;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  flex:0 0 auto !important;
 }
 
 .modal input,
@@ -239,26 +170,79 @@ body.ats-admin .ats-card{
   max-width:100% !important;
 }
 
-/* Mobile modal stacking */
+.modal input,
+.modal select{
+  width:100%;
+}
+
+#clientSuggestions{
+  max-height:180px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  margin-top:8px;
+}
+
+/* Keep Add Assignment controls from being pushed out by jobs */
+#btnAddAssignment{
+  flex:0 0 auto !important;
+}
+
+.modal-grid + div{
+  flex:0 0 auto !important;
+  margin-top:14px !important;
+}
+
+.assignment-list{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding-right:8px !important;
+  margin-top:18px !important;
+  overscroll-behavior:contain;
+}
+
+@media(max-width:1300px){
+  .week-board{
+    grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
+  }
+}
+
+@media(max-width:800px){
+  body.ats-admin .ats-container{
+    width:100% !important;
+    padding-left:14px !important;
+    padding-right:14px !important;
+  }
+
+  .week-board{
+    grid-template-columns:1fr !important;
+  }
+}
+
 @media(max-width:760px){
   body.ats-admin .ats-container{
     padding-left:10px !important;
     padding-right:10px !important;
   }
 
-  .week-board{
-    grid-template-columns:1fr !important;
-  }
-
   .modal-backdrop.open{
+    align-items:stretch !important;
+    justify-content:center !important;
     padding:10px !important;
   }
 
   .modal{
     width:100% !important;
-    border-radius:18px !important;
+    max-width:100% !important;
     max-height:calc(100dvh - 20px) !important;
-    padding:18px !important;
+    border-radius:18px !important;
+    padding:16px !important;
+  }
+
+  .modal > div:first-child{
+    gap:12px !important;
+    align-items:flex-start !important;
   }
 
   .modal-grid{
@@ -275,32 +259,10 @@ body.ats-admin .ats-card{
     width:100% !important;
     min-width:0 !important;
   }
-/* FIX: modal scrolls internally when many jobs exist */
-.modal-backdrop.open{
-  position:fixed !important;
-  inset:0 !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  overflow:hidden !important;
-  padding:12px !important;
-}
 
-.modal{
-  width:min(900px, 96vw) !important;
-  max-height:92dvh !important;
-  overflow:hidden !important;
-  display:flex !important;
-  flex-direction:column !important;
-}
-
-.assignment-list{
-  flex:1 1 auto !important;
-  min-height:0 !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  padding-right:8px !important;
-  margin-top:18px !important;
+  .assignment-list{
+    padding-right:4px !important;
+  }
 }
 </style>
 </head>
