@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/assets/css/style.css"/>
 
 <script defer src="/admin/admin-nav.js"></script>
-<script defer src="./weekly-board.js?v=1"></script>
+<script defer src="./weekly-board.js?v=3"></script>
 
 <style>
 .week-board{
@@ -164,6 +164,116 @@ body.ats-admin .ats-card{
 
   .week-board{
     grid-template-columns:1fr !important;
+  }
+/* MOBILE / RESIZE STABILITY FIX */
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden !important;
+}
+
+body.ats-admin{
+  min-height:100dvh;
+  background-attachment:fixed;
+}
+
+body.ats-admin .ats-main{
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:hidden !important;
+}
+
+body.ats-admin .ats-container{
+  width:100% !important;
+  max-width:1600px !important;
+  margin:0 auto !important;
+  padding-left:16px !important;
+  padding-right:16px !important;
+  overflow-x:hidden !important;
+}
+
+body.ats-admin .ats-card{
+  width:100% !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+}
+
+.week-board{
+  width:100% !important;
+  max-width:100% !important;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)) !important;
+}
+
+.day-card{
+  width:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+/* Modal always fits screen */
+.modal-backdrop.open{
+  align-items:flex-start !important;
+  justify-content:center !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:16px !important;
+}
+
+.modal{
+  width:min(900px,100%) !important;
+  max-width:100% !important;
+  max-height:calc(100dvh - 32px) !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  margin:0 auto !important;
+}
+
+.modal-grid{
+  grid-template-columns:1fr 1fr !important;
+}
+
+.modal input,
+.modal select,
+.modal button{
+  max-width:100% !important;
+}
+
+/* Mobile modal stacking */
+@media(max-width:760px){
+  body.ats-admin .ats-container{
+    padding-left:10px !important;
+    padding-right:10px !important;
+  }
+
+  .week-board{
+    grid-template-columns:1fr !important;
+  }
+
+  .modal-backdrop.open{
+    padding:10px !important;
+  }
+
+  .modal{
+    width:100% !important;
+    border-radius:18px !important;
+    max-height:calc(100dvh - 20px) !important;
+    padding:18px !important;
+  }
+
+  .modal-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .assignment{
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .assignment .button,
+  .modal .button{
+    width:100% !important;
+    min-width:0 !important;
   }
 }
 </style>
