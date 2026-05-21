@@ -438,3 +438,42 @@ button.button:hover{
   opacity:.8;
   font-size:12px;
 }
+
+/* ATS CLOCK ACTION BUTTONS */
+.ats-clock .button,
+.ats-clock a.button,
+.ats-clock button.button{
+  background:#000 !important;
+  color:#ffe600 !important;
+  border:2px solid #000 !important;
+  border-radius:7px !important;
+  box-shadow:none !important;
+
+  min-width:160px !important;
+  padding:16px 22px !important;
+
+  font-weight:900 !important;
+  font-size:16px !important;
+  text-align:center !important;
+  text-decoration:none !important;
+}
+
+.ats-clock .button:hover,
+.ats-clock a.button:hover,
+.ats-clock button.button:hover{
+  background:#111 !important;
+  color:#ffe600 !important;
+  transform:none !important;
+}
+
+.ats-clock .button:disabled,
+.ats-clock button.button:disabled{
+  opacity:.45 !important;
+  cursor:not-allowed !important;
+}
+
+.ats-clock .clock-actions{
+  display:flex !important;
+  gap:8px !important;
+  flex-wrap:wrap !important;
+}
