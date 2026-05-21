@@ -12,261 +12,261 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
 
 <script defer src="/admin/admin-nav.js?v=8"></script>
-<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=999"></script>
+<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=1000"></script>
 
 <style>
-  html,
-  body{
-    width:100%;
-    max-width:100%;
-    overflow-x:hidden !important;
-  }
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden !important;
+}
 
-  body.ats-admin .ats-main{
-    width:100% !important;
-    max-width:none !important;
-    padding-left:0 !important;
-    padding-right:0 !important;
-    overflow-x:hidden !important;
-  }
+body.ats-admin .ats-main{
+  width:100% !important;
+  max-width:none !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  overflow-x:hidden !important;
+}
 
-  body.ats-admin .my-board-container{
-    width:100vw !important;
-    max-width:none !important;
-    margin:0 !important;
-    padding-left:18px !important;
-    padding-right:18px !important;
-    box-sizing:border-box !important;
-  }
+body.ats-admin .my-board-container{
+  width:100vw !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding-left:18px !important;
+  padding-right:18px !important;
+  box-sizing:border-box !important;
+}
 
-  body.ats-admin .my-board-shell{
-    display:grid;
-    gap:18px;
-    width:100% !important;
-    max-width:none !important;
-    overflow:visible;
-  }
+body.ats-admin .my-board-shell{
+  display:grid;
+  gap:18px;
+  width:100% !important;
+  max-width:none !important;
+  overflow:visible;
+}
 
-  .my-board-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:16px;
-    flex-wrap:wrap;
-  }
+.my-board-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  flex-wrap:wrap;
+}
 
-  .my-board-meta{
-    opacity:.78;
-    line-height:1.45;
-    margin-top:6px;
-  }
+.my-board-meta{
+  opacity:.78;
+  line-height:1.45;
+  margin-top:6px;
+}
 
-  #statusBox{
-    line-height:1.45;
-    opacity:.92;
-  }
+#statusBox{
+  line-height:1.45;
+  opacity:.92;
+}
 
+body.ats-admin .my-board-week{
+  display:grid;
+  width:100% !important;
+  max-width:none !important;
+  gap:10px;
+  margin-top:18px;
+  align-items:start;
+}
+
+.my-day-card{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:12px;
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+}
+
+.my-day-title{
+  font-weight:900;
+  font-size:18px;
+  margin-bottom:2px;
+}
+
+.my-day-date{
+  font-size:12px;
+  opacity:.72;
+  margin-bottom:12px;
+}
+
+.my-job-card{
+  background:rgba(0,0,0,.16);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  padding:10px;
+  margin-bottom:10px;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+
+.my-client-btn{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:#fff;
+  padding:0;
+  margin:0;
+  text-align:left;
+  font:inherit;
+  font-size:15px;
+  font-weight:900;
+  line-height:1.25;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  overflow-wrap:anywhere;
+  max-width:100%;
+}
+
+.my-job-address,
+.my-job-shared,
+.my-job-notes{
+  margin-top:7px;
+  font-size:12px;
+  opacity:.84;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+
+.my-job-address a{
+  color:#ffe96b;
+  font-weight:900;
+}
+
+.my-clock-btn{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  min-width:0 !important;
+  margin-top:10px !important;
+  padding:10px 10px !important;
+  border-radius:12px !important;
+  text-align:center !important;
+  text-decoration:none !important;
+  line-height:1.2 !important;
+  font-size:13px !important;
+}
+
+.empty-day{
+  opacity:.55;
+  font-size:13px;
+  line-height:1.4;
+}
+
+.spec-card{
+  display:none;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:16px;
+  margin-top:18px;
+}
+
+.spec-card.open{
+  display:block;
+}
+
+.spec-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.spec-line{
+  margin:0 0 14px;
+}
+
+.spec-label{
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  opacity:.72;
+  margin-bottom:4px;
+}
+
+.spec-value{
+  white-space:pre-wrap;
+  line-height:1.45;
+}
+
+@media(min-width:1200px){
   body.ats-admin .my-board-week{
-    display:grid;
-    width:100% !important;
-    max-width:none !important;
-    gap:10px;
-    margin-top:18px;
-    align-items:start;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+  }
+}
+
+@media(min-width:900px) and (max-width:1199px){
+  body.ats-admin .my-board-week{
+    grid-template-columns:repeat(3,minmax(0,1fr));
   }
 
   .my-day-card{
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.14);
-    border-radius:18px;
-    padding:12px;
-    min-width:0;
-    width:100%;
-    box-sizing:border-box;
-  }
-
-  .my-day-title{
-    font-weight:900;
-    font-size:18px;
-    margin-bottom:2px;
-  }
-
-  .my-day-date{
-    font-size:12px;
-    opacity:.72;
-    margin-bottom:12px;
-  }
-
-  .my-job-card{
-    background:rgba(0,0,0,.16);
-    border:1px solid rgba(255,255,255,.10);
-    border-radius:14px;
-    padding:10px;
-    margin-bottom:10px;
-    min-width:0;
-    max-width:100%;
-    box-sizing:border-box;
+    padding:14px;
   }
 
   .my-client-btn{
-    appearance:none;
-    border:0;
-    background:transparent;
-    color:#fff;
-    padding:0;
-    margin:0;
-    text-align:left;
-    font:inherit;
-    font-size:15px;
-    font-weight:900;
-    line-height:1.25;
-    cursor:pointer;
-    text-decoration:underline;
-    text-underline-offset:3px;
-    overflow-wrap:anywhere;
-    max-width:100%;
-  }
-
-  .my-job-address,
-  .my-job-shared,
-  .my-job-notes{
-    margin-top:7px;
-    font-size:12px;
-    opacity:.84;
-    line-height:1.35;
-    overflow-wrap:anywhere;
-  }
-
-  .my-job-address a{
-    color:#ffe96b;
-    font-weight:900;
+    font-size:17px;
   }
 
   .my-clock-btn{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
+    font-size:14px !important;
+  }
+}
+
+@media(min-width:761px) and (max-width:899px){
+  body.ats-admin .my-board-week{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:760px){
+  body.ats-admin .my-board-container{
     width:100% !important;
-    min-width:0 !important;
-    margin-top:10px !important;
-    padding:10px 10px !important;
-    border-radius:12px !important;
-    text-align:center !important;
-    text-decoration:none !important;
-    line-height:1.2 !important;
-    font-size:13px !important;
+    padding-left:12px !important;
+    padding-right:12px !important;
   }
 
-  .empty-day{
-    opacity:.55;
-    font-size:13px;
-    line-height:1.4;
+  .my-board-header{
+    display:grid;
+    grid-template-columns:1fr;
   }
 
-  .spec-card{
-    display:none;
-    background:rgba(255,255,255,.08);
-    border:1px solid rgba(255,255,255,.14);
-    border-radius:18px;
+  #clockLink{
+    width:100%;
+  }
+
+  body.ats-admin .my-board-week{
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+
+  .my-day-card{
     padding:16px;
-    margin-top:18px;
   }
 
-  .spec-card.open{
-    display:block;
+  .my-client-btn{
+    font-size:19px;
   }
 
-  .spec-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-    margin-bottom:12px;
+  .my-clock-btn{
+    min-height:52px;
+    font-size:16px !important;
   }
-
-  .spec-line{
-    margin:0 0 14px;
-  }
-
-  .spec-label{
-    font-size:12px;
-    font-weight:900;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    opacity:.72;
-    margin-bottom:4px;
-  }
-
-  .spec-value{
-    white-space:pre-wrap;
-    line-height:1.45;
-  }
-
-  @media(min-width:1200px){
-    body.ats-admin .my-board-week{
-      grid-template-columns:repeat(7,minmax(0,1fr));
-    }
-  }
-
-  @media(min-width:900px) and (max-width:1199px){
-    body.ats-admin .my-board-week{
-      grid-template-columns:repeat(3,minmax(0,1fr));
-    }
-
-    .my-day-card{
-      padding:14px;
-    }
-
-    .my-client-btn{
-      font-size:17px;
-    }
-
-    .my-clock-btn{
-      font-size:14px !important;
-    }
-  }
-
-  @media(min-width:761px) and (max-width:899px){
-    body.ats-admin .my-board-week{
-      grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-  }
-
-  @media(max-width:760px){
-    body.ats-admin .my-board-container{
-      width:100% !important;
-      padding-left:12px !important;
-      padding-right:12px !important;
-    }
-
-    .my-board-header{
-      display:grid;
-      grid-template-columns:1fr;
-    }
-
-    #clockLink{
-      width:100%;
-    }
-
-    body.ats-admin .my-board-week{
-      grid-template-columns:1fr;
-      gap:16px;
-    }
-
-    .my-day-card{
-      padding:16px;
-    }
-
-    .my-client-btn{
-      font-size:19px;
-    }
-
-    .my-clock-btn{
-      min-height:52px;
-      font-size:16px !important;
-    }
-  }
+}
 </style>
 </head>
 
