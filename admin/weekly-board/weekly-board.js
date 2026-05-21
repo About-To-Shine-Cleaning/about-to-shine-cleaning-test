@@ -3,6 +3,7 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // Admin / Payroll / Scheduler only
+// Adds: Change Employee + Change Job buttons inside assignment modal
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -103,7 +104,7 @@ function jsonp(action, paramsObj = {}) {
     const device = getDeviceKey();
 
     if (!token) {
-      reject(new Error("Missing admin token. Open this from the Admin Panel first."));
+      reject(new Error("Missing admin token. Open this from the Home page first."));
       return;
     }
 
@@ -157,6 +158,21 @@ function prettyDate(ymd) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+function getDayNameFromYMD(ymd) {
+  const d = new Date(ymd + "T12:00:00");
+  return d.toLocaleDateString(undefined, { weekday: "long" });
+}
+
+function getEmployeeById(employeeId) {
+  return employees.find(x => String(x.employeeId || "").trim() === String(employeeId || "").trim());
+}
+
+function clearClientSelection() {
+  selectedClient = null;
+  if (clientSearch) clientSearch.value = "";
+  if (clientSuggestions) clientSuggestions.innerHTML = "";
+}
+
 async function init() {
   try {
     const authRes = await jsonp("auth");
@@ -171,7 +187,7 @@ async function init() {
       if (boardEl) {
         boardEl.innerHTML = `
           <div class="assignment" style="grid-column:1/-1;">
-            This page is for office/admin editing only. Your read-only weekly board is on the clock screen.
+            This page is for office/admin editing only. Your read-only weekly board is on My Weekly Board.
           </div>
         `;
       }
@@ -266,9 +282,7 @@ function buildWeekBoard() {
 
 function openDay(dateStr, day) {
   currentDay = dateStr;
-  selectedClient = null;
-  if (clientSearch) clientSearch.value = "";
-  if (clientSuggestions) clientSuggestions.innerHTML = "";
+  clearClientSelection();
   if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
@@ -330,18 +344,43 @@ function renderModalAssignments() {
   assignmentList.innerHTML = rows.map(x => `
     <div class="assignment">
       <strong>${escapeHtml(x.row.employeeName)}</strong>
-      ${escapeHtml(x.row.clientName)}
+      <div>${escapeHtml(x.row.clientName)}</div>
       ${x.row.address ? `<div class="assignment-address">${escapeHtml(x.row.address)}</div>` : ""}
-      <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <button class="button button-secondary" type="button" data-change-employee-index="${x.realIndex}">
+          Change Employee
+        </button>
+
+        <button class="button button-secondary" type="button" data-change-job-index="${x.realIndex}">
+          Change Job
+        </button>
+
+        <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">
+          Remove
+        </button>
+      </div>
     </div>
   `).join("");
+
+  assignmentList.querySelectorAll("[data-change-employee-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.changeEmployeeIndex);
+      changeAssignmentEmployee(index);
+    });
+  });
+
+  assignmentList.querySelectorAll("[data-change-job-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.changeJobIndex);
+      changeAssignmentJob(index);
+    });
+  });
 
   assignmentList.querySelectorAll("[data-remove-index]").forEach(btn => {
     btn.addEventListener("click", () => {
       const index = Number(btn.dataset.removeIndex);
-      assignments.splice(index, 1);
-      renderModalAssignments();
-      renderAssignments(currentDay);
+      removeAssignment(index);
     });
   });
 }
@@ -382,17 +421,12 @@ function handleClientSearch() {
   });
 }
 
-function getDayNameFromYMD(ymd) {
-  const d = new Date(ymd + "T12:00:00");
-  return d.toLocaleDateString(undefined, { weekday: "long" });
-}
-
 function addAssignment() {
   if (!currentDay) return alert("Choose a day first.");
   if (!selectedClient) return alert("Select a client from the search results.");
 
   const employeeId = employeeSelect?.value || "";
-  const employee = employees.find(x => x.employeeId === employeeId);
+  const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Select an employee.");
 
   assignments.push({
@@ -408,10 +442,51 @@ function addAssignment() {
     active: "YES"
   });
 
-  selectedClient = null;
-  if (clientSearch) clientSearch.value = "";
-  if (clientSuggestions) clientSuggestions.innerHTML = "";
+  clearClientSelection();
+  renderModalAssignments();
+  renderAssignments(currentDay);
+}
 
+function changeAssignmentEmployee(index) {
+  const row = assignments[index];
+  if (!row) return alert("Assignment not found.");
+
+  const employeeId = employeeSelect?.value || "";
+  const employee = getEmployeeById(employeeId);
+  if (!employee) return alert("Select the new employee from the Employee dropdown first.");
+
+  row.employeeId = employee.employeeId;
+  row.employeeName = employee.employeeName;
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
+
+  renderModalAssignments();
+  renderAssignments(currentDay);
+}
+
+function changeAssignmentJob(index) {
+  const row = assignments[index];
+  if (!row) return alert("Assignment not found.");
+  if (!selectedClient) return alert("Search and select the new client first, then click Change Job.");
+
+  row.clientId = selectedClient.clientId || "";
+  row.clientName = selectedClient.clientName;
+  row.address = selectedClient.address || "";
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
+
+  clearClientSelection();
+  renderModalAssignments();
+  renderAssignments(currentDay);
+}
+
+function removeAssignment(index) {
+  if (!assignments[index]) return;
+  assignments.splice(index, 1);
   renderModalAssignments();
   renderAssignments(currentDay);
 }
