@@ -7,6 +7,7 @@
 // ✅ Change Employee opens an inline picker inside that assignment card
 // ✅ Change Job opens an inline client search with live suggestions
 // ✅ No more prompt boxes / no more select-first confusion
+// ✅ Save Weekly Board uses chunked JSONP so mobile/large boards do not fail
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -609,17 +610,66 @@ function removeAssignment(index) {
   renderAssignments(currentDay);
 }
 
-async function saveBoard() {
-  try {
-    btnSaveWeek.disabled = true;
-    btnSaveWeek.textContent = "Saving...";
+function makeSaveId() {
+  return "wb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+}
 
-    const res = await jsonp("weekly_board_save", {
+function chunkString(str, size) {
+  const out = [];
+  const s = String(str || "");
+  const n = Number(size || 1200);
+  for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n));
+  return out;
+}
+
+async function saveBoard() {
+  const originalText = btnSaveWeek ? btnSaveWeek.textContent : "Save Weekly Board";
+
+  try {
+    if (btnSaveWeek) {
+      btnSaveWeek.disabled = true;
+      btnSaveWeek.textContent = "Saving...";
+    }
+
+    const saveId = makeSaveId();
+    const payloadText = JSON.stringify({ assignments });
+    const chunks = chunkString(payloadText, 1200);
+
+    const startRes = await jsonp("weekly_board_save_start", {
       weekStart: currentWeekStart,
-      payload: JSON.stringify({ assignments })
+      saveId
     });
 
-    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
+    if (!startRes || !startRes.ok) {
+      throw new Error(startRes?.error || "weekly_board_save_start failed");
+    }
+
+    for (let i = 0; i < chunks.length; i++) {
+      if (btnSaveWeek) btnSaveWeek.textContent = `Saving ${i + 1}/${chunks.length}...`;
+
+      const chunkRes = await jsonp("weekly_board_save_chunk", {
+        weekStart: currentWeekStart,
+        saveId,
+        index: String(i),
+        chunk: chunks[i]
+      });
+
+      if (!chunkRes || !chunkRes.ok) {
+        throw new Error(chunkRes?.error || `weekly_board_save_chunk failed at ${i + 1}`);
+      }
+    }
+
+    if (btnSaveWeek) btnSaveWeek.textContent = "Finalizing...";
+
+    const finishRes = await jsonp("weekly_board_save_finish", {
+      weekStart: currentWeekStart,
+      saveId,
+      totalChunks: String(chunks.length)
+    });
+
+    if (!finishRes || !finishRes.ok) {
+      throw new Error(finishRes?.error || "weekly_board_save_finish failed");
+    }
 
     alert("Weekly board saved ✅");
     await loadBoard(currentWeekStart);
@@ -628,8 +678,10 @@ async function saveBoard() {
     console.error(err);
     alert(String(err?.message || err));
   } finally {
-    btnSaveWeek.disabled = false;
-    btnSaveWeek.textContent = "Save Weekly Board";
+    if (btnSaveWeek) {
+      btnSaveWeek.disabled = false;
+      btnSaveWeek.textContent = originalText || "Save Weekly Board";
+    }
   }
 }
 
