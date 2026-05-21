@@ -2,382 +2,207 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Weekly Assignment Board | ATS Admin</title>
+<title>My Weekly Board | About To Shine Cleaning</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
 
 <link rel="stylesheet" href="/admin/admin-layout.css"/>
 <link rel="stylesheet" href="/assets/css/style.css"/>
+<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
+<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
 
-<script defer src="/admin/admin-nav.js"></script>
-<script defer src="./weekly-board.js?v=4"></script>
+<script defer src="/admin/admin-nav.js?v=8"></script>
+<script defer src="./my-weekly-board.js?v=2"></script>
 
 <style>
-/* =========================================================
-   ATS WEEKLY BOARD EDITOR — MOBILE / MODAL CONTROL FIX
-   Patch target: /admin/weekly-board/index.html
-   Purpose: keep modal controls visible and make job list scroll inside modal
-   ========================================================= */
-
-html,
-body{
-  width:100%;
-  max-width:100%;
-  overflow-x:hidden !important;
-}
-
-body.ats-admin{
-  min-height:100dvh;
-  background-attachment:scroll !important;
-  background-repeat:no-repeat !important;
-  background-size:cover !important;
-  background-position:center top !important;
-}
-
-body.ats-admin .ats-main{
-  width:100% !important;
-  max-width:100% !important;
-  overflow-x:hidden !important;
-  background:transparent !important;
-}
-
-body.ats-admin .ats-container{
-  max-width:none !important;
-  width:96vw !important;
-  margin:0 auto !important;
-  padding-left:24px !important;
-  padding-right:24px !important;
-  overflow-x:hidden !important;
-}
-
-body.ats-admin .ats-card{
-  max-width:none !important;
-  width:100% !important;
-  overflow:hidden !important;
-  background:rgba(255,255,255,.04) !important;
-  backdrop-filter:blur(10px);
-}
-
-.week-board{
-  display:grid !important;
-  grid-template-columns:repeat(7,minmax(170px,1fr)) !important;
-  gap:14px !important;
-  margin-top:24px !important;
-  width:100% !important;
-  max-width:100% !important;
-}
-
-.day-card{
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:18px;
-  min-height:260px;
-  min-width:0 !important;
-  max-width:100% !important;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-
-.day-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  margin-bottom:12px;
-  flex:0 0 auto;
-}
-
-.day-name{
-  font-size:15px;
-  font-weight:800;
-}
-
-.day-date{
-  font-size:12px;
-  opacity:.7;
-}
-
-.assignment{
-  background:rgba(0,0,0,.14);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:10px;
-  max-width:100%;
-  overflow-wrap:anywhere;
-}
-
-.assignment strong{
-  display:block;
-  margin-bottom:4px;
-}
-
-.assignment-client{
-  line-height:1.35;
-  overflow-wrap:anywhere;
-}
-
-.assignment button{
-  margin-top:8px;
-}
-
-.add-assignment{
-  margin-top:auto;
-}
-
-.modal-backdrop{
-  position:fixed !important;
-  inset:0 !important;
-  background:rgba(0,0,0,.65);
-  display:none;
-  align-items:center !important;
-  justify-content:center !important;
-  z-index:9999;
-  overflow:hidden !important;
-  padding:12px !important;
-}
-
-.modal-backdrop.open{
-  display:flex !important;
-}
-
-.modal{
-  width:min(900px,96vw) !important;
-  max-width:96vw !important;
-  max-height:92dvh !important;
-  background:#232857;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:24px;
-  padding:24px;
-  overflow:hidden !important;
-  display:flex !important;
-  flex-direction:column !important;
-  min-height:0 !important;
-}
-
-.modal > div:first-child{
-  flex:0 0 auto !important;
-  margin-bottom:14px !important;
-}
-
-.modal-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-  flex:0 0 auto !important;
-}
-
-.modal input,
-.modal select,
-.modal button{
-  max-width:100% !important;
-}
-
-.modal input,
-.modal select{
-  width:100%;
-}
-
-#clientSuggestions{
-  max-height:180px;
-  overflow-y:auto;
-  overflow-x:hidden;
-  margin-top:8px;
-}
-
-#btnAddAssignment{
-  flex:0 0 auto !important;
-}
-
-.modal-grid + div{
-  flex:0 0 auto !important;
-  margin-top:14px !important;
-}
-
-.assignment-list{
-  flex:1 1 auto !important;
-  min-height:0 !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  padding-right:8px !important;
-  margin-top:18px !important;
-  overscroll-behavior:contain;
-}
-
-@media(max-width:1300px){
-  .week-board{
-    grid-template-columns:repeat(3,minmax(220px,1fr)) !important;
-  }
-}
-
-@media(max-width:800px){
-
-  body.ats-admin .ats-container{
-    width:100% !important;
-    padding-left:14px !important;
-    padding-right:14px !important;
+  .my-board-shell{
+    display:grid;
+    gap:18px;
   }
 
-  .week-board{
-    grid-template-columns:1fr !important;
-  }
-}
-
-@media(max-width:760px){
-
-  body.ats-admin{
-    background-attachment:scroll !important;
-    background-size:cover !important;
-    background-position:center top !important;
+  .my-board-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
   }
 
-  .ats-main{
-    background:transparent !important;
+  .my-board-meta{
+    opacity:.78;
+    line-height:1.45;
+    margin-top:6px;
   }
 
-  body.ats-admin .ats-container{
-    padding-left:10px !important;
-    padding-right:10px !important;
+  .my-board-week{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:14px;
+    margin-top:18px;
   }
 
-  .modal-backdrop.open{
-    align-items:stretch !important;
-    justify-content:center !important;
-    padding:10px !important;
+  .my-day-card{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:18px;
+    padding:14px;
+    min-height:170px;
   }
 
-  .modal{
-    width:100% !important;
-    max-width:100% !important;
-    max-height:calc(100dvh - 20px) !important;
-    border-radius:18px !important;
-    padding:16px !important;
+  .my-day-title{
+    font-weight:900;
+    margin-bottom:2px;
   }
 
-  .modal > div:first-child{
-    gap:12px !important;
-    align-items:flex-start !important;
+  .my-day-date{
+    font-size:12px;
+    opacity:.72;
+    margin-bottom:12px;
   }
 
-  .modal-grid{
-    grid-template-columns:1fr !important;
+  .my-job-card{
+    background:rgba(0,0,0,.16);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:10px;
   }
 
-  .assignment{
-    width:100% !important;
-    max-width:100% !important;
+  .my-client-btn{
+    appearance:none;
+    border:0;
+    background:transparent;
+    color:#fff;
+    padding:0;
+    margin:0;
+    text-align:left;
+    font:inherit;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:3px;
   }
 
-  .assignment .button,
-  .modal .button{
+  .my-job-address,
+  .my-job-shared,
+  .my-job-notes{
+    margin-top:7px;
+    font-size:13px;
+    opacity:.82;
+    line-height:1.4;
+  }
+
+  .my-job-address a{
+    color:#ffe96b;
+    font-weight:800;
+  }
+
+  .my-clock-btn{
+    display:flex !important;
     width:100% !important;
     min-width:0 !important;
+    margin-top:12px !important;
+    padding:12px 14px !important;
+    border-radius:14px !important;
+    text-align:center !important;
+    text-decoration:none !important;
   }
 
-  .assignment-list{
-    padding-right:4px !important;
-  }
-}
-@media(max-width:760px){
-  html,
-  body,
-  body.ats-admin,
-  .ats-main,
-  .ats-container,
-  .ats-card{
-    background-attachment:scroll !important;
+  .empty-day{
+    opacity:.55;
+    font-size:13px;
+    line-height:1.4;
   }
 
-  body.ats-admin::before,
-  body.ats-admin::after,
-  .ats-main::before,
-  .ats-main::after{
-    display:none !important;
-    content:none !important;
+  .spec-card{
+    display:none;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:18px;
+    padding:16px;
   }
-}
+
+  .spec-card.open{
+    display:block;
+  }
+
+  .spec-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+
+  .spec-line{
+    margin:0 0 14px;
+  }
+
+  .spec-label{
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    opacity:.72;
+    margin-bottom:4px;
+  }
+
+  .spec-value{
+    white-space:pre-wrap;
+    line-height:1.45;
+  }
+
+  @media(max-width:1200px){
+    .my-board-week{grid-template-columns:repeat(3,1fr);}
+  }
+
+  @media(max-width:800px){
+    .my-board-week{grid-template-columns:1fr;}
+    .my-day-card{min-height:0;}
+  }
 </style>
 </head>
 
 <body class="ats-admin">
-
 <header class="ats-header">
   <div class="ats-header-inner">
-
-    <a class="ats-brand" href="/admin/">
-      <img src="/assets/images/logo-v2.png" alt="">
+    <a class="ats-brand" href="/admin/" aria-label="Go to Home">
+      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
     </a>
-
     <div class="ats-header-actions">
-      <button class="ats-burger" type="button">
+      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
+      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
     </div>
-
   </div>
 </header>
 
 <main class="ats-main">
-<div class="ats-container">
+  <div class="ats-container">
+    <section class="ats-card my-board-shell">
+      <div class="my-board-header">
+        <div>
+          <div class="ats-eyebrow">Employee Weekly Board</div>
+          <h1 id="pageTitle">My Weekly Board</h1>
+          <div class="my-board-meta" id="weekLabel">Loading week...</div>
+        </div>
+        <a class="button" id="clockLink" href="/clock.html">Open Clock</a>
+      </div>
 
-<section class="ats-card">
+      <div id="statusBox" aria-live="polite">Loading assignments...</div>
+      <div id="weekBoard" class="my-board-week"></div>
+    </section>
 
-<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
-  <div>
-    <div class="ats-eyebrow">Weekly Assignment Board</div>
-    <h1 id="weekLabel">Loading week...</h1>
+    <section class="ats-card spec-card" id="clientSpecsCard">
+      <div class="spec-head">
+        <h2 style="margin:0;" id="specTitle">Client Specs</h2>
+        <button class="button button-secondary" type="button" id="closeSpecsBtn">Close</button>
+      </div>
+      <div id="clientSpecsBody">Loading client info...</div>
+    </section>
   </div>
-
-  <button class="button" id="btnSaveWeek">
-    Save Weekly Board
-  </button>
-</div>
-
-<div class="week-board" id="weekBoard"></div>
-
-</section>
-
-</div>
 </main>
-
-<div class="modal-backdrop" id="assignmentModal">
-
-<div class="modal">
-
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-    <h2 id="modalTitle">Assignments</h2>
-
-    <button class="button button-secondary" id="closeModal">
-      Close
-    </button>
-  </div>
-
-  <div class="modal-grid">
-
-    <div>
-      <label>Employee</label>
-      <select id="employeeSelect"></select>
-    </div>
-
-    <div>
-      <label>Client</label>
-      <input type="text" id="clientSearch" placeholder="Start typing client name...">
-      <div id="clientSuggestions"></div>
-    </div>
-
-  </div>
-
-  <div style="margin-top:18px;">
-    <button class="button" id="btnAddAssignment">
-      Add Assignment
-    </button>
-  </div>
-
-  <div class="assignment-list" id="assignmentList"></div>
-
-</div>
-</div>
-
 </body>
 </html>
