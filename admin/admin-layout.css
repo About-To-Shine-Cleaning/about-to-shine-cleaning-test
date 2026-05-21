@@ -438,6 +438,20 @@ button.button:hover{
   opacity:.8;
   font-size:12px;
 }
+.job-result-btn{
+  color:#ffe600 !important;
+  font-weight:800 !important;
+}
+
+.job-result-btn strong{
+  color:#ffe600 !important;
+  font-weight:900 !important;
+}
+
+.job-result-btn small{
+  color:#ffffff !important;
+  opacity:.9 !important;
+}
 
 /* ATS CLOCK ACTION BUTTONS */
 .ats-clock .button,
