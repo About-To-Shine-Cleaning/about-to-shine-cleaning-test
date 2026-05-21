@@ -382,10 +382,9 @@ function renderModalAssignments() {
 
       const currentEmployee = current.employeeName || "Current Employee";
 
-      const list = employees
-        .map(emp => `${emp.employeeId} • ${emp.employeeName}`)
-        .join("
-");
+     const list = employees
+  .map(emp => `${emp.employeeId} • ${emp.employeeName}`)
+  .join("\n");
 
       const selected = prompt(
         `Move assignment from ${currentEmployee} to which employee?
