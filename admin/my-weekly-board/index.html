@@ -16,13 +16,16 @@
 
 <style>
   .my-board-container{
-  width:min(1800px, 96vw) !important;
-  max-width:none !important;
-  margin-inline:auto !important;
-}
+    width:96vw !important;
+    max-width:1800px !important;
+    margin-inline:auto !important;
+    padding-inline:18px !important;
+  }
+
   .my-board-shell{
     display:grid;
     gap:18px;
+    width:100%;
     overflow:visible;
   }
 
@@ -47,27 +50,24 @@
 
   .my-board-week{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    width:100%;
     gap:18px;
     margin-top:18px;
-    width:100%;
-    max-width:100%;
-    overflow:visible;
+    align-items:start;
   }
 
   .my-day-card{
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.14);
     border-radius:20px;
-    padding:16px;
-    min-height:170px;
+    padding:18px;
     min-width:0;
-    max-width:100%;
+    width:100%;
   }
 
   .my-day-title{
     font-weight:900;
-    font-size:18px;
+    font-size:20px;
     margin-bottom:2px;
   }
 
@@ -83,8 +83,6 @@
     border-radius:16px;
     padding:14px;
     margin-bottom:12px;
-    min-width:0;
-    max-width:100%;
   }
 
   .my-client-btn{
@@ -96,14 +94,13 @@
     margin:0;
     text-align:left;
     font:inherit;
-    font-size:17px;
+    font-size:18px;
     font-weight:900;
     line-height:1.25;
     cursor:pointer;
     text-decoration:underline;
     text-underline-offset:3px;
     overflow-wrap:anywhere;
-    max-width:100%;
   }
 
   .my-job-address,
@@ -123,8 +120,9 @@
 
   .my-clock-btn{
     display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
     width:100% !important;
-    min-width:0 !important;
     margin-top:12px !important;
     padding:13px 14px !important;
     border-radius:14px !important;
@@ -178,19 +176,30 @@
     line-height:1.45;
   }
 
-  @media(min-width:1200px){
+  /* DESKTOP */
+  @media(min-width:1400px){
+    .my-board-week{
+      grid-template-columns:repeat(4,minmax(0,1fr));
+    }
+  }
+
+  /* LAPTOP */
+  @media(min-width:900px) and (max-width:1399px){
     .my-board-week{
       grid-template-columns:repeat(3,minmax(0,1fr));
     }
   }
 
-  @media(max-width:1199px){
+  /* TABLET */
+  @media(min-width:761px) and (max-width:899px){
     .my-board-week{
       grid-template-columns:repeat(2,minmax(0,1fr));
     }
   }
 
+  /* MOBILE */
   @media(max-width:760px){
+
     .my-board-header{
       display:grid;
       grid-template-columns:1fr;
@@ -201,21 +210,10 @@
     }
 
     .my-board-week{
-      display:block;
-      margin-top:12px;
+      grid-template-columns:1fr;
     }
 
     .my-day-card{
-      margin-bottom:16px;
-      min-height:0;
-      padding:16px;
-    }
-
-    .my-day-title{
-      font-size:20px;
-    }
-
-    .my-job-card{
       padding:16px;
     }
 
@@ -224,8 +222,8 @@
     }
 
     .my-clock-btn{
-      font-size:16px !important;
       min-height:52px;
+      font-size:16px !important;
     }
   }
 </style>
