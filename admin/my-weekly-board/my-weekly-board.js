@@ -2,6 +2,7 @@
 // FILE: /admin/my-weekly-board/my-weekly-board.js
 // TYPE: .js
 // ATS My Weekly Board — read-only employee schedule
+// Adds: direct Clock Into This Job links for weekly-board assignments
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -139,6 +140,20 @@ function groupByDate(rows) {
   return out;
 }
 
+function buildClockUrl(job) {
+  const qs = new URLSearchParams({
+    emp: employeeId,
+    source: "weekly_board",
+    serviceDate: job.serviceDate || "",
+    clientId: job.clientId || "",
+    clientName: job.clientName || "",
+    jobName: job.clientName || "",
+    address: job.address || ""
+  });
+
+  return `/clock.html?${qs.toString()}`;
+}
+
 function renderWeek(rows, weekStart) {
   activeRows = Array.isArray(rows) ? rows : [];
   const grouped = groupByDate(activeRows);
@@ -153,7 +168,7 @@ function renderWeek(rows, weekStart) {
 
   if (statusBox) {
     statusBox.textContent = activeRows.length
-      ? "Tap a client name to view specs."
+      ? "Tap a client name to view specs, or tap Clock Into This Job to open the clock already selected."
       : "No assignments posted for this week yet.";
   }
 
@@ -185,6 +200,7 @@ function renderJob(job) {
   const notes = String(job.notes || "").trim();
   const shared = Array.isArray(job.sharedEmployees) ? job.sharedEmployees : [];
   const sharedText = shared.length ? shared.join(", ") : "";
+  const clockUrl = buildClockUrl(job);
 
   return `
     <div class="my-job-card">
@@ -194,6 +210,7 @@ function renderJob(job) {
       ${address ? `<div class="my-job-address"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open Map</a><br>${escapeHtml(address)}</div>` : ""}
       ${sharedText ? `<div class="my-job-shared">With: ${escapeHtml(sharedText)}</div>` : ""}
       ${notes ? `<div class="my-job-notes">${escapeHtml(notes)}</div>` : ""}
+      <a class="button my-clock-btn" href="${clockUrl}">Clock Into This Job</a>
     </div>
   `;
 }
