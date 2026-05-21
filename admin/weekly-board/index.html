@@ -119,6 +119,34 @@
     grid-template-columns:1fr;
   }
 }
+  /* WEEKLY BOARD EDITOR LAYOUT FIX */
+.ats-container{
+  max-width:1600px !important;
+  width:96vw !important;
+}
+
+.week-board{
+  display:grid !important;
+  grid-template-columns:repeat(7, minmax(180px, 1fr)) !important;
+  gap:14px !important;
+  overflow:visible !important;
+}
+
+.day-card{
+  min-width:0 !important;
+}
+
+@media(max-width:1300px){
+  .week-board{
+    grid-template-columns:repeat(3, 1fr) !important;
+  }
+}
+
+@media(max-width:800px){
+  .week-board{
+    grid-template-columns:1fr !important;
+  }
+}
 </style>
 </head>
 
