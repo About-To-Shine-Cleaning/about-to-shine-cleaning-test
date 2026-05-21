@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
 
 <script defer src="/admin/admin-nav.js?v=8"></script>
-<script defer src="./my-weekly-board.js?v=101"></script>
+<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=102"></script>
 
 <style>
   html,
@@ -34,8 +34,8 @@
     width:100vw !important;
     max-width:none !important;
     margin:0 !important;
-    padding-left:24px !important;
-    padding-right:24px !important;
+    padding-left:18px !important;
+    padding-right:18px !important;
     box-sizing:border-box !important;
   }
 
@@ -70,7 +70,7 @@
     display:grid;
     width:100% !important;
     max-width:none !important;
-    gap:18px;
+    gap:10px;
     margin-top:18px;
     align-items:start;
   }
@@ -78,8 +78,8 @@
   .my-day-card{
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.14);
-    border-radius:20px;
-    padding:18px;
+    border-radius:18px;
+    padding:12px;
     min-width:0;
     width:100%;
     box-sizing:border-box;
@@ -87,22 +87,22 @@
 
   .my-day-title{
     font-weight:900;
-    font-size:20px;
+    font-size:18px;
     margin-bottom:2px;
   }
 
   .my-day-date{
-    font-size:13px;
+    font-size:12px;
     opacity:.72;
-    margin-bottom:14px;
+    margin-bottom:12px;
   }
 
   .my-job-card{
     background:rgba(0,0,0,.16);
     border:1px solid rgba(255,255,255,.10);
-    border-radius:16px;
-    padding:14px;
-    margin-bottom:12px;
+    border-radius:14px;
+    padding:10px;
+    margin-bottom:10px;
     min-width:0;
     max-width:100%;
     box-sizing:border-box;
@@ -117,7 +117,7 @@
     margin:0;
     text-align:left;
     font:inherit;
-    font-size:18px;
+    font-size:15px;
     font-weight:900;
     line-height:1.25;
     cursor:pointer;
@@ -130,10 +130,10 @@
   .my-job-address,
   .my-job-shared,
   .my-job-notes{
-    margin-top:8px;
-    font-size:13px;
+    margin-top:7px;
+    font-size:12px;
     opacity:.84;
-    line-height:1.4;
+    line-height:1.35;
     overflow-wrap:anywhere;
   }
 
@@ -148,12 +148,13 @@
     justify-content:center !important;
     width:100% !important;
     min-width:0 !important;
-    margin-top:12px !important;
-    padding:13px 14px !important;
-    border-radius:14px !important;
+    margin-top:10px !important;
+    padding:10px 10px !important;
+    border-radius:12px !important;
     text-align:center !important;
     text-decoration:none !important;
-    line-height:1.25 !important;
+    line-height:1.2 !important;
+    font-size:13px !important;
   }
 
   .empty-day{
@@ -203,32 +204,26 @@
   }
 
   @media(min-width:1200px){
-  body.ats-admin .my-board-week{
-    grid-template-columns:repeat(7,minmax(0,1fr));
-    gap:12px;
+    body.ats-admin .my-board-week{
+      grid-template-columns:repeat(7,minmax(0,1fr));
+    }
   }
-
-  .my-day-card{
-    padding:14px;
-  }
-
-  .my-job-card{
-    padding:12px;
-  }
-
-  .my-client-btn{
-    font-size:16px;
-  }
-
-  .my-clock-btn{
-    font-size:14px !important;
-    padding:10px 12px !important;
-  }
-}
 
   @media(min-width:900px) and (max-width:1199px){
     body.ats-admin .my-board-week{
       grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .my-day-card{
+      padding:14px;
+    }
+
+    .my-client-btn{
+      font-size:17px;
+    }
+
+    .my-clock-btn{
+      font-size:14px !important;
     }
   }
 
