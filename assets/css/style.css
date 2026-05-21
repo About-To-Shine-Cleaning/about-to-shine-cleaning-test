@@ -2,6 +2,25 @@
    BRAND VARIABLES
    (Single source of truth in assets/css/site-brand.css)
 ================================================= */
+
+/* =================================================
+   ADMIN PAGE SAFETY OVERRIDES
+   Keeps public-site body rules from creating mobile seams on /admin pages.
+================================================= */
+body.ats-admin{
+  padding-bottom:0;
+  background-color:#0b1020;
+  background-repeat:no-repeat;
+  background-attachment:scroll;
+  background-size:cover;
+  background-position:center top;
+}
+
+body.ats-admin h1,
+body.ats-admin h2{
+  color:var(--ats-text, rgba(255,255,255,.92));
+}
+
 /* =================================================
    BASE TYPOGRAPHY
 ================================================= */
@@ -263,7 +282,7 @@ section {
 ================================================= */
 footer {
   background: var(--ats-footer-bg);
-color: #ffffff;
+  color: #ffffff;
   text-align: center;
   border-top: 5px solid var(--ats-divider); /* slightly thicker yellow */
 }
@@ -326,7 +345,6 @@ footer p {
 body {
   padding-bottom: 80px;
 }
-
 
 /* =================================================
    FOOTER LINKS (SERVICE AREAS)
@@ -404,7 +422,6 @@ body {
   .ba-row{ grid-template-columns: 1fr; }
 }
 
-
 /* =========================
    FOOTER SOCIAL ICONS
 ========================= */
@@ -448,7 +465,6 @@ body {
   border:0;
 }
 
-
 /* =================================================
    SERVICES PAGE LAYOUT
 ================================================= */
@@ -475,7 +491,6 @@ body {
   .main-nav a{ padding: 12px 8px; }
   .button, .quote-form button{ padding: 14px 22px; }
 }
-
 
 /* ===== Footer Service Areas + Social Icons ===== */
 .footer-inner{
@@ -510,7 +525,6 @@ body {
   height: 28px;
   display: block;
 }
-
 
 /* ===============================
    FOOTER — TIGHT + LINKY
@@ -599,7 +613,6 @@ body {
 /* Remove any legacy "Find Us" blocks if present */
 .find-us, .footer-findus, .footer-find-us{ display:none !important; }
 
-
 /* =========================
    About: People cards
    ========================= */
@@ -655,7 +668,6 @@ body {
   position: relative;
 }
 .bio-text{
-  /* Preserve user-entered line breaks, but avoid huge gaps from multiple blank lines */
   white-space: pre-line;
   line-height: 1.5;
 }
@@ -707,7 +719,6 @@ body {
   align-items: center;
 }
 
-/* Footer uses the same honeycomb language as the Contact page */
 .footer-social.footer-honeycomb{
   justify-content: center;
 }
@@ -739,7 +750,6 @@ body {
    Contact: honeycomb socials
    ========================= */
 .social-honeycomb{
-  /* 3-1-2 honeycomb layout */
   --hex: 56px;
   display: grid;
   grid-template-columns: repeat(3, var(--hex));
@@ -750,7 +760,6 @@ body {
   align-content: start;
 }
 
-/* Position helpers */
 .social-honeycomb .pos-top-1{ grid-column: 1; grid-row: 1; }
 .social-honeycomb .pos-top-2{ grid-column: 2; grid-row: 1; }
 .social-honeycomb .pos-top-3{ grid-column: 3; grid-row: 1; }
@@ -780,7 +789,6 @@ body {
 .honey:hover{ filter: brightness(1.05); }
 
 .contact-section{
-
   margin-top: 28px;
 }
 .contact-map iframe{
@@ -789,7 +797,6 @@ body {
   border: 0;
   border-radius: 18px;
 }
-
 
 /* =========================
    Social icons (PNG) — injected
@@ -821,7 +828,6 @@ body {
   filter: grayscale(0.1);
 }
 
-/* Brand-tinted hover ring */
 .footer-social .social-facebook:hover{ box-shadow: 0 0 0 2px rgba(24,119,242,.85), 0 10px 22px rgba(0,0,0,.18); }
 .footer-social .social-yelp:hover{ box-shadow: 0 0 0 2px rgba(211,35,35,.85), 0 10px 22px rgba(0,0,0,.18); }
 .footer-social .social-nextdoor:hover{ box-shadow: 0 0 0 2px rgba(0,178,70,.85), 0 10px 22px rgba(0,0,0,.18); }
@@ -829,7 +835,6 @@ body {
 .footer-social .social-google:hover{ box-shadow: 0 0 0 2px rgba(66,133,244,.85), 0 10px 22px rgba(0,0,0,.18); }
 .footer-social .social-instagram:hover{ box-shadow: 0 0 0 2px rgba(228,64,95,.85), 0 10px 22px rgba(0,0,0,.18); }
 
-/* Honeycomb tweaks to match footer */
 .social-honeycomb .honey{
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, opacity .12s ease;
 }
@@ -845,7 +850,6 @@ body {
 .social-honeycomb .honey.social-yellowpages:hover{ box-shadow: 0 0 0 2px rgba(255,212,0,.85), 0 10px 22px rgba(0,0,0,.14); }
 .social-honeycomb .honey.social-google:hover{ box-shadow: 0 0 0 2px rgba(66,133,244,.85), 0 10px 22px rgba(0,0,0,.14); }
 .social-honeycomb .honey.social-instagram:hover{ box-shadow: 0 0 0 2px rgba(228,64,95,.85), 0 10px 22px rgba(0,0,0,.14); }
-
 
 /* === SERVICES DROPDOWN (Desktop hover + mobile-safe) === */
 .main-nav { display: flex; gap: 14px; align-items: center; }
@@ -867,9 +871,6 @@ body {
   z-index: 999;
 }
 
-
-
-/* Ensure dropdown text is readable (dropdown has white background) */
 .dropdown-menu a,
 .dropdown-menu .submenu-title{
   color:#1b1b1b;
@@ -882,7 +883,6 @@ body {
   margin:8px 0;
 }
 
-/* Mobile: click-to-open dropdowns */
 .nav-item.dropdown.open .dropdown-menu{ display:block; }
 
 .nav-item.dropdown:hover .dropdown-menu,
@@ -926,7 +926,6 @@ body {
   background: rgba(0,0,0,0.06);
 }
 
-/* Mobile: no hover — show dropdown content as stacked lists when nav is open */
 @media (max-width: 900px){
   .main-nav{ display: none; flex-direction: column; align-items: stretch; gap: 10px; }
   .main-nav.open{ display: flex; }
@@ -934,10 +933,40 @@ body {
   .nav-item.dropdown{ position: static; }
   .dropdown-menu{
     position: static;
-    display: block;     /* always visible inside mobile menu */
+    display: block;
     box-shadow: none;
     border: 1px solid rgba(0,0,0,0.10);
     margin-top: 6px;
   }
   .submenu{ display: grid; }
+}
+
+/* ===== ATS Admin Mobile Background Seam Fix =====
+   This only affects admin pages that also load the public stylesheet. */
+@media (max-width: 760px){
+  body.ats-admin{
+    padding-bottom:0 !important;
+    min-height:100vh !important;
+    min-height:100svh !important;
+    background-color:#0b1020 !important;
+    background-repeat:no-repeat !important;
+    background-attachment:scroll !important;
+    background-size:cover !important;
+    background-position:center top !important;
+    overflow-x:hidden !important;
+  }
+
+  body.ats-admin::before,
+  body.ats-admin::after,
+  body.ats-admin .ats-main::before,
+  body.ats-admin .ats-main::after{
+    content:none !important;
+    display:none !important;
+  }
+
+  body.ats-admin .ats-main,
+  body.ats-admin .ats-container,
+  body.ats-admin .ats-card{
+    background-attachment:scroll !important;
+  }
 }
