@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow,noarchive"/>
 
-<link rel="stylesheet" href="/admin/admin-layout.css"/>
+<link rel="stylesheet" href="/admin/admin-layout.css?v=3000001"/>
 <link rel="stylesheet" href="/assets/css/style.css"/>
 <link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
 
-<script defer src="/admin/admin-nav.js?v=8"></script>
-<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=2000000"></script>
+<script defer src="/admin/admin-nav.js?v=9"></script>
+<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=3000001"></script>
 
 <style>
 html,
@@ -59,6 +59,55 @@ body.ats-admin .my-board-shell{
   opacity:.78;
   line-height:1.45;
   margin-top:6px;
+}
+
+.my-board-toolbar{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:-4px;
+  padding:10px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:16px;
+  background:rgba(0,0,0,.18);
+}
+
+.my-board-toolbar.open{
+  display:flex;
+}
+
+.my-view-toggle{
+  display:inline-flex;
+  gap:6px;
+  padding:5px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.my-toggle-btn{
+  appearance:none;
+  border:0;
+  border-radius:999px;
+  padding:9px 14px;
+  background:transparent;
+  color:rgba(255,255,255,.82);
+  font-weight:900;
+  cursor:pointer;
+}
+
+.my-toggle-btn.active{
+  background:#000;
+  color:#ffe600;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);
+}
+
+.my-view-help{
+  color:rgba(255,255,255,.72);
+  font-size:13px;
+  line-height:1.35;
 }
 
 #statusBox{
@@ -157,6 +206,26 @@ body.ats-admin .my-board-week{
   font-size:13px !important;
 }
 
+.full-week-job{
+  display:grid;
+  gap:4px;
+}
+
+.full-week-employee{
+  font-size:12px;
+  color:#ffe600;
+  font-weight:900;
+  line-height:1.2;
+}
+
+.full-week-client{
+  font-size:15px;
+  color:#fff;
+  font-weight:900;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+
 .empty-day{
   opacity:.55;
   font-size:13px;
@@ -245,6 +314,21 @@ body.ats-admin .my-board-week{
     grid-template-columns:1fr;
   }
 
+  .my-board-toolbar.open{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .my-view-toggle{
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .my-toggle-btn{
+    width:100%;
+  }
+
   #clockLink{
     width:100%;
   }
@@ -268,72 +352,6 @@ body.ats-admin .my-board-week{
   }
 }
 </style>
-
-<style id="ats-unified-page-finish">
-/* Page-level finish: keeps layout CSS, forces ATS operational colors/buttons. */
-.ats-card,
-.day-card,
-.my-day-card,
-.my-job-card,
-.assignment,
-.client-result,
-.spec-box,
-.spec-card,
-.modal{
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
-  border:1px solid rgba(255,255,255,.13) !important;
-  color:#f7f7fb !important;
-  box-shadow:0 18px 50px rgba(0,0,0,.35) !important;
-}
-.button,
-a.button,
-button.button,
-#btnSaveWeek,
-#btnAddAssignment,
-.map-btn{
-  background:#000 !important;
-  color:#ffe600 !important;
-  border:1px solid rgba(255,230,0,.55) !important;
-  border-radius:10px !important;
-  font-weight:900 !important;
-  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
-}
-.button:hover,
-a.button:hover,
-button.button:hover,
-#btnSaveWeek:hover,
-#btnAddAssignment:hover,
-.map-btn:hover{
-  background:#111 !important;
-  color:#ffe600 !important;
-  border-color:rgba(255,230,0,.85) !important;
-  text-decoration:none !important;
-}
-.button-secondary,
-button.button-secondary{
-  background:rgba(0,0,0,.34) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-input,
-select,
-textarea,
-.client-search{
-  background:rgba(0,0,0,.35) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-.my-day-card.past-day{
-  opacity:.48 !important;
-  filter:grayscale(.75) !important;
-}
-.my-day-card.past-day button,
-.my-day-card.past-day a{
-  pointer-events:none !important;
-  cursor:not-allowed !important;
-}
-</style>
-
 </head>
 
 <body class="ats-admin">
@@ -361,6 +379,14 @@ textarea,
           <div class="my-board-meta" id="weekLabel">Loading week...</div>
         </div>
         <a class="button" id="clockLink" href="/clock.html">Open Clock</a>
+      </div>
+
+      <div id="viewToolbar" class="my-board-toolbar" aria-label="Weekly board view options">
+        <div class="my-view-toggle" role="group" aria-label="Choose weekly board view">
+          <button class="my-toggle-btn active" type="button" id="btnMyJobs" aria-pressed="true">My Jobs</button>
+          <button class="my-toggle-btn" type="button" id="btnFullWeek" aria-pressed="false">Full Week</button>
+        </div>
+        <div class="my-view-help" id="viewHelp">Full Week shows employee + client only.</div>
       </div>
 
       <div id="statusBox" aria-live="polite">Loading assignments...</div>
