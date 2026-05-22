@@ -1,26 +1,26 @@
-/* ATS Admin Layout v1 — shared system for all admin tools
-   NOTE: Visual-only. Does NOT touch auth/routes/storage logic.
-   UPDATED: Home card + hamburger permission styling support v2. */
+/* FULL CORRECTED ATS ADMIN LAYOUT CSS */
 
 :root{
-  --ats-purple:#5b2aa8;
-  --ats-purple2:#3f1c83;
-  --ats-blue:#1b2a6d;
-  --ats-yellow:#FFD700;
-
-  --ats-text: rgba(255,255,255,.92);
-  --ats-muted: rgba(255,255,255,.82);
-  --ats-border: rgba(255,255,255,.18);
-  --ats-card: rgba(255,255,255,.10);
-
-  --ats-shadow: 0 12px 30px rgba(0,0,0,.22);
-  --ats-shadow2: 0 18px 44px rgba(0,0,0,.28);
-
-  --ats-r-lg:18px;
+  --ats-bg:#07090f;
+  --ats-panel:#10131c;
+  --ats-panel2:#151928;
+  --ats-panel3:#1b2033;
+  --ats-purple:#3b2479;
+  --ats-purple2:#24164a;
+  --ats-blue:#121b45;
+  --ats-yellow:#ffe600;
+  --ats-gold:#f7c600;
+  --ats-text:#f7f7fb;
+  --ats-muted:#b9bed0;
+  --ats-border:rgba(255,255,255,.13);
+  --ats-border-strong:rgba(255,230,0,.40);
+  --ats-card:rgba(16,19,28,.92);
+  --ats-shadow:0 18px 50px rgba(0,0,0,.35);
+  --ats-shadow2:0 24px 70px rgba(0,0,0,.45);
+  --ats-r-lg:22px;
   --ats-r-md:14px;
   --ats-r-sm:12px;
-
-  --ats-container: 1100px;
+  --ats-container:1100px;
 }
 
 *{box-sizing:border-box}
@@ -36,13 +36,13 @@ body.ats-admin{
   margin:0;
   min-height:100vh;
   min-height:100svh;
-  font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-  color: var(--ats-text);
-  background-color:#0b1020;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+  color:var(--ats-text);
+  background-color:var(--ats-bg);
   background-image:
-    radial-gradient(1200px 600px at 15% 15%, rgba(255,215,0,.18), transparent 60%),
-    radial-gradient(900px 500px at 85% 25%, rgba(123,71,255,.20), transparent 60%),
-    linear-gradient(135deg, #2b0a57 0%, #1a1f4c 40%, #0b1020 100%);
+    radial-gradient(900px 460px at 8% 4%, rgba(255,230,0,.10), transparent 60%),
+    radial-gradient(760px 420px at 88% 12%, rgba(82,49,170,.20), transparent 62%),
+    linear-gradient(135deg, #120d22 0%, #111735 46%, #07090f 100%);
   background-repeat:no-repeat;
   background-attachment:scroll;
   background-size:cover;
@@ -50,855 +50,101 @@ body.ats-admin{
   overflow-x:hidden;
 }
 
-a{color:inherit;text-decoration:none}
-a:hover{text-decoration:underline}
-
-.ats-header{
-  position:sticky;
-  top:0;
-  z-index:50;
-  backdrop-filter: blur(10px);
-  background: linear-gradient(135deg, rgba(91,42,168,.55), rgba(27,42,109,.40));
-  border-bottom: 1px solid var(--ats-border);
-}
-.ats-header-inner{
-  max-width: var(--ats-container);
-  margin: 0 auto;
-  padding: 12px 16px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.ats-brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-decoration:none;
-}
-.ats-brand img{
-  height:44px;
-  width:auto;
-  display:block;
-  filter: drop-shadow(0 6px 18px rgba(0,0,0,.35));
-}
-
-.ats-header-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.ats-live-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,215,0,.55);
-  background: rgba(255,215,0,.14);
-  color: var(--ats-text);
-  text-decoration:none;
-  font-weight: 650;
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
-}
-.ats-live-btn:hover{
-  text-decoration:none;
-  background: rgba(255,215,0,.20);
-}
-
-.ats-burger{
-  width:44px;height:44px;
-  border-radius: 999px;
-  border: 1px solid var(--ats-border);
-  background: rgba(255,255,255,.08);
-  display:inline-flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  cursor:pointer;
-}
-.ats-burger span{
-  display:block;
-  width:18px;
-  height:2px;
-  background: rgba(255,255,255,.86);
-  border-radius: 999px;
-}
-
-.ats-main{padding: 18px 0 40px;}
-.ats-container{
-  max-width: var(--ats-container);
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-/* Cards + controls */
-.ats-card{
-  border: 1px solid var(--ats-border);
-  background: var(--ats-card);
-  border-radius: var(--ats-r-lg);
-  box-shadow: var(--ats-shadow);
-  padding: 16px;
-}
-.ats-card + .ats-card{margin-top:14px}
-
-.ats-title{
-  font-size: 22px;
-  margin: 0 0 10px;
-  letter-spacing: .2px;
-}
-.ats-subtitle{
-  margin: 0 0 14px;
-  color: var(--ats-muted);
-}
-
-.ats-row{display:flex;gap:12px;flex-wrap:wrap}
-.ats-row > *{flex:1 1 240px}
-
-.ats-input, input[type="text"], input[type="email"], input[type="number"], input[type="date"], select, textarea{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: var(--ats-r-md);
-  border: 1px solid var(--ats-border);
-  background: rgba(0,0,0,.20);
-  color: var(--ats-text);
-  outline:none;
-}
-textarea{min-height:96px}
-
-.ats-btn, button{
-  border-radius: 999px;
-  border: 1px solid var(--ats-border);
-  background: rgba(255,255,255,.10);
-  color: var(--ats-text);
-  padding: 11px 14px;
-  cursor:pointer;
-  font-weight: 650;
-}
-.ats-btn:hover, button:hover{background: rgba(255,255,255,.14)}
-.ats-btn.primary{
-  border-color: rgba(255,215,0,.70);
-  background: rgba(255,215,0,.18);
-}
-.ats-btn.primary:hover{background: rgba(255,215,0,.24)}
-.ats-btn.danger{
-  border-color: rgba(255,80,80,.55);
-  background: rgba(255,80,80,.12);
-}
-
-/* Drawer nav */
-.ats-nav-backdrop{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.55);
-  opacity:0; pointer-events:none;
-  transition: opacity .16s ease;
-  z-index:80;
-}
-.ats-nav-drawer{
-  position:fixed;
-  top:0; right:0;
-  height:100%;
-  width:min(360px, 92vw);
-  background: linear-gradient(180deg, rgba(63,28,131,.92), rgba(11,16,32,.96));
-  border-left: 1px solid var(--ats-border);
-  box-shadow: var(--ats-shadow2);
-  transform: translateX(105%);
-  transition: transform .18s ease;
-  z-index:90;
-  display:flex;
-  flex-direction:column;
-}
-.ats-nav-drawer header{
-  padding: 14px 14px 10px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  border-bottom: 1px solid var(--ats-border);
-}
-.ats-nav-drawer h2{
-  font-size: 16px;
-  margin:0;
-  letter-spacing:.3px;
-}
-.ats-nav-close{
-  width:42px;height:42px;
-  border-radius:999px;
-}
-.ats-nav-list{
-  padding: 10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.ats-nav-item{
-  padding: 12px 12px;
-  border-radius: var(--ats-r-md);
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.06);
-  text-decoration:none;
-  font-weight:800;
-}
-.ats-nav-item:hover{text-decoration:none;background: rgba(255,255,255,.10)}
-.ats-nav-item[aria-current="page"]{
-  border-color: rgba(255,215,0,.60);
-  background: rgba(255,215,0,.14);
-  color:var(--ats-yellow) !important;
-}
-.ats-nav-footer{
-  margin-top:auto;
-  padding: 12px 10px 16px;
-  border-top: 1px solid var(--ats-border);
-}
-.ats-nav-footer .ats-live-btn{width:100%;}
-.ats-nav-backdrop.open{opacity:1;pointer-events:auto}
-.ats-nav-drawer.open{transform:translateX(0)}
-
-/* Mobile tweaks */
-@media (max-width: 520px){
-  .ats-live-btn{display:none;}
-  .ats-brand img{height:40px}
-  .ats-main{padding-top: 14px}
-}
-
-/* ===== Clock: Light content card (keeps global admin gradient/nav) ===== */
-.ats-card--light{
-  background:#ffffff;
-  color:#111827;
-  border:1px solid rgba(17,24,39,.10);
-  box-shadow: 0 18px 60px rgba(0,0,0,.28);
-}
-.ats-card--light h1,.ats-card--light h2,.ats-card--light h3,.ats-card--light h4{
-  color:#0f172a;
-}
-.ats-card--light label{ color:#111827; }
-.ats-card--light input,
-.ats-card--light select,
-.ats-card--light textarea{
-  background:#ffffff;
-  color:#111827;
-  border:1px solid rgba(17,24,39,.18);
-}
-.ats-card--light input::placeholder,
-.ats-card--light textarea::placeholder{
-  color: rgba(17,24,39,.55);
-}
-.ats-card--light a{ color:#1b2a6d; }
-
-/* ===== Compatibility layer for legacy tool markup (Estimator/Payroll) ===== */
-.ats-admin .letterhead{display:none !important;}
-.ats-admin .wrap{
-  max-width: var(--ats-container);
-  margin: 0 auto;
-  padding: 18px;
-}
-.ats-admin .top{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:space-between;
-  flex-wrap:wrap;
-}
-.ats-admin .pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 12px;
-  border-radius:999px;
-  background: rgba(255,255,255,.10);
-  border:1px solid var(--ats-border);
-  color: var(--ats-text);
-}
-.ats-admin .card{
-  background: rgba(255,255,255,.10) !important;
-  border: 1px solid var(--ats-border) !important;
-  border-radius: var(--ats-r-lg) !important;
-  padding: 16px !important;
-  box-shadow: var(--ats-shadow) !important;
-  color: var(--ats-text) !important;
-}
-.ats-admin .card h1,
-.ats-admin .card h2,
-.ats-admin .card h3,
-.ats-admin .card h4{
-  color: var(--ats-text) !important;
-}
-.ats-admin .card label{
-  color: var(--ats-muted) !important;
-}
-.ats-admin .btn{
-  border-radius: 999px !important;
-  border: 1px solid var(--ats-border) !important;
-  background: rgba(255,255,255,.10) !important;
-  color: var(--ats-text) !important;
-  padding: 11px 14px !important;
-  cursor:pointer;
-  font-weight: 650;
-}
-.ats-admin .btn:hover{ background: rgba(255,255,255,.14) !important; }
-.ats-admin .btn.primary{
-  border-color: rgba(255,215,0,.70) !important;
-  background: rgba(255,215,0,.18) !important;
-}
-.ats-admin .btn.primary:hover{ background: rgba(255,215,0,.24) !important; }
-.ats-admin .btn.secondary{
-  background: rgba(255,255,255,.08) !important;
-}
-.ats-admin .btn:disabled{
-  opacity: .65 !important;
-  cursor:not-allowed !important;
-}
-
-.button{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:12px 20px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.10);
-  background:linear-gradient(180deg,#2d2357 0%, #1d173d 100%);
-  color:#ffffff;
-  font-weight:700;
-  text-decoration:none;
-  cursor:pointer;
-  transition:all .18s ease;
-  min-width:140px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 4px 14px rgba(0,0,0,.28);
-}
-
-/* FORCE ATS DARK BUTTONS */
-.button,
-a.button,
-button.button{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-
-  padding:12px 20px !important;
-  min-width:140px !important;
-
-  border-radius:16px !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-
-  background:linear-gradient(180deg,#24164a 0%, #140d2c 100%) !important;
-
-  color:#ffffff !important;
-  font-weight:700 !important;
-  text-decoration:none !important;
-
-  cursor:pointer !important;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.04),
-    0 6px 18px rgba(0,0,0,.38) !important;
-
-  transition:all .18s ease !important;
-}
-
-.button:hover,
-a.button:hover,
-button.button:hover{
-  background:linear-gradient(180deg,#35206b 0%, #1d123d 100%) !important;
-  transform:translateY(-1px);
-}
-
-.button:disabled{
-  opacity:.45 !important;
-  cursor:not-allowed !important;
-}
-
-.clock-actions{
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.job-result-btn{
-  display:block;
-  width:100%;
-  margin:8px 0;
-  padding:14px 16px;
-
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.08);
-
-  background:linear-gradient(180deg,#24164a 0%, #140d2c 100%);
-  color:#fff;
-
-  text-align:left;
-  cursor:pointer;
-
-  transition:.15s ease;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.03),
-    0 4px 10px rgba(0,0,0,.24);
-}
-
-.job-result-btn:hover{
-  background:linear-gradient(180deg,#35206b 0%, #1d123d 100%);
-  transform:translateY(-1px);
-}
-
-.job-result-btn strong{
-  display:block;
-  font-size:16px;
-  margin-bottom:2px;
-}
-
-.job-result-btn small{
-  opacity:.8;
-  font-size:12px;
-}
-.job-result-btn{
-  color:#ffe600 !important;
-  font-weight:800 !important;
-}
-
-.job-result-btn strong{
-  color:#ffe600 !important;
-  font-weight:900 !important;
-}
-
-.job-result-btn small{
-  color:#ffffff !important;
-  opacity:.9 !important;
-}
-
-/* ATS CLOCK ACTION BUTTONS */
-.ats-clock .button,
-.ats-clock a.button,
-.ats-clock button.button{
-  background:#000 !important;
-  color:#ffe600 !important;
-  border:2px solid #000 !important;
-  border-radius:7px !important;
-  box-shadow:none !important;
-
-  min-width:160px !important;
-  padding:16px 22px !important;
-
-  font-weight:900 !important;
-  font-size:16px !important;
-  text-align:center !important;
-  text-decoration:none !important;
-}
-
-.ats-clock .button:hover,
-.ats-clock a.button:hover,
-.ats-clock button.button:hover{
-  background:#111 !important;
-  color:#ffe600 !important;
-  transform:none !important;
-}
-
-.ats-clock .button:disabled,
-.ats-clock button.button:disabled{
-  opacity:.45 !important;
-  cursor:not-allowed !important;
-}
-
-.ats-clock .clock-actions{
-  display:flex !important;
-  gap:8px !important;
-  flex-wrap:wrap !important;
-}
-
-/* ===== ATS Admin Mobile Background Seam Fix =====
-   Prevents iOS/mobile browsers from splitting or repeating the admin gradient. */
-@media (max-width: 760px){
-  html,
-  body{
-    min-height:100%;
-    width:100%;
-    max-width:100%;
-    overflow-x:hidden !important;
-  }
-
-  body.ats-admin{
-    min-height:100vh !important;
-    min-height:100svh !important;
-    background-color:#0b1020 !important;
-    background-image:
-      radial-gradient(900px 460px at 10% 8%, rgba(255,215,0,.16), transparent 62%),
-      radial-gradient(760px 420px at 90% 18%, rgba(123,71,255,.18), transparent 64%),
-      linear-gradient(135deg, #2b0a57 0%, #1a1f4c 42%, #0b1020 100%) !important;
-    background-repeat:no-repeat !important;
-    background-attachment:scroll !important;
-    background-size:100% 100%, 100% 100%, cover !important;
-    background-position:center top !important;
-    overflow-x:hidden !important;
-  }
-
-  body.ats-admin::before,
-  body.ats-admin::after,
-  .ats-main::before,
-  .ats-main::after,
-  .ats-container::before,
-  .ats-container::after{
-    content:none !important;
-    display:none !important;
-  }
-
-  body.ats-admin .ats-main,
-  body.ats-admin .ats-container{
-    background:transparent !important;
-    background-image:none !important;
-    background-attachment:scroll !important;
-  }
-}
-
-/* =========================================================
-   ATS Admin Unified Operational Theme — Clock-style baseline
-   Added for Payroll + Weekly Board + My Weekly Board + Client Info.
-   Visual-only. Does not touch auth/routes/storage logic.
-   ========================================================= */
-:root{
-  --ats-bg:#07090f;
-  --ats-panel:#10131c;
-  --ats-panel2:#151928;
-  --ats-panel3:#1b2033;
-  --ats-yellow:#ffe600;
-  --ats-gold:#f7c600;
-  --ats-purple:#3b2479;
-  --ats-purple2:#24164a;
-  --ats-blue:#121b45;
-  --ats-text:#f7f7fb;
-  --ats-muted:#b9bed0;
-  --ats-border:rgba(255,255,255,.13);
-  --ats-border-strong:rgba(255,230,0,.40);
-  --ats-card:rgba(16,19,28,.92);
-  --ats-shadow:0 18px 50px rgba(0,0,0,.35);
-  --ats-shadow2:0 24px 70px rgba(0,0,0,.45);
-}
-
-body.ats-admin{
-  color:var(--ats-text) !important;
-  background-color:var(--ats-bg) !important;
-  background-image:
-    radial-gradient(900px 460px at 8% 4%, rgba(255,230,0,.10), transparent 60%),
-    radial-gradient(760px 420px at 88% 12%, rgba(82,49,170,.20), transparent 62%),
-    linear-gradient(135deg, #120d22 0%, #111735 46%, #07090f 100%) !important;
-}
-
-.ats-header{
-  background:linear-gradient(135deg, rgba(59,36,121,.86), rgba(18,27,69,.86)) !important;
-  border-bottom:1px solid rgba(255,255,255,.12) !important;
-  box-shadow:0 10px 30px rgba(0,0,0,.28) !important;
-}
-
-.ats-card,
-.ats-admin .card,
-.ats-admin .hero,
-.day-card,
-.my-day-card,
-.my-job-card,
-.assignment,
-.client-result,
-.spec-box,
-.spec-card,
-.modal,
-.payroll-employee-card,
-.final-employee-card,
-.section-toggle-card,
-details{
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
-  border:1px solid var(--ats-border) !important;
-  box-shadow:var(--ats-shadow) !important;
-  color:var(--ats-text) !important;
-}
-
-.ats-card,
-.ats-admin .card,
-.ats-admin .hero{
-  border-radius:22px !important;
-}
-
-.day-card,
-.my-day-card{
-  background:linear-gradient(180deg, rgba(27,32,51,.96), rgba(16,19,30,.96)) !important;
-}
-
-.my-job-card,
-.assignment,
-.client-result,
-.spec-box{
-  background:linear-gradient(180deg, rgba(20,24,38,.98), rgba(10,13,21,.98)) !important;
-}
-
-.ats-eyebrow,
-.period-title,
-.spec-label,
-summary,
-.employee-total,
-.payroll-total-amount,
-.final-value.gold{
-  color:var(--ats-yellow) !important;
-}
-
-.ats-subtitle,
-.my-board-meta,
-.my-day-date,
-.my-job-address,
-.my-job-shared,
-.my-job-notes,
-.empty-day,
-.muted,
-.small,
-.payroll-sub,
-.payroll-total-label,
-.toggle-help,
-.job-date{
-  color:var(--ats-muted) !important;
-  opacity:1 !important;
-}
-
-.button,
-a.button,
-button.button,
-.ats-btn,
-.ats-admin .btn,
-.ats-live-btn,
-.map-btn,
-#btnSaveWeek,
-#btnAddAssignment{
-  background:#000 !important;
-  color:var(--ats-yellow) !important;
-  border:1px solid rgba(255,230,0,.55) !important;
-  border-radius:10px !important;
-  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
-  font-weight:900 !important;
-  text-decoration:none !important;
-}
-
-.button:hover,
-a.button:hover,
-button.button:hover,
-.ats-btn:hover,
-.ats-admin .btn:hover,
-.ats-live-btn:hover,
-.map-btn:hover,
-#btnSaveWeek:hover,
-#btnAddAssignment:hover{
-  background:#111 !important;
-  color:var(--ats-yellow) !important;
-  border-color:rgba(255,230,0,.85) !important;
-  transform:translateY(-1px);
-  text-decoration:none !important;
-}
-
-.button-secondary,
-.ats-admin .btn.secondary,
-button.button-secondary,
-a.button-secondary{
-  background:rgba(0,0,0,.34) !important;
-  color:var(--ats-text) !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-
-button:disabled,
-.button:disabled,
-.button.disabled,
-.my-clock-btn.disabled{
-  opacity:.45 !important;
-  cursor:not-allowed !important;
-  pointer-events:none !important;
-  filter:grayscale(.45);
-}
-
-input,
-select,
-textarea,
-.ats-input,
-.client-search,
-.pay-input,
-.pay-method,
-.admin-input,
-.admin-textarea,
-select.payroll-select{
-  background:rgba(0,0,0,.35) !important;
-  color:var(--ats-text) !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-  border-radius:12px !important;
-}
-
-input:focus,
-select:focus,
-textarea:focus,
-.client-search:focus{
-  border-color:rgba(255,230,0,.70) !important;
-  box-shadow:0 0 0 3px rgba(255,230,0,.14) !important;
-}
-
-select option,
-.pay-method option,
-select.payroll-select option{
-  color:#111827 !important;
-  background:#fff !important;
-}
-
-table th,
-table td{
-  border-color:rgba(255,255,255,.10) !important;
-}
-
-th{
-  color:var(--ats-yellow) !important;
-}
-
-.table-wrap{
-  background:rgba(0,0,0,.22) !important;
-  border-color:var(--ats-border) !important;
-}
-
-.my-client-btn{
-  color:var(--ats-text) !important;
-}
-
-.my-job-address a,
-.client-address a,
-a[href*="maps"]{
-  color:var(--ats-yellow) !important;
-  font-weight:900 !important;
-}
-
-.my-day-card.past-day{
-  opacity:.48 !important;
-  filter:grayscale(.75) !important;
-  background:linear-gradient(180deg, rgba(28,30,38,.80), rgba(12,14,20,.86)) !important;
-}
-
-.my-day-card.past-day button,
-.my-day-card.past-day a{
-  pointer-events:none !important;
-  cursor:not-allowed !important;
-}
-
-.my-day-card.past-day .my-clock-btn{
-  background:#141414 !important;
-  color:#a9a9a9 !important;
-  border-color:rgba(255,255,255,.12) !important;
-}
-
-.ats-clock .ats-card--light{
-  background:#ffffff !important;
-  color:#111827 !important;
-}
-
-.ats-clock .ats-card--light input,
-.ats-clock .ats-card--light select,
-.ats-clock .ats-card--light textarea{
-  background:#ffffff !important;
-  color:#111827 !important;
-  border:1px solid rgba(17,24,39,.18) !important;
-}
-
-/* =========================================================
-   ATS Admin Home Permission/Card Polish v2
-   ========================================================= */
-
-.ats-admin #cards.grid{
+.hidden,
+.card.hidden,
+#cards.hidden,
+#cards .card.hidden,
+body.ats-admin .hidden,
+body.ats-admin .card.hidden,
+body.ats-admin #cards .card.hidden{
+  display:none !important;
+}
+
+body.ats-admin .brand-logo,
+body.ats-admin .topbar .brand-logo{
+  width:44px !important;
+  height:44px !important;
+  max-width:44px !important;
+  max-height:44px !important;
+  flex:0 0 44px !important;
+  overflow:hidden !important;
+  border-radius:14px !important;
+}
+
+body.ats-admin .brand-logo img,
+body.ats-admin .topbar .brand-logo img{
+  width:44px !important;
+  height:44px !important;
+  max-width:44px !important;
+  max-height:44px !important;
+  object-fit:cover !important;
+  display:block !important;
+}
+
+body.ats-admin #cards.grid{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:14px !important;
   align-items:stretch !important;
 }
 
-.ats-admin #cards .card{
-  min-height:230px !important;
-  height:230px !important;
-  display:flex !important;
-  flex-direction:column !important;
-  justify-content:flex-start !important;
+.card{
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
+  border:1px solid var(--ats-border);
+  border-radius:22px;
+  box-shadow:var(--ats-shadow);
+  color:var(--ats-text);
+  padding:18px;
+  min-height:230px;
+  height:230px;
+  display:flex;
+  flex-direction:column;
 }
 
-.ats-admin #cards .card h3{
-  color:var(--ats-text) !important;
-  margin-bottom:10px !important;
+.board-card{
+  position:relative;
+  overflow:hidden;
+  transition:all .18s ease;
 }
 
-.ats-admin #cards .card p{
-  flex:0 0 auto;
-  min-height:48px !important;
-  margin-bottom:14px !important;
+.board-card:not(.expanded){
+  height:230px;
+  min-height:230px;
 }
 
-.ats-admin #cards .card .small{
-  margin-top:12px !important;
+.board-card.expanded{
+  height:auto;
+  min-height:330px;
+  border-color:rgba(255,230,0,.70);
 }
 
-.ats-admin #cards .card .btn,
-.ats-admin #cards .card .button{
+.board-card-main{
+  display:flex;
+  align-items:center;
+  gap:8px;
   margin-top:auto;
 }
 
-/* Expandable Weekly Board card */
-.ats-admin .board-card{
+.board-card-toggle{
+  flex:0 0 54px;
+  width:54px;
+  height:54px;
+  border-radius:12px;
   position:relative;
-  overflow:hidden !important;
-  transition:
-    min-height .18s ease,
-    height .18s ease,
-    border-color .18s ease,
-    box-shadow .18s ease,
-    transform .18s ease;
 }
 
-.ats-admin .board-card:not(.expanded){
-  height:230px !important;
-  min-height:230px !important;
-}
-
-.ats-admin .board-card.expanded{
-  height:auto !important;
-  min-height:330px !important;
-  z-index:5;
-  border-color:rgba(255,230,0,.70) !important;
-  box-shadow:0 24px 70px rgba(0,0,0,.45) !important;
-}
-
-.ats-admin .board-card-main{
-  display:flex !important;
-  align-items:center !important;
-  gap:8px !important;
-  margin-top:auto !important;
-}
-
-.ats-admin .board-card-main .btn,
-.ats-admin .board-card-main .button{
-  flex:1 1 auto !important;
-  margin-top:0 !important;
-}
-
-.ats-admin .board-card-toggle{
-  flex:0 0 44px !important;
-  width:44px !important;
-  min-width:44px !important;
-  height:54px !important;
-  min-height:54px !important;
-  padding:0 !important;
-  border-radius:12px !important;
-  font-size:0 !important;
-  line-height:1 !important;
-  position:relative !important;
-}
-
-.ats-admin .board-card-toggle::before{
+.board-card-toggle::before{
   content:"⌄";
   font-size:28px;
-  line-height:1;
   color:#ffe600;
   font-weight:900;
-  transform:translateY(-2px);
 }
 
-.ats-admin .board-card.expanded .board-card-toggle::before{
+.board-card.expanded .board-card-toggle::before{
   content:"⌃";
-  transform:translateY(2px);
 }
 
-.ats-admin .board-card-extra{
+.board-card-extra{
   display:none;
   width:100%;
   margin-top:14px;
@@ -906,83 +152,47 @@ a[href*="maps"]{
   border-top:1px solid rgba(255,255,255,.13);
 }
 
-.ats-admin .board-card.expanded .board-card-extra{
-  display:block !important;
+.board-card.expanded .board-card-extra{
+  display:block;
 }
 
-.ats-admin .board-card .small{
-  margin-top:10px;
+.btn,
+.button,
+button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-height:48px;
+  padding:12px 20px;
+  border-radius:10px;
+  border:1px solid rgba(255,230,0,.55);
+  background:#000;
+  color:#ffe600;
+  font-weight:900;
+  text-decoration:none;
 }
 
-.hidden{
-  display:none !important;
+.btn:hover,
+.button:hover,
+button:hover{
+  background:#111;
 }
 
-/* Clock buttons: keep visual active style while disabled/locked */
-.ats-clock .button.clock-action-locked,
-.ats-clock button.button.clock-action-locked,
-.ats-clock .button:disabled.clock-action-locked,
-.ats-clock button.button:disabled.clock-action-locked{
-  opacity:1 !important;
-  filter:none !important;
-  background:#000 !important;
-  color:#ffe600 !important;
-  border-color:#000 !important;
-  cursor:not-allowed !important;
-  pointer-events:auto !important;
-}
-
-/* My Weekly Board Full Week toggle */
-.my-board-toolbar{
-  color:var(--ats-text) !important;
-}
-
-.my-toggle-btn{
-  transition:background .15s ease, color .15s ease, transform .15s ease;
-}
-
-.my-toggle-btn:hover{
-  transform:translateY(-1px);
-}
-
-.my-toggle-btn.active{
-  border:1px solid rgba(255,230,0,.55) !important;
+@media(max-width:900px){
+  body.ats-admin #cards.grid{
+    grid-template-columns:1fr !important;
+  }
 }
 
 @media(max-width:760px){
-  .button,
-  a.button,
-  button.button,
-  .ats-admin .btn{
-    width:auto;
-    min-width:140px;
+  .card{
+    height:auto;
+    min-height:210px;
   }
 
-  .ats-admin #cards{
-    gap:14px;
-  }
-
-  .ats-admin #cards .card{
-    height:auto !important;
-    min-height:210px !important;
-  }
-
-  .ats-admin .board-card:not(.expanded){
-    height:auto !important;
-    min-height:210px !important;
-  }
-
-  .ats-admin .board-card-main{
-    display:flex !important;
-    grid-template-columns:none !important;
-  }
-
-  .ats-admin .board-card-toggle{
-    flex:0 0 44px !important;
-  }
-
-  .ats-admin .board-card .btn,
-  .ats-admin .board-card .button{
-    width:100% !important;
+  .board-card:not(.expanded){
+    height:auto;
+    min-height:210px;
   }
 }
