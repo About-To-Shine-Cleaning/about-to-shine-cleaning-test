@@ -1,5 +1,6 @@
 /* ATS Admin Layout v1 — shared system for all admin tools
-   NOTE: Visual-only. Does NOT touch auth/routes/storage logic. */
+   NOTE: Visual-only. Does NOT touch auth/routes/storage logic.
+   UPDATED: Home card + hamburger permission styling support v2. */
 
 :root{
   --ats-purple:#5b2aa8;
@@ -239,11 +240,13 @@ textarea{min-height:96px}
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(255,255,255,.06);
   text-decoration:none;
+  font-weight:800;
 }
 .ats-nav-item:hover{text-decoration:none;background: rgba(255,255,255,.10)}
 .ats-nav-item[aria-current="page"]{
   border-color: rgba(255,215,0,.60);
   background: rgba(255,215,0,.14);
+  color:var(--ats-yellow) !important;
 }
 .ats-nav-footer{
   margin-top:auto;
@@ -251,6 +254,8 @@ textarea{min-height:96px}
   border-top: 1px solid var(--ats-border);
 }
 .ats-nav-footer .ats-live-btn{width:100%;}
+.ats-nav-backdrop.open{opacity:1;pointer-events:auto}
+.ats-nav-drawer.open{transform:translateX(0)}
 
 /* Mobile tweaks */
 @media (max-width: 520px){
@@ -258,7 +263,6 @@ textarea{min-height:96px}
   .ats-brand img{height:40px}
   .ats-main{padding-top: 14px}
 }
-
 
 /* ===== Clock: Light content card (keeps global admin gradient/nav) ===== */
 .ats-card--light{
@@ -347,9 +351,6 @@ textarea{min-height:96px}
   opacity: .65 !important;
   cursor:not-allowed !important;
 }
-
-.ats-nav-backdrop.open{opacity:1;pointer-events:auto}
-.ats-nav-drawer.open{transform:translateX(0)}
 
 .button{
   display:inline-flex;
@@ -550,7 +551,6 @@ button.button:hover{
     background-attachment:scroll !important;
   }
 }
-
 
 /* =========================================================
    ATS Admin Unified Operational Theme — Clock-style baseline
@@ -797,6 +797,82 @@ a[href*="maps"]{
   border:1px solid rgba(17,24,39,.18) !important;
 }
 
+/* =========================================================
+   ATS Admin Home Permission/Card Polish v2
+   ========================================================= */
+
+.ats-admin #cards .card{
+  min-height:184px;
+  display:flex;
+  flex-direction:column;
+}
+
+.ats-admin #cards .card h3{
+  color:var(--ats-text) !important;
+}
+
+.ats-admin #cards .card p{
+  flex:0 0 auto;
+}
+
+.ats-admin #cards .card .btn,
+.ats-admin #cards .card .button{
+  margin-top:auto;
+}
+
+/* Expandable Weekly Board card */
+.ats-admin .board-card{
+  min-height:184px;
+  transition:
+    min-height .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    transform .18s ease;
+  overflow:hidden;
+}
+
+.ats-admin .board-card-main{
+  display:grid;
+  gap:10px;
+  margin-top:auto;
+}
+
+.ats-admin .board-card-toggle{
+  width:100% !important;
+  min-height:42px !important;
+  margin-top:0 !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+}
+
+.ats-admin .board-card-extra{
+  display:none;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.13);
+}
+
+.ats-admin .board-card.expanded{
+  border-color:rgba(255,230,0,.45) !important;
+  box-shadow:0 24px 70px rgba(0,0,0,.45) !important;
+}
+
+.ats-admin .board-card.expanded .board-card-extra{
+  display:block;
+}
+
+.ats-admin .board-card .small{
+  margin-top:10px;
+}
+
+.ats-admin .board-card:not(.expanded){
+  min-height:184px;
+}
+
+.hidden{
+  display:none !important;
+}
+
 @media(max-width:760px){
   .button,
   a.button,
@@ -804,5 +880,22 @@ a[href*="maps"]{
   .ats-admin .btn{
     width:auto;
     min-width:140px;
+  }
+
+  .ats-admin #cards{
+    gap:14px;
+  }
+
+  .ats-admin #cards .card{
+    min-height:168px;
+  }
+
+  .ats-admin .board-card:not(.expanded){
+    min-height:168px;
+  }
+
+  .ats-admin .board-card .btn,
+  .ats-admin .board-card .button{
+    width:100% !important;
   }
 }
