@@ -3,7 +3,10 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // Admin / Payroll / Scheduler only
-// DO NOT paste My Weekly Board code into this file.
+// Fixed flow:
+// ✅ Change Employee opens an inline picker inside that assignment card
+// ✅ Change Job opens an inline client search with live suggestions
+// ✅ No more prompt boxes / no more select-first confusion
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -34,7 +37,7 @@ let clients = [];
 let assignments = [];
 let currentWeekStart = "";
 let auth = null;
-let editMode = null;
+let editMode = null; // { type: "employee" | "job", index: number }
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -231,6 +234,7 @@ async function init() {
 async function loadEmployees() {
   const data = await jsonp("board_employees");
   if (!data || !data.ok) throw new Error(data?.error || "board_employees failed");
+
   employees = Array.isArray(data.rows) ? data.rows : [];
 
   if (employeeSelect) {
@@ -362,7 +366,13 @@ function renderJobEditPanel(row, realIndex) {
   return `
     <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
       <strong>Choose new client/job</strong>
-      <input type="text" data-job-search-index="${realIndex}" placeholder="Start typing client name..." autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
+      <input
+        type="text"
+        data-job-search-index="${realIndex}"
+        placeholder="Start typing client name..."
+        autocomplete="off"
+        style="width:100%;margin-top:10px;padding:12px;border-radius:12px;"
+      >
       <div data-job-suggestions-index="${realIndex}" style="margin-top:10px;"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
         <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
@@ -390,11 +400,13 @@ function renderModalAssignments() {
         <strong>${escapeHtml(x.row.employeeName)}</strong>
         <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
         ${x.row.address ? `<div class="assignment-address" style="opacity:.85;margin-top:4px;">${escapeHtml(x.row.address)}</div>` : ""}
+
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
           <button class="button button-secondary" type="button" data-open-employee-edit="${x.realIndex}">Change Employee</button>
           <button class="button button-secondary" type="button" data-open-job-edit="${x.realIndex}">Change Job</button>
           <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
         </div>
+
         ${isEmployeeEdit ? renderEmployeeEditPanel(x.row, x.realIndex) : ""}
         ${isJobEdit ? renderJobEditPanel(x.row, x.realIndex) : ""}
       </div>
@@ -491,6 +503,7 @@ function renderInlineJobSuggestions(index, value) {
 function applyEmployeeChange(index, employeeId) {
   const row = assignments[index];
   if (!row) return alert("Assignment not found.");
+
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Employee not found.");
 
@@ -526,6 +539,7 @@ function applyJobChange(index, client) {
 
 function handleClientSearch() {
   if (!clientSuggestions || !clientSearch) return;
+
   const q = clientSearch.value.trim().toLowerCase();
   selectedClient = null;
   clientSuggestions.innerHTML = "";
@@ -548,11 +562,13 @@ function handleClientSearch() {
       <strong>${escapeHtml(client.clientName)}</strong>
       <div style="opacity:.75;font-size:13px;">${escapeHtml(client.address || "")}</div>
     `;
+
     div.addEventListener("click", () => {
       selectedClient = client;
       clientSearch.value = client.clientName;
       clientSuggestions.innerHTML = "";
     });
+
     clientSuggestions.appendChild(div);
   });
 }
@@ -586,57 +602,66 @@ function addAssignment() {
 function removeAssignment(index) {
   if (!assignments[index]) return;
   if (!confirm("Remove this assignment?")) return;
+
   assignments.splice(index, 1);
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
 }
 
-function makeSaveId() {
-  return "wb_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+function makeSaveSessionId() {
+  return "wbs_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
 }
 
-function chunkString(str, size) {
-  const out = [];
-  const s = String(str || "");
-  const n = Number(size || 1200);
-  for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n));
-  return out;
+async function saveBoardChunked(payloadText) {
+  const sessionId = makeSaveSessionId();
+  const chunkSize = 6500; // safe for JSONP URL length
+  const totalChunks = Math.ceil(payloadText.length / chunkSize);
+
+  await jsonp("weekly_board_save_start", {
+    weekStart: currentWeekStart,
+    saveId: sessionId,
+    totalChunks: String(totalChunks)
+  });
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = payloadText.slice(i * chunkSize, (i + 1) * chunkSize);
+    await jsonp("weekly_board_save_chunk", {
+      weekStart: currentWeekStart,
+      saveId: sessionId,
+      index: String(i),
+      chunk: chunk
+    });
+  }
+
+  return await jsonp("weekly_board_save_finish", {
+    weekStart: currentWeekStart,
+    saveId: sessionId,
+    totalChunks: String(totalChunks)
+  });
 }
 
 async function saveBoard() {
-  const originalText = btnSaveWeek ? btnSaveWeek.textContent : "Save Weekly Board";
   try {
-    if (btnSaveWeek) {
-      btnSaveWeek.disabled = true;
-      btnSaveWeek.textContent = "Saving...";
-    }
+    btnSaveWeek.disabled = true;
+    btnSaveWeek.textContent = "Saving...";
 
-    const saveId = makeSaveId();
     const payloadText = JSON.stringify({ assignments });
-    const chunks = chunkString(payloadText, 1200);
 
-    const startRes = await jsonp("weekly_board_save_start", { weekStart: currentWeekStart, saveId });
-    if (!startRes || !startRes.ok) throw new Error(startRes?.error || "weekly_board_save_start failed");
+    let res;
 
-    for (let i = 0; i < chunks.length; i++) {
-      if (btnSaveWeek) btnSaveWeek.textContent = `Saving ${i + 1}/${chunks.length}...`;
-      const chunkRes = await jsonp("weekly_board_save_chunk", {
+    // Small boards can still save normally.
+    // Larger boards use chunked JSONP so the browser does not reject the URL.
+    if (payloadText.length < 6500) {
+      res = await jsonp("weekly_board_save", {
         weekStart: currentWeekStart,
-        saveId,
-        index: String(i),
-        chunk: chunks[i]
+        payload: payloadText
       });
-      if (!chunkRes || !chunkRes.ok) throw new Error(chunkRes?.error || `weekly_board_save_chunk failed at ${i + 1}`);
+    } else {
+      res = await saveBoardChunked(payloadText);
     }
 
-    if (btnSaveWeek) btnSaveWeek.textContent = "Finalizing...";
-    const finishRes = await jsonp("weekly_board_save_finish", {
-      weekStart: currentWeekStart,
-      saveId,
-      totalChunks: String(chunks.length)
-    });
-    if (!finishRes || !finishRes.ok) throw new Error(finishRes?.error || "weekly_board_save_finish failed");
+    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
 
     alert("Weekly board saved ✅");
     await loadBoard(currentWeekStart);
@@ -645,10 +670,8 @@ async function saveBoard() {
     console.error(err);
     alert(String(err?.message || err));
   } finally {
-    if (btnSaveWeek) {
-      btnSaveWeek.disabled = false;
-      btnSaveWeek.textContent = originalText || "Save Weekly Board";
-    }
+    btnSaveWeek.disabled = false;
+    btnSaveWeek.textContent = "Save Weekly Board";
   }
 }
 
