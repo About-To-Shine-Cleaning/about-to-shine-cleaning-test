@@ -1046,3 +1046,42 @@ a[href*="maps"]{
     grid-template-columns:1fr !important;
   }
 }
+/* Weekly Board dropdown clean behavior */
+.ats-admin .board-card{
+  overflow:hidden !important;
+}
+
+.ats-admin .board-card.expanded{
+  height:auto !important;
+}
+
+.ats-admin .board-card-extra{
+  width:100% !important;
+  margin-top:14px !important;
+  padding-top:14px !important;
+  border-top:1px solid rgba(255,255,255,.14) !important;
+}
+
+.ats-admin .board-card-extra .btn{
+  width:100% !important;
+  margin:0 !important;
+}
+
+.ats-admin .board-card .small{
+  clear:both !important;
+  width:100% !important;
+}
+
+.ats-admin .board-card-main{
+  display:grid !important;
+  grid-template-columns:1fr 56px !important;
+  gap:10px !important;
+  align-items:center !important;
+}
+
+.ats-admin .board-card-toggle{
+  width:56px !important;
+  min-width:56px !important;
+  height:56px !important;
+  min-height:56px !important;
+}
