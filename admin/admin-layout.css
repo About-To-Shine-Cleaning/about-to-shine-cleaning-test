@@ -801,18 +801,31 @@ a[href*="maps"]{
    ATS Admin Home Permission/Card Polish v2
    ========================================================= */
 
+.ats-admin #cards.grid{
+  align-items:stretch !important;
+}
+
 .ats-admin #cards .card{
-  min-height:184px;
-  display:flex;
-  flex-direction:column;
+  min-height:230px !important;
+  height:230px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:flex-start !important;
 }
 
 .ats-admin #cards .card h3{
   color:var(--ats-text) !important;
+  margin-bottom:10px !important;
 }
 
 .ats-admin #cards .card p{
   flex:0 0 auto;
+  min-height:48px !important;
+  margin-bottom:14px !important;
+}
+
+.ats-admin #cards .card .small{
+  margin-top:12px !important;
 }
 
 .ats-admin #cards .card .btn,
@@ -822,27 +835,58 @@ a[href*="maps"]{
 
 /* Expandable Weekly Board card */
 .ats-admin .board-card{
-  min-height:184px;
+  position:relative;
+  overflow:visible !important;
   transition:
     min-height .18s ease,
     border-color .18s ease,
     box-shadow .18s ease,
     transform .18s ease;
-  overflow:hidden;
+}
+
+.ats-admin .board-card:not(.expanded){
+  height:230px !important;
+  min-height:230px !important;
 }
 
 .ats-admin .board-card-main{
-  display:grid;
-  gap:10px;
-  margin-top:auto;
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin-top:auto !important;
+}
+
+.ats-admin .board-card-main .btn,
+.ats-admin .board-card-main .button{
+  flex:1 1 auto !important;
+  margin-top:0 !important;
 }
 
 .ats-admin .board-card-toggle{
-  width:100% !important;
-  min-height:42px !important;
-  margin-top:0 !important;
-  padding:10px 12px !important;
+  flex:0 0 44px !important;
+  width:44px !important;
+  min-width:44px !important;
+  height:44px !important;
+  min-height:44px !important;
+  padding:0 !important;
   border-radius:12px !important;
+  font-size:0 !important;
+  line-height:1 !important;
+  position:relative !important;
+}
+
+.ats-admin .board-card-toggle::before{
+  content:"⌄";
+  font-size:28px;
+  line-height:1;
+  color:#ffe600;
+  font-weight:900;
+  transform:translateY(-2px);
+}
+
+.ats-admin .board-card.expanded .board-card-toggle::before{
+  content:"⌃";
+  transform:translateY(2px);
 }
 
 .ats-admin .board-card-extra{
@@ -853,24 +897,54 @@ a[href*="maps"]{
 }
 
 .ats-admin .board-card.expanded{
+  height:auto !important;
+  min-height:230px !important;
+  z-index:5;
   border-color:rgba(255,230,0,.45) !important;
   box-shadow:0 24px 70px rgba(0,0,0,.45) !important;
 }
 
 .ats-admin .board-card.expanded .board-card-extra{
-  display:block;
+  display:block !important;
 }
 
 .ats-admin .board-card .small{
   margin-top:10px;
 }
 
-.ats-admin .board-card:not(.expanded){
-  min-height:184px;
-}
-
 .hidden{
   display:none !important;
+}
+
+/* Clock buttons: keep visual active style while disabled/locked */
+.ats-clock .button.clock-action-locked,
+.ats-clock button.button.clock-action-locked,
+.ats-clock .button:disabled.clock-action-locked,
+.ats-clock button.button:disabled.clock-action-locked{
+  opacity:1 !important;
+  filter:none !important;
+  background:#000 !important;
+  color:#ffe600 !important;
+  border-color:#000 !important;
+  cursor:not-allowed !important;
+  pointer-events:auto !important;
+}
+
+/* My Weekly Board Full Week toggle */
+.my-board-toolbar{
+  color:var(--ats-text) !important;
+}
+
+.my-toggle-btn{
+  transition:background .15s ease, color .15s ease, transform .15s ease;
+}
+
+.my-toggle-btn:hover{
+  transform:translateY(-1px);
+}
+
+.my-toggle-btn.active{
+  border:1px solid rgba(255,230,0,.55) !important;
 }
 
 @media(max-width:760px){
@@ -887,11 +961,22 @@ a[href*="maps"]{
   }
 
   .ats-admin #cards .card{
-    min-height:168px;
+    height:auto !important;
+    min-height:210px !important;
   }
 
   .ats-admin .board-card:not(.expanded){
-    min-height:168px;
+    height:auto !important;
+    min-height:210px !important;
+  }
+
+  .ats-admin .board-card-main{
+    display:flex !important;
+    grid-template-columns:none !important;
+  }
+
+  .ats-admin .board-card-toggle{
+    flex:0 0 44px !important;
   }
 
   .ats-admin .board-card .btn,
