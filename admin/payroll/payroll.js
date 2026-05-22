@@ -157,6 +157,53 @@
     return "$" + cleanMoneyNumber(v).toFixed(2);
   }
 
+  function dedupePayrollJobsForDisplay(jobs) {
+    const seen = {};
+
+    return (Array.isArray(jobs) ? jobs : []).filter(j => {
+      const date = String(j.date || "").trim();
+
+      const rawName = String(
+        j.clientName ||
+        j.jobName ||
+        j.job ||
+        j.client ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+
+      const rawId = String(j.jobId || "")
+        .trim()
+        .toLowerCase();
+
+      const pay = cleanMoneyNumber(
+        j.jobPay ??
+        j.pay ??
+        j.amount ??
+        0
+      ).toFixed(2);
+
+      const key = [date, rawId || rawName, pay].join("|");
+
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function normalizePayrollEmployeesForDisplay(employees) {
+    return (Array.isArray(employees) ? employees : []).map(emp => {
+      const copy = { ...emp };
+      copy.jobs = dedupePayrollJobsForDisplay(copy.jobs || []);
+      copy.totalPay = copy.jobs.reduce((sum, j) => {
+        return sum + cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0);
+      }, 0);
+      return copy;
+    });
+  }
+
   function employeeInitials(name) {
     const parts = String(name || "")
       .trim()
@@ -492,8 +539,8 @@
   function renderPayouts(payouts) {
     if (!payoutCard || !payoutBody || !payoutHint || !payoutTotals) return;
 
-    const employees = payouts?.employees || [];
-    const grandTotal = Number(payouts?.grandTotal || 0);
+    const employees = normalizePayrollEmployeesForDisplay(payouts?.employees || []);
+    const grandTotal = employees.reduce((sum, emp) => sum + cleanMoneyNumber(emp.totalPay || 0), 0);
 
     if (!employees.length) {
       payoutBody.innerHTML = `<div class="empty-card">No job lines found for this period.</div>`;
