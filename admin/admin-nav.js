@@ -1,29 +1,38 @@
-/* ATS Admin Nav v8 — role-aware global navigation
-   ✅ "Home" label instead of "Admin Home"
-   ✅ My Weekly Board is its own page: /admin/my-weekly-board/
+/* ATS Admin Nav v9 — employee-aware global navigation
+   ✅ Home label instead of Admin Home
+   ✅ My Weekly Board page: /admin/my-weekly-board/
    ✅ Clock URL: /clock.html
-   ✅ E01/E04 full admin
-   ✅ E02 payroll + weekly board editor + clock + client info + my weekly board
-   ✅ E03/E05 clock + my weekly board + client info
+   ✅ E01/E02/E03/E05 hamburger matches visible home cards
+   ✅ E04 hamburger sees all admin panel tools
    ✅ Old Schedule hidden from GUI/menu but files remain untouched
    ✅ Preserves emp=... for clock and my weekly board links
 */
 (function () {
   const AUTH_STORAGE = "ats_admin_auth_v1";
 
-  const TOOLS = [
-    { key: "home", label: "Home", href: "/admin/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "clock", label: "Clock", href: "/clock.html", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "my_weekly_board", label: "My Weekly Board", href: "/admin/my-weekly-board/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "client_info", label: "Client Info", href: "/admin/client-info/", roles: ["full_admin", "schedule_payroll", "payroll", "clock_only"] },
-    { key: "weekly_board", label: "Weekly Board Editor", href: "/admin/weekly-board/", roles: ["full_admin", "schedule_payroll", "payroll"] },
-    { key: "payroll", label: "Payroll", href: "/admin/payroll/", roles: ["full_admin", "schedule_payroll", "payroll"] },
-    { key: "estimator", label: "Estimator", href: "/admin/estimator/", roles: ["full_admin"] },
-    { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/", roles: ["full_admin"] },
-    { key: "legacy", label: "Legacy Pricing", href: "/admin/legacy/", roles: ["full_admin"] },
-    { key: "admin_tools", label: "Admin Tools", href: "/admin/tools/", roles: ["full_admin"] },
-    { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/", roles: ["full_admin"] }
+  const ALL_TOOLS = [
+    { key: "home", label: "Home", href: "/admin/" },
+    { key: "clock", label: "Clock", href: "/clock.html" },
+    { key: "payroll", label: "Payroll", href: "/admin/payroll/" },
+    { key: "my_weekly_board", label: "My Weekly Board", href: "/admin/my-weekly-board/" },
+    { key: "weekly_board", label: "Weekly Board Editor", href: "/admin/weekly-board/" },
+    { key: "client_info", label: "Client Info", href: "/admin/client-info/" },
+    { key: "estimator", label: "Estimator", href: "/admin/estimator/" },
+    { key: "estimate_form", label: "Estimate Form", href: "/admin/estimate-form/" },
+    { key: "legacy", label: "Legacy Pricing", href: "/admin/legacy/" },
+    { key: "admin_tools", label: "Admin Tools", href: "/admin/tools/" },
+    { key: "site_report", label: "Site Report", href: "/admin/tools/site-report/" }
   ];
+
+  const MENU_BY_EMPLOYEE = {
+    E01: ["home", "clock", "payroll", "weekly_board", "client_info"],
+    E02: ["home", "clock", "payroll", "my_weekly_board", "weekly_board", "client_info"],
+    E03: ["home", "clock", "my_weekly_board", "client_info"],
+    E04: ["home", "clock", "payroll", "my_weekly_board", "weekly_board", "client_info", "estimator", "estimate_form", "legacy", "admin_tools", "site_report"],
+    E05: ["home", "clock", "my_weekly_board", "client_info"]
+  };
+
+  const FALLBACK_MENU = ["home", "clock", "my_weekly_board", "client_info"];
 
   function normalizeRole(role, employeeId) {
     const r = String(role || "").trim().toLowerCase();
@@ -53,14 +62,21 @@
     }
   }
 
-  function getRole() {
+  function getEmployeeId() {
     const auth = getStoredAuth();
-    return normalizeRole(auth.role, auth.employeeId);
+    return String(auth.employeeId || "").trim().toUpperCase();
   }
 
-  function allowed(item, role) {
-    role = normalizeRole(role);
-    return (item.roles || []).map(r => normalizeRole(r)).includes(role);
+  function getVisibleToolKeys() {
+    const id = getEmployeeId();
+    if (MENU_BY_EMPLOYEE[id]) return MENU_BY_EMPLOYEE[id];
+
+    const auth = getStoredAuth();
+    const role = normalizeRole(auth.role, id);
+
+    if (role === "full_admin") return ["home", "clock", "payroll", "my_weekly_board", "weekly_board", "client_info"];
+    if (role === "schedule_payroll" || role === "payroll") return ["home", "clock", "payroll", "my_weekly_board", "weekly_board", "client_info"];
+    return FALLBACK_MENU;
   }
 
   function getEmpQuery() {
@@ -94,6 +110,7 @@
       const u = new URL(p, window.location.origin);
       p = u.pathname;
     } catch (e) {}
+
     if (!p) return "/";
     if (p.length > 1 && p.endsWith("index.html")) p = p.slice(0, -10);
     if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
@@ -110,9 +127,11 @@
   function mount() {
     removeExisting();
 
-    const role = getRole();
     const current = normalizePath(window.location.pathname);
-    const visibleTools = TOOLS.filter(item => allowed(item, role));
+    const visibleKeys = getVisibleToolKeys();
+    const visibleTools = visibleKeys
+      .map(key => ALL_TOOLS.find(item => item.key === key))
+      .filter(Boolean);
 
     const backdrop = document.createElement("div");
     backdrop.className = "ats-nav-backdrop";
@@ -170,6 +189,7 @@
     burger.onclick = openNav;
     closeBtn.onclick = closeNav;
     backdrop.onclick = closeNav;
+
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && drawer.classList.contains("open")) closeNav();
     });
