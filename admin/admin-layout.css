@@ -984,9 +984,65 @@ a[href*="maps"]{
     width:100% !important;
   }
 }
-/* MUST stay last — fixes permission-hidden admin home cards */
+/* MUST STAY LAST — Admin Home layout repair */
+.ats-admin .brand-logo{
+  width:44px !important;
+  height:44px !important;
+  max-width:44px !important;
+  max-height:44px !important;
+  border-radius:14px !important;
+  overflow:hidden !important;
+  flex:0 0 44px !important;
+}
+
+.ats-admin .brand-logo img{
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover !important;
+  display:block !important;
+}
+
+.ats-admin .topbar{
+  padding:18px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:12px !important;
+}
+
+.ats-admin .brand{
+  display:flex !important;
+  align-items:center !important;
+  gap:12px !important;
+}
+
+.ats-admin .title{
+  font-weight:800 !important;
+  font-size:18px !important;
+}
+
+.ats-admin .accentline{
+  height:6px !important;
+  background:#FFD700 !important;
+  border-radius:999px !important;
+  margin:0 18px !important;
+}
+
+.ats-admin #cards.grid{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:14px !important;
+  align-items:stretch !important;
+}
+
 .ats-admin #cards .card.hidden,
 .ats-admin .card.hidden,
 .hidden{
   display:none !important;
+}
+
+@media(max-width:900px){
+  .ats-admin #cards.grid{
+    grid-template-columns:1fr !important;
+  }
 }
