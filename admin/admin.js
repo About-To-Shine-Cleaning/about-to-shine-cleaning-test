@@ -1,13 +1,17 @@
 /* =========================================================
    FILE: /admin/admin.js
    TYPE: .js
-   ATS Home — v1.9.4
+   ATS Home — v2.0.0
    ✅ Correct Clock URL: /clock.html
    ✅ My Weekly Board URL: /admin/my-weekly-board/
-   ✅ E01/E04 full admin
-   ✅ E02 schedule/payroll + weekly board editor + my weekly board
-   ✅ E03/E05 clock + client info + my weekly board
-   ✅ Old Schedule hidden from GUI cards
+   ✅ E01/E04 full backend admin remains supported by backend
+   ✅ Home cards follow requested NFC visibility matrix
+   ✅ E04 sees normal main cards on home, all tools in hamburger
+   ✅ E01 home cards: Clock, Payroll, Weekly Board, Client Info
+   ✅ E02 home cards: Clock, Payroll, Weekly Board expandable, Client Info
+   ✅ E03/E05 home cards: Clock, Weekly Board, Client Info
+   ✅ Weekly Board card stays same size collapsed
+   ✅ Profiles with both boards get expandable card
    ✅ Visible header shows ONLY E## • Name, not role
 ========================================================= */
 
@@ -19,39 +23,18 @@
   const TOKEN_STORAGE = "ats_admin_token_v1";
   const TOKEN_LOCAL   = "ats_admin_token_local_v1";
 
-  const ROLE_TOOLS = {
-    full_admin: [
-      "clock",
-      "my_weekly_board",
-      "client_info",
-      "weekly_board",
-      "estimator",
-      "estimate_form",
-      "payroll",
-      "legacy",
-      "admin_tools",
-      "site_report"
-    ],
-    schedule_payroll: [
-      "clock",
-      "my_weekly_board",
-      "client_info",
-      "weekly_board",
-      "payroll"
-    ],
-    payroll: [
-      "clock",
-      "my_weekly_board",
-      "client_info",
-      "weekly_board",
-      "payroll"
-    ],
-    clock_only: [
-      "clock",
-      "my_weekly_board",
-      "client_info"
-    ]
+  const EMPLOYEE_HOME_TOOLS = {
+    E01: ["clock", "payroll", "weekly_board_group", "client_info"],
+    E02: ["clock", "payroll", "weekly_board_group", "client_info"],
+    E03: ["clock", "weekly_board_group", "client_info"],
+    E04: ["clock", "payroll", "weekly_board_group", "client_info"],
+    E05: ["clock", "weekly_board_group", "client_info"]
   };
+
+  const FALLBACK_HOME_TOOLS = ["clock", "weekly_board_group", "client_info"];
+
+  const BOARD_EDITOR_EMPLOYEES = new Set(["E02", "E04"]);
+  const MY_WEEKLY_BOARD_EMPLOYEES = new Set(["E02", "E03", "E04", "E05"]);
 
   const statusEl = document.getElementById("status");
   const whoEl = document.getElementById("who");
@@ -60,6 +43,11 @@
 
   const clockBtn = document.getElementById("clockBtn");
   const myWeeklyBoardBtn = document.getElementById("myWeeklyBoardBtn");
+  const weeklyBoardEditorBtn = document.getElementById("weeklyBoardEditorBtn");
+  const weeklyBoardCard = document.getElementById("weeklyBoardCard");
+  const weeklyBoardToggle = document.getElementById("weeklyBoardToggle");
+  const weeklyBoardCardText = document.getElementById("weeklyBoardCardText");
+  const weeklyBoardSmall = document.getElementById("weeklyBoardSmall");
 
   const desktopLogin = document.getElementById("desktopLogin");
   const desktopToken = document.getElementById("desktopToken");
@@ -87,9 +75,26 @@
     return "clock_only";
   }
 
-  function canUse(role, tool) {
-    role = normalizeRole(role);
-    return (ROLE_TOOLS[role] || ROLE_TOOLS.clock_only).includes(tool);
+  function getEmployeeId(authObj) {
+    return String(authObj?.employeeId || "").trim().toUpperCase();
+  }
+
+  function getHomeToolsForEmployee(employeeId) {
+    const id = String(employeeId || "").trim().toUpperCase();
+    return EMPLOYEE_HOME_TOOLS[id] || FALLBACK_HOME_TOOLS;
+  }
+
+  function canUseHomeTool(employeeId, tool) {
+    return getHomeToolsForEmployee(employeeId).includes(tool);
+  }
+
+  function canUseMyWeeklyBoard(employeeId) {
+    const id = String(employeeId || "").trim().toUpperCase();
+    return MY_WEEKLY_BOARD_EMPLOYEES.has(id) || id === "E01";
+  }
+
+  function canUseBoardEditor(employeeId) {
+    return BOARD_EDITOR_EMPLOYEES.has(String(employeeId || "").trim().toUpperCase());
   }
 
   function setStatus(msg, state) {
@@ -195,16 +200,90 @@
     if (whoEl) whoEl.textContent = "";
   }
 
-  function applyCardPermissions(role) {
+  function resetWeeklyBoardCard() {
+    if (!weeklyBoardCard) return;
+    weeklyBoardCard.classList.remove("expanded");
+    if (weeklyBoardToggle) {
+      weeklyBoardToggle.setAttribute("aria-expanded", "false");
+      weeklyBoardToggle.textContent = "Show Board Editor";
+    }
+  }
+
+  function configureWeeklyBoardCard(employeeId) {
+    const id = String(employeeId || "").trim().toUpperCase();
+    const hasMyBoard = canUseMyWeeklyBoard(id);
+    const hasEditor = canUseBoardEditor(id);
+
+    resetWeeklyBoardCard();
+
+    if (myWeeklyBoardBtn) {
+      myWeeklyBoardBtn.href = `/admin/my-weekly-board/?emp=${encodeURIComponent(id)}`;
+      myWeeklyBoardBtn.textContent = hasMyBoard ? "Open My Weekly Board" : "Open Weekly Board";
+    }
+
+    if (weeklyBoardEditorBtn) {
+      weeklyBoardEditorBtn.href = "/admin/weekly-board/";
+    }
+
+    if (weeklyBoardCardText) {
+      if (hasMyBoard && hasEditor) {
+        weeklyBoardCardText.textContent = "View your own week first, or expand this card to open the Board Editor.";
+      } else if (hasEditor) {
+        weeklyBoardCardText.textContent = "Open the weekly assignment board editor.";
+      } else {
+        weeklyBoardCardText.textContent = "View your assigned jobs for the current Saturday–Friday week.";
+      }
+    }
+
+    if (weeklyBoardSmall) {
+      if (hasMyBoard && hasEditor) {
+        weeklyBoardSmall.textContent = "Default is My Weekly Board. Expand only when you need the editor.";
+      } else if (hasEditor) {
+        weeklyBoardSmall.textContent = "Board editor access.";
+      } else {
+        weeklyBoardSmall.textContent = "Read-only employee schedule view.";
+      }
+    }
+
+    if (weeklyBoardToggle) {
+      if (hasMyBoard && hasEditor) {
+        weeklyBoardToggle.classList.remove("hidden");
+      } else {
+        weeklyBoardToggle.classList.add("hidden");
+      }
+    }
+
+    if (hasEditor && !hasMyBoard && myWeeklyBoardBtn) {
+      myWeeklyBoardBtn.href = "/admin/weekly-board/";
+      myWeeklyBoardBtn.textContent = "Open Weekly Board Editor";
+    }
+  }
+
+  function applyCardPermissions(employeeId) {
+    const id = String(employeeId || "").trim().toUpperCase();
+
     document.querySelectorAll("[data-tool]").forEach(card => {
       const tool = card.getAttribute("data-tool");
-      if (canUse(role, tool)) card.classList.remove("hidden");
+      if (canUseHomeTool(id, tool)) card.classList.remove("hidden");
       else card.classList.add("hidden");
     });
+
+    configureWeeklyBoardCard(id);
+  }
+
+  function setupWeeklyBoardToggle() {
+    if (!weeklyBoardToggle || !weeklyBoardCard) return;
+
+    weeklyBoardToggle.onclick = () => {
+      const expanded = weeklyBoardCard.classList.toggle("expanded");
+      weeklyBoardToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      weeklyBoardToggle.textContent = expanded ? "Hide Board Editor" : "Show Board Editor";
+    };
   }
 
   function showCards(employeeId, employeeName, role) {
     role = normalizeRole(role, employeeId);
+    employeeId = String(employeeId || "").trim().toUpperCase();
 
     if (whoEl) whoEl.textContent = `${employeeId} • ${employeeName}`;
 
@@ -215,7 +294,8 @@
     if (clockBtn) clockBtn.href = clockHref;
     if (myWeeklyBoardBtn) myWeeklyBoardBtn.href = myWeekHref;
 
-    applyCardPermissions(role);
+    applyCardPermissions(employeeId);
+    setupWeeklyBoardToggle();
 
     if (cardsEl) cardsEl.classList.remove("hidden");
     if (desktopLogin) desktopLogin.classList.add("hidden");
@@ -245,7 +325,7 @@
 
     const authObj = {
       ok: true,
-      employeeId: res.employeeId,
+      employeeId: String(res.employeeId || "").trim().toUpperCase(),
       employeeName: res.employeeName,
       role: normalizeRole(res.role, res.employeeId),
       authedAt: new Date().toISOString()
