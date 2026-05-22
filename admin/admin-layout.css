@@ -836,9 +836,10 @@ a[href*="maps"]{
 /* Expandable Weekly Board card */
 .ats-admin .board-card{
   position:relative;
-  overflow:visible !important;
+  overflow:hidden !important;
   transition:
     min-height .18s ease,
+    height .18s ease,
     border-color .18s ease,
     box-shadow .18s ease,
     transform .18s ease;
@@ -847,6 +848,14 @@ a[href*="maps"]{
 .ats-admin .board-card:not(.expanded){
   height:230px !important;
   min-height:230px !important;
+}
+
+.ats-admin .board-card.expanded{
+  height:auto !important;
+  min-height:330px !important;
+  z-index:5;
+  border-color:rgba(255,230,0,.70) !important;
+  box-shadow:0 24px 70px rgba(0,0,0,.45) !important;
 }
 
 .ats-admin .board-card-main{
@@ -866,8 +875,8 @@ a[href*="maps"]{
   flex:0 0 44px !important;
   width:44px !important;
   min-width:44px !important;
-  height:44px !important;
-  min-height:44px !important;
+  height:54px !important;
+  min-height:54px !important;
   padding:0 !important;
   border-radius:12px !important;
   font-size:0 !important;
@@ -891,17 +900,10 @@ a[href*="maps"]{
 
 .ats-admin .board-card-extra{
   display:none;
-  margin-top:12px;
-  padding-top:12px;
+  width:100%;
+  margin-top:14px;
+  padding-top:14px;
   border-top:1px solid rgba(255,255,255,.13);
-}
-
-.ats-admin .board-card.expanded{
-  height:auto !important;
-  min-height:230px !important;
-  z-index:5;
-  border-color:rgba(255,230,0,.45) !important;
-  box-shadow:0 24px 70px rgba(0,0,0,.45) !important;
 }
 
 .ats-admin .board-card.expanded .board-card-extra{
@@ -983,129 +985,4 @@ a[href*="maps"]{
   .ats-admin .board-card .button{
     width:100% !important;
   }
-}
-/* MUST STAY LAST — Admin Home layout repair */
-.ats-admin .brand-logo{
-  width:44px !important;
-  height:44px !important;
-  max-width:44px !important;
-  max-height:44px !important;
-  border-radius:14px !important;
-  overflow:hidden !important;
-  flex:0 0 44px !important;
-}
-
-.ats-admin .brand-logo img{
-  width:100% !important;
-  height:100% !important;
-  object-fit:cover !important;
-  display:block !important;
-}
-
-.ats-admin .topbar{
-  padding:18px !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:space-between !important;
-  gap:12px !important;
-}
-
-.ats-admin .brand{
-  display:flex !important;
-  align-items:center !important;
-  gap:12px !important;
-}
-
-.ats-admin .title{
-  font-weight:800 !important;
-  font-size:18px !important;
-}
-
-.ats-admin .accentline{
-  height:6px !important;
-  background:#FFD700 !important;
-  border-radius:999px !important;
-  margin:0 18px !important;
-}
-
-.ats-admin #cards.grid{
-  display:grid !important;
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
-  gap:14px !important;
-  align-items:stretch !important;
-}
-
-.ats-admin #cards .card.hidden,
-.ats-admin .card.hidden,
-.hidden{
-  display:none !important;
-}
-
-@media(max-width:900px){
-  .ats-admin #cards.grid{
-    grid-template-columns:1fr !important;
-  }
-}
-/* Weekly Board dropdown clean behavior */
-.ats-admin .board-card{
-  overflow:hidden !important;
-}
-
-.ats-admin .board-card.expanded{
-  height:auto !important;
-}
-
-.ats-admin .board-card-extra{
-  width:100% !important;
-  margin-top:14px !important;
-  padding-top:14px !important;
-  border-top:1px solid rgba(255,255,255,.14) !important;
-}
-
-.ats-admin .board-card-extra .btn{
-  width:100% !important;
-  margin:0 !important;
-}
-
-.ats-admin .board-card .small{
-  clear:both !important;
-  width:100% !important;
-}
-
-.ats-admin .board-card-main{
-  display:grid !important;
-  grid-template-columns:1fr 56px !important;
-  gap:10px !important;
-  align-items:center !important;
-}
-
-.ats-admin .board-card-toggle{
-  width:56px !important;
-  min-width:56px !important;
-  height:56px !important;
-  min-height:56px !important;
-}
-/* FINAL weekly board dropdown visibility fix */
-.ats-admin .board-card{
-  overflow:hidden !important;
-}
-
-.ats-admin .board-card.expanded{
-  height:360px !important;
-  min-height:360px !important;
-  overflow:visible !important;
-}
-
-.ats-admin .board-card.expanded .board-card-extra{
-  display:block !important;
-  position:static !important;
-  width:100% !important;
-  margin-top:16px !important;
-  padding-top:16px !important;
-  border-top:1px solid rgba(255,255,255,.18) !important;
-}
-
-.ats-admin .board-card.expanded .board-card-extra .btn{
-  width:100% !important;
-  margin:0 !important;
 }
