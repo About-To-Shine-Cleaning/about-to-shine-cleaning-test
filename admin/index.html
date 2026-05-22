@@ -9,119 +9,72 @@
   <link rel="icon" type="image/png" href="/assets/images/logo-v2.png" />
   <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
-  <link rel="stylesheet" href="/admin/admin-layout.css?v=5001" />
+  <link rel="stylesheet" href="/admin/admin-layout.css?v=6001" />
 
-  <script defer src="/admin/admin-nav.js?v=5001"></script>
+  <script defer src="/admin/admin-nav.js?v=6001"></script>
 </head>
 
 <body class="ats-admin">
-
   <header class="ats-header">
     <div class="ats-header-inner">
-
       <a class="ats-brand" href="/admin/" aria-label="Go to Home">
         <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
       </a>
 
       <div class="ats-header-actions">
+        <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
 
-        <a class="ats-live-btn"
-           href="https://abouttoshinecleaning.com"
-           target="_blank"
-           rel="noopener">
-           Go to Live Website
-        </a>
-
-        <button class="ats-burger"
-                type="button"
-                aria-label="Open menu"
-                aria-haspopup="dialog"
-                aria-controls="atsNavDrawer"
-                aria-expanded="false">
+        <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
           <span></span>
           <span></span>
           <span></span>
         </button>
-
       </div>
-
     </div>
   </header>
 
   <main class="ats-main">
-
     <div class="ats-container">
-
       <div class="topbar">
-
         <div class="brand">
-
-          <div class="brand-logo">
-            <img src="/assets/images/logo-v2.png" alt="">
+          <div class="brand-logo" aria-hidden="true">
+            <img src="/assets/images/logo-v2.png" alt="" />
           </div>
 
           <div>
             <div class="title">About To Shine Cleaning</div>
             <div class="sub">Home</div>
           </div>
-
         </div>
 
         <div class="sub" id="who"></div>
-
       </div>
 
       <div class="accentline"></div>
 
       <div class="wrap">
-
-        <div class="status is-loading" id="status">
-          Loading secure access...
-        </div>
+        <div class="status is-loading" id="status">Loading secure access...</div>
 
         <div class="card hidden" id="desktopLogin">
-
           <h3>Desktop Sign-In</h3>
-
-          <p>
-            Enter your desktop admin token to unlock this device.
-          </p>
+          <p>Enter your desktop admin token to unlock this device.</p>
 
           <div class="row">
-
-            <input
-              class="input"
-              id="desktopToken"
-              placeholder="Enter token"
-              autocomplete="off"
-            />
-
-            <button class="btn" id="btnDesktopSignIn">
-              Sign In
-            </button>
-
+            <input class="input" id="desktopToken" placeholder="Enter token" autocomplete="off" />
+            <button class="btn" id="btnDesktopSignIn">Sign In</button>
           </div>
 
           <div class="row" style="margin-top:10px;">
-
             <label class="chk">
               <input type="checkbox" id="rememberDevice" checked />
               Remember on this device
             </label>
 
-            <button
-              class="btn secondary"
-              id="btnClearAccess"
-              type="button">
-              Clear Access
-            </button>
-
+            <button class="btn secondary" id="btnClearAccess" type="button">Clear Access</button>
           </div>
-
         </div>
 
         <div class="grid hidden" id="cards">
-
           <div class="card hidden" data-tool="clock">
             <h3>Employee Clock</h3>
             <p>Open the employee clock page.</p>
@@ -130,50 +83,20 @@
           </div>
 
           <div class="card board-card hidden" data-tool="weekly_board_group" id="weeklyBoardCard">
-
             <h3>Weekly Board</h3>
-
-            <p id="weeklyBoardCardText">
-              View your own week first, or expand this card to open the Board Editor.
-            </p>
+            <p id="weeklyBoardCardText">View your own week first, or expand this card to open the Board Editor.</p>
 
             <div class="board-card-main">
-
-              <a class="btn"
-                 id="myWeeklyBoardBtn"
-                 href="#"
-                 rel="noopener">
-                 Open My Weekly Board
-              </a>
-
-              <button
-                class="btn secondary board-card-toggle hidden"
-                id="weeklyBoardToggle"
-                type="button"
-                aria-expanded="false">
-              </button>
-
+              <a class="btn" id="myWeeklyBoardBtn" href="#" rel="noopener">Open My Weekly Board</a>
+              <button class="btn secondary board-card-toggle hidden" id="weeklyBoardToggle" type="button" aria-expanded="false" aria-label="Open Board Editor options"></button>
             </div>
 
             <div class="board-card-extra" id="weeklyBoardExtra">
-
-              <a class="btn secondary"
-                 id="weeklyBoardEditorBtn"
-                 href="/admin/weekly-board/"
-                 rel="noopener">
-                 Open Board Editor
-              </a>
-
-              <div class="small">
-                Editor access appears only for approved scheduler/payroll profiles.
-              </div>
-
+              <a class="btn secondary" id="weeklyBoardEditorBtn" href="/admin/weekly-board/" rel="noopener">Open Board Editor</a>
+              <div class="small">Editor access appears only for approved scheduler/payroll profiles.</div>
             </div>
 
-            <div class="small">
-              My Weekly Board is the default employee schedule view.
-            </div>
-
+            <div class="small" id="weeklyBoardSmall">My Weekly Board is the default employee schedule view.</div>
           </div>
 
           <div class="card hidden" data-tool="client_info">
@@ -194,43 +117,43 @@
             <h3>Residential Estimator</h3>
             <p>Open the walkthrough estimator inside the admin panel.</p>
             <a class="btn" href="/admin/estimator/" rel="noopener">Open Estimator</a>
+            <div class="small">Full admin only.</div>
           </div>
 
           <div class="card hidden" data-tool="estimate_form">
             <h3>Estimate Form</h3>
             <p>Mobile paper-style estimate form with PDF generation.</p>
             <a class="btn" href="/admin/estimate-form/" rel="noopener">Open Estimate Form</a>
+            <div class="small">Full admin only.</div>
           </div>
 
           <div class="card hidden" data-tool="legacy">
             <h3>Legacy Pricing</h3>
             <p>Legacy client rate adjustment calculator.</p>
             <a class="btn" href="/admin/legacy/" rel="noopener">Open Legacy Calculator</a>
+            <div class="small">Full admin only.</div>
           </div>
 
           <div class="card hidden" data-tool="site_report">
             <h3>Site Report</h3>
             <p>GA4 traffic insights and visitor analytics.</p>
             <a class="btn" href="/admin/tools/site-report/" rel="noopener">Open Site Report</a>
+            <div class="small">Full admin only.</div>
           </div>
 
           <div class="card hidden" data-tool="admin_tools">
             <h3>Admin Tools</h3>
             <p>Site report and future internal tools grouped in one place.</p>
             <a class="btn secondary" href="/admin/tools/" rel="noopener">Open Admin Tools</a>
+            <div class="small">Full admin only.</div>
           </div>
-
         </div>
 
         <div class="small" id="debug"></div>
-
       </div>
-
     </div>
-
   </main>
 
-  <script src="/admin/admin.js?v=5001"></script>
-
+  <script src="/admin/admin.js?v=6001"></script>
 </body>
 </html>
