@@ -652,14 +652,9 @@ async function saveBoard() {
 
     // Small boards can still save normally.
     // Larger boards use chunked JSONP so the browser does not reject the URL.
-    if (payloadText.length < 6500) {
-      res = await jsonp("weekly_board_save", {
-        weekStart: currentWeekStart,
-        payload: payloadText
-      });
-    } else {
+    
       res = await saveBoardChunked(payloadText);
-    }
+
 
     if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
 
