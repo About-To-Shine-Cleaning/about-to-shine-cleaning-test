@@ -984,3 +984,9 @@ a[href*="maps"]{
     width:100% !important;
   }
 }
+/* MUST stay last — fixes permission-hidden admin home cards */
+.ats-admin #cards .card.hidden,
+.ats-admin .card.hidden,
+.hidden{
+  display:none !important;
+}
