@@ -1,14 +1,19 @@
 // =========================================================
 // FILE: /admin/my-weekly-board/my-weekly-board.js
 // TYPE: .js
-// ATS My Weekly Board — read-only employee schedule
-// Adds: direct Clock Into This Job links for weekly-board assignments
-// DO NOT paste this into /admin/weekly-board/weekly-board.js
+// ATS My Weekly Board — employee schedule + approved Full Week view
+// ✅ Default = My Jobs
+// ✅ E01/E02/E04 can toggle Full Week
+// ✅ Full Week stays clean: employee + client only
+// ✅ My Jobs keeps specs/maps/clock buttons
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
 
 const AUTH_STORAGE = "ats_admin_auth_v1";
+const TOKEN_STORAGE = "ats_admin_token_v1";
+const TOKEN_LOCAL = "ats_admin_token_local_v1";
+const DEVICE_KEY_STORAGE = "ats_device_key_v1";
 
 const EMPLOYEES = {
   E01: "Shannon Kovecses",
@@ -23,6 +28,8 @@ const EMPLOYEES = {
   E10: "Employee Ten"
 };
 
+const FULL_WEEK_ALLOWED = new Set(["E01", "E02", "E04"]);
+
 const pageTitle = document.getElementById("pageTitle");
 const weekLabel = document.getElementById("weekLabel");
 const statusBox = document.getElementById("statusBox");
@@ -33,11 +40,18 @@ const clientSpecsBody = document.getElementById("clientSpecsBody");
 const specTitle = document.getElementById("specTitle");
 const closeSpecsBtn = document.getElementById("closeSpecsBtn");
 
+const viewToolbar = document.getElementById("viewToolbar");
+const btnMyJobs = document.getElementById("btnMyJobs");
+const btnFullWeek = document.getElementById("btnFullWeek");
+const viewHelp = document.getElementById("viewHelp");
+
 const DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 let employeeId = "";
 let employeeName = "";
 let activeRows = [];
+let currentWeekStart = "";
+let currentView = "mine";
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -56,6 +70,37 @@ function getStoredAuth() {
   }
 }
 
+function getStoredToken() {
+  try {
+    const sessionToken = String(sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
+    if (sessionToken) return sessionToken;
+  } catch (e) {}
+
+  try {
+    const localToken = String(localStorage.getItem(TOKEN_LOCAL) || "").trim();
+    if (localToken) return localToken;
+  } catch (e) {}
+
+  return "";
+}
+
+function getDeviceKey() {
+  try {
+    let key = String(localStorage.getItem(DEVICE_KEY_STORAGE) || "").trim();
+    if (!key) {
+      key = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(DEVICE_KEY_STORAGE, key);
+    }
+    return key;
+  } catch (e) {
+    return "";
+  }
+}
+
+function canViewFullWeek() {
+  return FULL_WEEK_ALLOWED.has(String(employeeId || "").trim().toUpperCase());
+}
+
 function resolveEmployee() {
   const params = new URLSearchParams(window.location.search);
   const auth = getStoredAuth();
@@ -71,6 +116,10 @@ function resolveEmployee() {
 
   if (pageTitle) pageTitle.textContent = `${employeeName}'s Weekly Board`;
   if (clockLink) clockLink.href = `/clock.html?emp=${encodeURIComponent(employeeId)}`;
+
+  if (viewToolbar) {
+    viewToolbar.classList.toggle("open", canViewFullWeek());
+  }
 }
 
 function jsonp(action, paramsObj = {}) {
@@ -96,6 +145,20 @@ function jsonp(action, paramsObj = {}) {
 
     script.src = API_URL + "?" + qs.toString();
     document.body.appendChild(script);
+  });
+}
+
+function authedJsonp(action, paramsObj = {}) {
+  const token = getStoredToken();
+  const device = getDeviceKey();
+
+  if (!token) throw new Error("Missing saved admin token. Return to Admin Home first.");
+  if (!device) throw new Error("Missing device key. Return to Admin Home first.");
+
+  return jsonp(action, {
+    ...paramsObj,
+    t: token,
+    d: device
   });
 }
 
@@ -165,26 +228,63 @@ function buildClockUrl(job) {
   return `/clock.html?${qs.toString()}`;
 }
 
-function renderWeek(rows, weekStart) {
-  activeRows = Array.isArray(rows) ? rows : [];
-  const grouped = groupByDate(activeRows);
+function setViewMode(mode) {
+  currentView = mode === "full" ? "full" : "mine";
 
+  if (btnMyJobs) {
+    btnMyJobs.classList.toggle("active", currentView === "mine");
+    btnMyJobs.setAttribute("aria-pressed", currentView === "mine" ? "true" : "false");
+  }
+
+  if (btnFullWeek) {
+    btnFullWeek.classList.toggle("active", currentView === "full");
+    btnFullWeek.setAttribute("aria-pressed", currentView === "full" ? "true" : "false");
+  }
+
+  if (clientSpecsCard && currentView === "full") {
+    clientSpecsCard.classList.remove("open");
+  }
+
+  if (viewHelp) {
+    viewHelp.textContent = currentView === "full"
+      ? "Full Week shows employee + client only."
+      : "My Jobs shows maps, specs, and clock buttons.";
+  }
+}
+
+function updateWeekLabel(rows, weekStart, labelMode) {
   const start = new Date(weekStart + "T12:00:00");
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
 
   if (weekLabel) {
-    weekLabel.textContent = `${prettyDate(weekStart)} → ${prettyDate(formatYMD(end))} • ${activeRows.length} job${activeRows.length === 1 ? "" : "s"}`;
+    const name = labelMode === "full" ? "Full Week" : "My Jobs";
+    weekLabel.textContent = `${prettyDate(weekStart)} → ${prettyDate(formatYMD(end))} • ${rows.length} ${rows.length === 1 ? "job" : "jobs"} • ${name}`;
   }
+}
+
+function renderWeek(rows, weekStart, labelMode = "mine") {
+  activeRows = Array.isArray(rows) ? rows : [];
+  const grouped = groupByDate(activeRows);
+
+  updateWeekLabel(activeRows, weekStart, labelMode);
 
   if (statusBox) {
-    statusBox.textContent = activeRows.length
-      ? "Tap a client name to view specs, or tap Clock Into This Job to open the clock already selected."
-      : "No assignments posted for this week yet.";
+    if (labelMode === "full") {
+      statusBox.textContent = activeRows.length
+        ? "Full Week view is read-only and shows employee + client only."
+        : "No assignments posted for this week yet.";
+    } else {
+      statusBox.textContent = activeRows.length
+        ? "Tap a client name to view specs, or tap Clock Into This Job to open the clock already selected."
+        : "No assignments posted for this week yet.";
+    }
   }
 
   if (!weekBoard) return;
   weekBoard.innerHTML = "";
+
+  const start = new Date(weekStart + "T12:00:00");
 
   DAYS.forEach((day, index) => {
     const d = new Date(start);
@@ -199,14 +299,23 @@ function renderWeek(rows, weekStart) {
     card.innerHTML = `
       <div class="my-day-title">${escapeHtml(day)}</div>
       <div class="my-day-date">${escapeHtml(prettyDay(ymd))}</div>
-      ${jobs.length ? jobs.map(job => renderJob(job, isPast)).join("") : `<div class="empty-day">No jobs assigned.</div>`}
+      ${jobs.length ? jobs.map(job => labelMode === "full" ? renderFullWeekJob(job) : renderMyJob(job, isPast)).join("") : `<div class="empty-day">No jobs assigned.</div>`}
     `;
 
     weekBoard.appendChild(card);
   });
 }
 
-function renderJob(job, isPast) {
+function renderFullWeekJob(job) {
+  return `
+    <div class="my-job-card full-week-job">
+      <div class="full-week-employee">${escapeHtml(job.employeeName || job.employeeId || "Employee")}</div>
+      <div class="full-week-client">${escapeHtml(job.clientName || "Client")}</div>
+    </div>
+  `;
+}
+
+function renderMyJob(job, isPast) {
   const clientName = escapeHtml(job.clientName || "Client");
   const address = String(job.address || "").trim();
   const notes = String(job.notes || "").trim();
@@ -264,7 +373,7 @@ function renderSpecs(specs, fallbackName) {
 }
 
 async function openClientSpecs(clientName, clientId) {
-  if (!clientName) return;
+  if (!clientName || currentView === "full") return;
 
   if (clientSpecsCard && clientSpecsBody) {
     clientSpecsCard.classList.add("open");
@@ -280,23 +389,63 @@ async function openClientSpecs(clientName, clientId) {
   }
 }
 
-async function loadBoard() {
-  resolveEmployee();
-
-  const start = getSaturdayForDate(new Date());
-  const weekStart = formatYMD(start);
+async function loadMyBoard() {
+  setViewMode("mine");
 
   const res = await jsonp("weekly_board_employee_view", {
     employeeId,
     emp: employeeId,
-    weekStart
+    weekStart: currentWeekStart
   });
 
   if (!res || !res.ok) {
     throw new Error(res?.error || "weekly_board_employee_view failed");
   }
 
-  renderWeek(res.rows || [], res.weekStart || weekStart);
+  renderWeek(res.rows || [], res.weekStart || currentWeekStart, "mine");
+}
+
+async function loadFullWeekBoard() {
+  if (!canViewFullWeek()) {
+    throw new Error("Full Week view is not available for this profile.");
+  }
+
+  setViewMode("full");
+
+  const res = await authedJsonp("weekly_board_full_week", {
+    weekStart: currentWeekStart
+  });
+
+  if (!res || !res.ok) {
+    throw new Error(res?.error || "weekly_board_full_week failed");
+  }
+
+  renderWeek(res.rows || [], res.weekStart || currentWeekStart, "full");
+}
+
+async function loadBoard() {
+  resolveEmployee();
+
+  const start = getSaturdayForDate(new Date());
+  currentWeekStart = formatYMD(start);
+
+  await loadMyBoard();
+}
+
+if (btnMyJobs) {
+  btnMyJobs.addEventListener("click", () => {
+    loadMyBoard().catch(err => {
+      if (statusBox) statusBox.textContent = String(err?.message || err);
+    });
+  });
+}
+
+if (btnFullWeek) {
+  btnFullWeek.addEventListener("click", () => {
+    loadFullWeekBoard().catch(err => {
+      if (statusBox) statusBox.textContent = String(err?.message || err);
+    });
+  });
 }
 
 if (weekBoard) {
