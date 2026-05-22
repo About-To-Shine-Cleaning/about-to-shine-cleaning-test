@@ -3,10 +3,13 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // Admin / Payroll / Scheduler only
-// Fixed flow:
-// ✅ Change Employee opens an inline picker inside that assignment card
-// ✅ Change Job opens an inline client search with live suggestions
-// ✅ No more prompt boxes / no more select-first confusion
+// Incremental save flow:
+// ✅ Refresh Board button reloads only
+// ✅ Add Assignment saves immediately
+// ✅ Change Employee saves immediately
+// ✅ Change Job saves immediately
+// ✅ Remove saves immediately
+// ✅ No full-board save / no chunked save
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -38,6 +41,7 @@ let assignments = [];
 let currentWeekStart = "";
 let auth = null;
 let editMode = null; // { type: "employee" | "job", index: number }
+let isSavingChange = false;
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -99,7 +103,7 @@ function escapeHtml(s) {
 function setMessage(msg, isError) {
   if (!weekLabel) return;
   weekLabel.textContent = msg;
-  if (isError) weekLabel.style.color = "#ffb4b4";
+  weekLabel.style.color = isError ? "#ffb4b4" : "";
 }
 
 function jsonp(action, paramsObj = {}) {
@@ -183,8 +187,71 @@ function getActiveRowsForCurrentDay() {
     .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
 }
 
+function rowPayload(row) {
+  return {
+    rowId: row.rowId || "",
+    weekStart: row.weekStart || currentWeekStart,
+    serviceDate: row.serviceDate || currentDay,
+    dayName: row.dayName || getDayNameFromYMD(row.serviceDate || currentDay),
+    employeeId: row.employeeId || "",
+    employeeName: row.employeeName || "",
+    clientId: row.clientId || "",
+    clientName: row.clientName || "",
+    address: row.address || "",
+    notes: row.notes || "",
+    sortOrder: row.sortOrder || "",
+    active: row.active || "YES"
+  };
+}
+
+async function saveRow(action, row) {
+  const payload = JSON.stringify(rowPayload(row));
+  const res = await jsonp(action, {
+    weekStart: currentWeekStart,
+    rowId: row.rowId || "",
+    payload
+  });
+
+  if (!res || !res.ok) throw new Error(res?.error || action + " failed");
+  return res;
+}
+
+function setBusy(message) {
+  isSavingChange = true;
+  if (btnAddAssignment) btnAddAssignment.disabled = true;
+  if (btnSaveWeek) {
+    btnSaveWeek.disabled = true;
+    btnSaveWeek.textContent = message || "Working...";
+  }
+}
+
+function clearBusy() {
+  isSavingChange = false;
+  if (btnAddAssignment) btnAddAssignment.disabled = false;
+  if (btnSaveWeek) {
+    btnSaveWeek.disabled = false;
+    btnSaveWeek.textContent = "Refresh Board";
+  }
+}
+
+async function refreshBoard() {
+  try {
+    setBusy("Refreshing...");
+    await loadBoard(currentWeekStart);
+    buildWeekBoard();
+    if (currentDay) renderModalAssignments();
+  } catch (err) {
+    console.error(err);
+    alert(String(err?.message || err));
+  } finally {
+    clearBusy();
+  }
+}
+
 async function init() {
   try {
+    if (btnSaveWeek) btnSaveWeek.textContent = "Refresh Board";
+
     const authRes = await jsonp("auth");
     if (!authRes || !authRes.ok) throw new Error(authRes?.error || "Not authorized");
     auth = authRes;
@@ -219,7 +286,7 @@ async function init() {
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
     clientSearch?.addEventListener("input", handleClientSearch);
-    btnSaveWeek?.addEventListener("click", saveBoard);
+    btnSaveWeek?.addEventListener("click", refreshBoard);
 
     modal?.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
@@ -500,41 +567,79 @@ function renderInlineJobSuggestions(index, value) {
   });
 }
 
-function applyEmployeeChange(index, employeeId) {
+async function applyEmployeeChange(index, employeeId) {
+  if (isSavingChange) return;
+
   const row = assignments[index];
   if (!row) return alert("Assignment not found.");
 
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Employee not found.");
 
-  row.employeeId = employee.employeeId;
-  row.employeeName = employee.employeeName;
-  row.weekStart = currentWeekStart;
-  row.serviceDate = currentDay;
-  row.dayName = getDayNameFromYMD(currentDay);
-  row.active = row.active || "YES";
+  const oldRow = { ...row };
 
-  editMode = null;
-  renderModalAssignments();
-  renderAssignments(currentDay);
+  try {
+    setBusy("Saving...");
+
+    row.employeeId = employee.employeeId;
+    row.employeeName = employee.employeeName;
+    row.weekStart = currentWeekStart;
+    row.serviceDate = currentDay;
+    row.dayName = getDayNameFromYMD(currentDay);
+    row.active = row.active || "YES";
+
+    const res = await saveRow("weekly_board_update", row);
+    if (res.row && res.row.rowId) row.rowId = res.row.rowId;
+
+    editMode = null;
+    renderModalAssignments();
+    renderAssignments(currentDay);
+  } catch (err) {
+    Object.assign(row, oldRow);
+    console.error(err);
+    alert(String(err?.message || err));
+    renderModalAssignments();
+    renderAssignments(currentDay);
+  } finally {
+    clearBusy();
+  }
 }
 
-function applyJobChange(index, client) {
+async function applyJobChange(index, client) {
+  if (isSavingChange) return;
+
   const row = assignments[index];
   if (!row) return alert("Assignment not found.");
   if (!client) return alert("Client not found.");
 
-  row.clientId = client.clientId || "";
-  row.clientName = client.clientName;
-  row.address = client.address || "";
-  row.weekStart = currentWeekStart;
-  row.serviceDate = currentDay;
-  row.dayName = getDayNameFromYMD(currentDay);
-  row.active = row.active || "YES";
+  const oldRow = { ...row };
 
-  editMode = null;
-  renderModalAssignments();
-  renderAssignments(currentDay);
+  try {
+    setBusy("Saving...");
+
+    row.clientId = client.clientId || "";
+    row.clientName = client.clientName;
+    row.address = client.address || "";
+    row.weekStart = currentWeekStart;
+    row.serviceDate = currentDay;
+    row.dayName = getDayNameFromYMD(currentDay);
+    row.active = row.active || "YES";
+
+    const res = await saveRow("weekly_board_update", row);
+    if (res.row && res.row.rowId) row.rowId = res.row.rowId;
+
+    editMode = null;
+    renderModalAssignments();
+    renderAssignments(currentDay);
+  } catch (err) {
+    Object.assign(row, oldRow);
+    console.error(err);
+    alert(String(err?.message || err));
+    renderModalAssignments();
+    renderAssignments(currentDay);
+  } finally {
+    clearBusy();
+  }
 }
 
 function handleClientSearch() {
@@ -573,7 +678,8 @@ function handleClientSearch() {
   });
 }
 
-function addAssignment() {
+async function addAssignment() {
+  if (isSavingChange) return;
   if (!currentDay) return alert("Choose a day first.");
   if (!selectedClient) return alert("Select a client from the search results.");
 
@@ -581,7 +687,8 @@ function addAssignment() {
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Select an employee.");
 
-  assignments.push({
+  const newRow = {
+    rowId: "",
     weekStart: currentWeekStart,
     serviceDate: currentDay,
     dayName: getDayNameFromYMD(currentDay),
@@ -592,82 +699,51 @@ function addAssignment() {
     address: selectedClient.address || "",
     notes: "",
     active: "YES"
-  });
+  };
 
-  clearClientSelection();
-  renderModalAssignments();
-  renderAssignments(currentDay);
-}
-
-function removeAssignment(index) {
-  if (!assignments[index]) return;
-  if (!confirm("Remove this assignment?")) return;
-
-  assignments.splice(index, 1);
-  editMode = null;
-  renderModalAssignments();
-  renderAssignments(currentDay);
-}
-
-function makeSaveSessionId() {
-  return "wbs_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
-}
-
-async function saveBoardChunked(payloadText) {
-  const sessionId = makeSaveSessionId();
-  const chunkSize = 6500; // safe for JSONP URL length
-  const totalChunks = Math.ceil(payloadText.length / chunkSize);
-
-  await jsonp("weekly_board_save_start", {
-    weekStart: currentWeekStart,
-    saveId: sessionId,
-    totalChunks: String(totalChunks)
-  });
-
-  for (let i = 0; i < totalChunks; i++) {
-    const chunk = payloadText.slice(i * chunkSize, (i + 1) * chunkSize);
-    await jsonp("weekly_board_save_chunk", {
-      weekStart: currentWeekStart,
-      saveId: sessionId,
-      index: String(i),
-      chunk: chunk
-    });
-  }
-
-  return await jsonp("weekly_board_save_finish", {
-    weekStart: currentWeekStart,
-    saveId: sessionId,
-    totalChunks: String(totalChunks)
-  });
-}
-
-async function saveBoard() {
   try {
-    btnSaveWeek.disabled = true;
-    btnSaveWeek.textContent = "Saving...";
+    setBusy("Saving...");
+    const res = await saveRow("weekly_board_add", newRow);
+    if (res.row && res.row.rowId) newRow.rowId = res.row.rowId;
+    assignments.push(newRow);
 
-    const payloadText = JSON.stringify({ assignments });
-
-    let res;
-
-    // Small boards can still save normally.
-    // Larger boards use chunked JSONP so the browser does not reject the URL.
-    
-      res = await saveBoardChunked(payloadText);
-
-
-    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
-
-    alert("Weekly board saved ✅");
-    await loadBoard(currentWeekStart);
-    buildWeekBoard();
+    clearClientSelection();
+    renderModalAssignments();
+    renderAssignments(currentDay);
   } catch (err) {
     console.error(err);
     alert(String(err?.message || err));
   } finally {
-    btnSaveWeek.disabled = false;
-    btnSaveWeek.textContent = "Save Weekly Board";
+    clearBusy();
   }
+}
+
+async function removeAssignment(index) {
+  if (isSavingChange) return;
+
+  const row = assignments[index];
+  if (!row) return;
+  if (!confirm("Remove this assignment?")) return;
+
+  try {
+    setBusy("Removing...");
+    await saveRow("weekly_board_remove", row);
+
+    assignments.splice(index, 1);
+    editMode = null;
+    renderModalAssignments();
+    renderAssignments(currentDay);
+  } catch (err) {
+    console.error(err);
+    alert(String(err?.message || err));
+  } finally {
+    clearBusy();
+  }
+}
+
+// Legacy names kept on purpose so old inline handlers / console tests do not break.
+function saveBoard() {
+  return refreshBoard();
 }
 
 if (document.readyState === "loading") {
