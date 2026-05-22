@@ -1085,3 +1085,27 @@ a[href*="maps"]{
   height:56px !important;
   min-height:56px !important;
 }
+/* FINAL weekly board dropdown visibility fix */
+.ats-admin .board-card{
+  overflow:hidden !important;
+}
+
+.ats-admin .board-card.expanded{
+  height:360px !important;
+  min-height:360px !important;
+  overflow:visible !important;
+}
+
+.ats-admin .board-card.expanded .board-card-extra{
+  display:block !important;
+  position:static !important;
+  width:100% !important;
+  margin-top:16px !important;
+  padding-top:16px !important;
+  border-top:1px solid rgba(255,255,255,.18) !important;
+}
+
+.ats-admin .board-card.expanded .board-card-extra .btn{
+  width:100% !important;
+  margin:0 !important;
+}
