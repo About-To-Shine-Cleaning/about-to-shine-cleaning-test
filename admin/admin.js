@@ -25,7 +25,7 @@
 
   const FALLBACK_HOME_TOOLS = ["clock", "weekly_board_group", "client_info"];
 
-  const BOARD_EDITOR_EMPLOYEES = new Set(["E02", "E04"]);
+  const BOARD_EDITOR_EMPLOYEES = new Set(["E01", "E02", "E04"]);
   const MY_WEEKLY_BOARD_EMPLOYEES = new Set(["E01", "E02", "E03", "E04", "E05"]);
 
   const statusEl = document.getElementById("status");
