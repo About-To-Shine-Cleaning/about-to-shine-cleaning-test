@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/assets/css/style.css"/>
 
 <script defer src="/admin/admin-nav.js"></script>
-<script defer src="./client-info.js?v=1"></script>
+<script defer src="./client-info.js?v=2000"></script>
 
 <style>
 .client-search-wrap{
@@ -121,6 +121,72 @@
   }
 }
 </style>
+
+<style id="ats-unified-page-finish">
+/* Page-level finish: keeps layout CSS, forces ATS operational colors/buttons. */
+.ats-card,
+.day-card,
+.my-day-card,
+.my-job-card,
+.assignment,
+.client-result,
+.spec-box,
+.spec-card,
+.modal{
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
+  border:1px solid rgba(255,255,255,.13) !important;
+  color:#f7f7fb !important;
+  box-shadow:0 18px 50px rgba(0,0,0,.35) !important;
+}
+.button,
+a.button,
+button.button,
+#btnSaveWeek,
+#btnAddAssignment,
+.map-btn{
+  background:#000 !important;
+  color:#ffe600 !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  border-radius:10px !important;
+  font-weight:900 !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
+}
+.button:hover,
+a.button:hover,
+button.button:hover,
+#btnSaveWeek:hover,
+#btnAddAssignment:hover,
+.map-btn:hover{
+  background:#111 !important;
+  color:#ffe600 !important;
+  border-color:rgba(255,230,0,.85) !important;
+  text-decoration:none !important;
+}
+.button-secondary,
+button.button-secondary{
+  background:rgba(0,0,0,.34) !important;
+  color:#f7f7fb !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+}
+input,
+select,
+textarea,
+.client-search{
+  background:rgba(0,0,0,.35) !important;
+  color:#f7f7fb !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+}
+.my-day-card.past-day{
+  opacity:.48 !important;
+  filter:grayscale(.75) !important;
+}
+.my-day-card.past-day button,
+.my-day-card.past-day a{
+  pointer-events:none !important;
+  cursor:not-allowed !important;
+}
+</style>
+
 </head>
 
 <body class="ats-admin">

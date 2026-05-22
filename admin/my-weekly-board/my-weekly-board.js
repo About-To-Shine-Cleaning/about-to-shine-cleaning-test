@@ -123,6 +123,16 @@ function prettyDay(ymd) {
   return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 
+function isPastDateYMD(ymd) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const d = new Date(ymd + "T12:00:00");
+  d.setHours(0, 0, 0, 0);
+
+  return d < today;
+}
+
 function getMapUrl(address) {
   const encoded = encodeURIComponent(address || "");
   return /iPhone|iPad|iPod/i.test(navigator.userAgent)
@@ -183,19 +193,20 @@ function renderWeek(rows, weekStart) {
     const jobs = grouped[ymd] || [];
 
     const card = document.createElement("section");
-    card.className = "my-day-card";
+    const isPast = isPastDateYMD(ymd);
+    card.className = "my-day-card" + (isPast ? " past-day" : "");
 
     card.innerHTML = `
       <div class="my-day-title">${escapeHtml(day)}</div>
       <div class="my-day-date">${escapeHtml(prettyDay(ymd))}</div>
-      ${jobs.length ? jobs.map(renderJob).join("") : `<div class="empty-day">No jobs assigned.</div>`}
+      ${jobs.length ? jobs.map(job => renderJob(job, isPast)).join("") : `<div class="empty-day">No jobs assigned.</div>`}
     `;
 
     weekBoard.appendChild(card);
   });
 }
 
-function renderJob(job) {
+function renderJob(job, isPast) {
   const clientName = escapeHtml(job.clientName || "Client");
   const address = String(job.address || "").trim();
   const notes = String(job.notes || "").trim();
@@ -205,13 +216,13 @@ function renderJob(job) {
 
   return `
     <div class="my-job-card">
-      <button class="my-client-btn" type="button" data-client-name="${clientName}" data-client-id="${escapeHtml(job.clientId || "")}">
+      <button class="my-client-btn" type="button" ${isPast ? "disabled aria-disabled=\"true\"" : ""} data-client-name="${clientName}" data-client-id="${escapeHtml(job.clientId || "")}">
         ${clientName}
       </button>
       ${address ? `<div class="my-job-address"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open Map</a><br>${escapeHtml(address)}</div>` : ""}
       ${sharedText ? `<div class="my-job-shared">With: ${escapeHtml(sharedText)}</div>` : ""}
       ${notes ? `<div class="my-job-notes">${escapeHtml(notes)}</div>` : ""}
-      <a class="button my-clock-btn" href="${clockUrl}">Clock Into This Job</a>
+      ${isPast ? `<span class="button my-clock-btn disabled" aria-disabled="true">Past Day</span>` : `<a class="button my-clock-btn" href="${clockUrl}">Clock Into This Job</a>`}
     </div>
   `;
 }
@@ -292,6 +303,7 @@ if (weekBoard) {
   weekBoard.addEventListener("click", function (e) {
     const btn = e.target.closest("[data-client-name]");
     if (!btn) return;
+    if (btn.closest(".past-day")) return;
     openClientSpecs(btn.dataset.clientName || "", btn.dataset.clientId || "");
   });
 }

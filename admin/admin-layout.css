@@ -550,3 +550,259 @@ button.button:hover{
     background-attachment:scroll !important;
   }
 }
+
+
+/* =========================================================
+   ATS Admin Unified Operational Theme — Clock-style baseline
+   Added for Payroll + Weekly Board + My Weekly Board + Client Info.
+   Visual-only. Does not touch auth/routes/storage logic.
+   ========================================================= */
+:root{
+  --ats-bg:#07090f;
+  --ats-panel:#10131c;
+  --ats-panel2:#151928;
+  --ats-panel3:#1b2033;
+  --ats-yellow:#ffe600;
+  --ats-gold:#f7c600;
+  --ats-purple:#3b2479;
+  --ats-purple2:#24164a;
+  --ats-blue:#121b45;
+  --ats-text:#f7f7fb;
+  --ats-muted:#b9bed0;
+  --ats-border:rgba(255,255,255,.13);
+  --ats-border-strong:rgba(255,230,0,.40);
+  --ats-card:rgba(16,19,28,.92);
+  --ats-shadow:0 18px 50px rgba(0,0,0,.35);
+  --ats-shadow2:0 24px 70px rgba(0,0,0,.45);
+}
+
+body.ats-admin{
+  color:var(--ats-text) !important;
+  background-color:var(--ats-bg) !important;
+  background-image:
+    radial-gradient(900px 460px at 8% 4%, rgba(255,230,0,.10), transparent 60%),
+    radial-gradient(760px 420px at 88% 12%, rgba(82,49,170,.20), transparent 62%),
+    linear-gradient(135deg, #120d22 0%, #111735 46%, #07090f 100%) !important;
+}
+
+.ats-header{
+  background:linear-gradient(135deg, rgba(59,36,121,.86), rgba(18,27,69,.86)) !important;
+  border-bottom:1px solid rgba(255,255,255,.12) !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.28) !important;
+}
+
+.ats-card,
+.ats-admin .card,
+.ats-admin .hero,
+.day-card,
+.my-day-card,
+.my-job-card,
+.assignment,
+.client-result,
+.spec-box,
+.spec-card,
+.modal,
+.payroll-employee-card,
+.final-employee-card,
+.section-toggle-card,
+details{
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
+  border:1px solid var(--ats-border) !important;
+  box-shadow:var(--ats-shadow) !important;
+  color:var(--ats-text) !important;
+}
+
+.ats-card,
+.ats-admin .card,
+.ats-admin .hero{
+  border-radius:22px !important;
+}
+
+.day-card,
+.my-day-card{
+  background:linear-gradient(180deg, rgba(27,32,51,.96), rgba(16,19,30,.96)) !important;
+}
+
+.my-job-card,
+.assignment,
+.client-result,
+.spec-box{
+  background:linear-gradient(180deg, rgba(20,24,38,.98), rgba(10,13,21,.98)) !important;
+}
+
+.ats-eyebrow,
+.period-title,
+.spec-label,
+summary,
+.employee-total,
+.payroll-total-amount,
+.final-value.gold{
+  color:var(--ats-yellow) !important;
+}
+
+.ats-subtitle,
+.my-board-meta,
+.my-day-date,
+.my-job-address,
+.my-job-shared,
+.my-job-notes,
+.empty-day,
+.muted,
+.small,
+.payroll-sub,
+.payroll-total-label,
+.toggle-help,
+.job-date{
+  color:var(--ats-muted) !important;
+  opacity:1 !important;
+}
+
+.button,
+a.button,
+button.button,
+.ats-btn,
+.ats-admin .btn,
+.ats-live-btn,
+.map-btn,
+#btnSaveWeek,
+#btnAddAssignment{
+  background:#000 !important;
+  color:var(--ats-yellow) !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  border-radius:10px !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
+  font-weight:900 !important;
+  text-decoration:none !important;
+}
+
+.button:hover,
+a.button:hover,
+button.button:hover,
+.ats-btn:hover,
+.ats-admin .btn:hover,
+.ats-live-btn:hover,
+.map-btn:hover,
+#btnSaveWeek:hover,
+#btnAddAssignment:hover{
+  background:#111 !important;
+  color:var(--ats-yellow) !important;
+  border-color:rgba(255,230,0,.85) !important;
+  transform:translateY(-1px);
+  text-decoration:none !important;
+}
+
+.button-secondary,
+.ats-admin .btn.secondary,
+button.button-secondary,
+a.button-secondary{
+  background:rgba(0,0,0,.34) !important;
+  color:var(--ats-text) !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+}
+
+button:disabled,
+.button:disabled,
+.button.disabled,
+.my-clock-btn.disabled{
+  opacity:.45 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  filter:grayscale(.45);
+}
+
+input,
+select,
+textarea,
+.ats-input,
+.client-search,
+.pay-input,
+.pay-method,
+.admin-input,
+.admin-textarea,
+select.payroll-select{
+  background:rgba(0,0,0,.35) !important;
+  color:var(--ats-text) !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  border-radius:12px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.client-search:focus{
+  border-color:rgba(255,230,0,.70) !important;
+  box-shadow:0 0 0 3px rgba(255,230,0,.14) !important;
+}
+
+select option,
+.pay-method option,
+select.payroll-select option{
+  color:#111827 !important;
+  background:#fff !important;
+}
+
+table th,
+table td{
+  border-color:rgba(255,255,255,.10) !important;
+}
+
+th{
+  color:var(--ats-yellow) !important;
+}
+
+.table-wrap{
+  background:rgba(0,0,0,.22) !important;
+  border-color:var(--ats-border) !important;
+}
+
+.my-client-btn{
+  color:var(--ats-text) !important;
+}
+
+.my-job-address a,
+.client-address a,
+a[href*="maps"]{
+  color:var(--ats-yellow) !important;
+  font-weight:900 !important;
+}
+
+.my-day-card.past-day{
+  opacity:.48 !important;
+  filter:grayscale(.75) !important;
+  background:linear-gradient(180deg, rgba(28,30,38,.80), rgba(12,14,20,.86)) !important;
+}
+
+.my-day-card.past-day button,
+.my-day-card.past-day a{
+  pointer-events:none !important;
+  cursor:not-allowed !important;
+}
+
+.my-day-card.past-day .my-clock-btn{
+  background:#141414 !important;
+  color:#a9a9a9 !important;
+  border-color:rgba(255,255,255,.12) !important;
+}
+
+.ats-clock .ats-card--light{
+  background:#ffffff !important;
+  color:#111827 !important;
+}
+
+.ats-clock .ats-card--light input,
+.ats-clock .ats-card--light select,
+.ats-clock .ats-card--light textarea{
+  background:#ffffff !important;
+  color:#111827 !important;
+  border:1px solid rgba(17,24,39,.18) !important;
+}
+
+@media(max-width:760px){
+  .button,
+  a.button,
+  button.button,
+  .ats-admin .btn{
+    width:auto;
+    min-width:140px;
+  }
+}

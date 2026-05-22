@@ -3,13 +3,10 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // Admin / Payroll / Scheduler only
-// Incremental save flow:
-// ✅ Refresh Board button reloads only
-// ✅ Add Assignment saves immediately
-// ✅ Change Employee saves immediately
-// ✅ Change Job saves immediately
-// ✅ Remove saves immediately
-// ✅ No full-board save / no chunked save
+// Fixed flow:
+// ✅ Change Employee opens an inline picker inside that assignment card
+// ✅ Change Job opens an inline client search with live suggestions
+// ✅ No more prompt boxes / no more select-first confusion
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -103,7 +100,7 @@ function escapeHtml(s) {
 function setMessage(msg, isError) {
   if (!weekLabel) return;
   weekLabel.textContent = msg;
-  weekLabel.style.color = isError ? "#ffb4b4" : "";
+  if (isError) weekLabel.style.color = "#ffb4b4";
 }
 
 function jsonp(action, paramsObj = {}) {
@@ -187,6 +184,7 @@ function getActiveRowsForCurrentDay() {
     .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
 }
 
+
 function rowPayload(row) {
   return {
     rowId: row.rowId || "",
@@ -247,6 +245,8 @@ async function refreshBoard() {
     clearBusy();
   }
 }
+
+
 
 async function init() {
   try {
@@ -741,7 +741,7 @@ async function removeAssignment(index) {
   }
 }
 
-// Legacy names kept on purpose so old inline handlers / console tests do not break.
+// Legacy name kept on purpose so old console tests do not break.
 function saveBoard() {
   return refreshBoard();
 }
