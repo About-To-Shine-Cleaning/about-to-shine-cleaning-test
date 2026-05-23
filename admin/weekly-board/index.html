@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
+<meta charset="utf-8" />
 <title>Weekly Assignment Board | ATS Admin</title>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow,noarchive"/>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow,noarchive" />
 
-<link rel="stylesheet" href="/admin/admin-layout.css"/>
-<link rel="stylesheet" href="/assets/css/style.css"/>
-<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
-<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
+<link rel="stylesheet" href="/admin/admin-layout.css?v=6001" />
+<link rel="icon" type="image/png" href="/assets/images/logo-v2.png" />
+<link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
-<script defer src="/admin/admin-nav.js?v=8"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=2000"></script>
+<script defer src="/admin/admin-nav.js?v=6001"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3001"></script>
 
 <style>
 html,
@@ -25,33 +24,48 @@ body{
 body.ats-admin{
   min-height:100dvh;
   background-attachment:scroll !important;
-  background-repeat:no-repeat !important;
-  background-size:cover !important;
-  background-position:center top !important;
 }
 
 body.ats-admin .ats-main{
   width:100% !important;
-  max-width:none !important;
   overflow-x:hidden !important;
   background:transparent !important;
 }
 
-body.ats-admin .weekly-editor-container{
-  width:100vw !important;
-  max-width:none !important;
-  margin:0 !important;
-  padding-left:18px !important;
-  padding-right:18px !important;
-  box-sizing:border-box !important;
+.weekly-editor-container{
+  width:100%;
+  max-width:1500px;
+  margin:0 auto;
+  padding:18px;
+  box-sizing:border-box;
 }
 
-body.ats-admin .ats-card{
-  max-width:none !important;
-  width:100% !important;
-  overflow:hidden !important;
-  background:rgba(255,255,255,.04) !important;
-  backdrop-filter:blur(10px);
+.weekly-editor-shell{
+  width:100%;
+  overflow:hidden;
+  padding:20px;
+}
+
+.weekly-editor-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.ats-eyebrow{
+  color:rgba(255,255,255,.62);
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.02em;
+  margin-bottom:8px;
+}
+
+#weekLabel{
+  margin:0;
+  font-size:clamp(28px,4vw,44px);
+  line-height:1.05;
 }
 
 .week-board{
@@ -64,9 +78,6 @@ body.ats-admin .ats-card{
 }
 
 .day-card{
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:18px;
   min-height:260px;
   min-width:0 !important;
   max-width:100% !important;
@@ -79,7 +90,7 @@ body.ats-admin .ats-card{
 .day-header{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:10px;
   margin-bottom:12px;
   flex:0 0 auto;
@@ -87,17 +98,18 @@ body.ats-admin .ats-card{
 
 .day-name{
   font-size:15px;
-  font-weight:800;
+  font-weight:900;
 }
 
 .day-date{
   font-size:12px;
-  opacity:.7;
+  color:rgba(255,255,255,.66);
+  margin-top:2px;
 }
 
 .assignment{
-  background:rgba(0,0,0,.14);
-  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.10);
   border-radius:12px;
   padding:10px;
   margin-bottom:10px;
@@ -115,20 +127,16 @@ body.ats-admin .ats-card{
   overflow-wrap:anywhere;
 }
 
-.assignment button{
-  margin-top:8px;
-}
-
 .modal-backdrop{
   position:fixed !important;
   inset:0 !important;
-  background:rgba(0,0,0,.65);
+  background:rgba(0,0,0,.70);
   display:none;
   align-items:center !important;
   justify-content:center !important;
   z-index:9999;
   overflow:hidden !important;
-  padding:12px !important;
+  padding:14px !important;
 }
 
 .modal-backdrop.open{
@@ -139,19 +147,26 @@ body.ats-admin .ats-card{
   width:min(900px,96vw) !important;
   max-width:96vw !important;
   max-height:92dvh !important;
-  background:#232857;
-  border:1px solid rgba(255,255,255,.12);
   border-radius:24px;
-  padding:24px;
+  padding:20px;
   overflow:hidden !important;
   display:flex !important;
   flex-direction:column !important;
   min-height:0 !important;
 }
 
-.modal > div:first-child{
+.modal-top{
   flex:0 0 auto !important;
-  margin-bottom:14px !important;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.modal-top h2{
+  margin:0;
+  font-size:clamp(22px,3vw,34px);
 }
 
 .modal-grid{
@@ -159,6 +174,14 @@ body.ats-admin .ats-card{
   grid-template-columns:1fr 1fr;
   gap:14px;
   flex:0 0 auto !important;
+}
+
+.modal label{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+  color:rgba(255,255,255,.78);
+  margin-bottom:6px;
 }
 
 .modal input,
@@ -181,11 +204,7 @@ body.ats-admin .ats-card{
 
 #btnAddAssignment{
   flex:0 0 auto !important;
-}
-
-.modal-grid + div{
-  flex:0 0 auto !important;
-  margin-top:14px !important;
+  margin-top:14px;
 }
 
 .assignment-list{
@@ -198,6 +217,19 @@ body.ats-admin .ats-card{
   overscroll-behavior:contain;
 }
 
+.assignment-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+
+.assignment-actions .button,
+.assignment-actions button{
+  flex:1 1 150px;
+  width:auto !important;
+}
+
 @media(max-width:1200px){
   .week-board{
     grid-template-columns:repeat(3,minmax(0,1fr)) !important;
@@ -205,10 +237,12 @@ body.ats-admin .ats-card{
 }
 
 @media(max-width:800px){
-  body.ats-admin .weekly-editor-container{
-    width:100% !important;
-    padding-left:12px !important;
-    padding-right:12px !important;
+  .weekly-editor-container{
+    padding:12px;
+  }
+
+  .weekly-editor-shell{
+    padding:16px;
   }
 
   .week-board{
@@ -239,79 +273,15 @@ body.ats-admin .ats-card{
     grid-template-columns:1fr !important;
   }
 
-  .assignment .button,
+  .assignment-actions .button,
+  .assignment-actions button,
   .modal .button{
     width:100% !important;
+    flex:1 1 100%;
     min-width:0 !important;
   }
 }
 </style>
-
-<style id="ats-unified-page-finish">
-/* Page-level finish: keeps layout CSS, forces ATS operational colors/buttons. */
-.ats-card,
-.day-card,
-.my-day-card,
-.my-job-card,
-.assignment,
-.client-result,
-.spec-box,
-.spec-card,
-.modal{
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
-  border:1px solid rgba(255,255,255,.13) !important;
-  color:#f7f7fb !important;
-  box-shadow:0 18px 50px rgba(0,0,0,.35) !important;
-}
-.button,
-a.button,
-button.button,
-#btnSaveWeek,
-#btnAddAssignment,
-.map-btn{
-  background:#000 !important;
-  color:#ffe600 !important;
-  border:1px solid rgba(255,230,0,.55) !important;
-  border-radius:10px !important;
-  font-weight:900 !important;
-  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
-}
-.button:hover,
-a.button:hover,
-button.button:hover,
-#btnSaveWeek:hover,
-#btnAddAssignment:hover,
-.map-btn:hover{
-  background:#111 !important;
-  color:#ffe600 !important;
-  border-color:rgba(255,230,0,.85) !important;
-  text-decoration:none !important;
-}
-.button-secondary,
-button.button-secondary{
-  background:rgba(0,0,0,.34) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-input,
-select,
-textarea,
-.client-search{
-  background:rgba(0,0,0,.35) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-.my-day-card.past-day{
-  opacity:.48 !important;
-  filter:grayscale(.75) !important;
-}
-.my-day-card.past-day button,
-.my-day-card.past-day a{
-  pointer-events:none !important;
-  cursor:not-allowed !important;
-}
-</style>
-
 </head>
 
 <body class="ats-admin">
@@ -331,8 +301,8 @@ textarea,
 
 <main class="ats-main">
   <div class="weekly-editor-container">
-    <section class="ats-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;">
+    <section class="ats-card weekly-editor-shell">
+      <div class="weekly-editor-top">
         <div>
           <div class="ats-eyebrow">Weekly Assignment Board</div>
           <h1 id="weekLabel">Loading week...</h1>
@@ -347,28 +317,25 @@ textarea,
 
 <div class="modal-backdrop" id="assignmentModal">
   <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;">
+    <div class="modal-top">
       <h2 id="modalTitle">Assignments</h2>
-      <button class="button button-secondary" id="closeModal">Close</button>
+      <button class="button button-secondary" id="closeModal" type="button">Close</button>
     </div>
 
     <div class="modal-grid">
       <div>
-        <label>Employee</label>
+        <label for="employeeSelect">Employee</label>
         <select id="employeeSelect"></select>
       </div>
 
       <div>
-        <label>Client</label>
-        <input type="text" id="clientSearch" placeholder="Start typing client name...">
+        <label for="clientSearch">Client</label>
+        <input type="text" id="clientSearch" placeholder="Start typing client name..." autocomplete="off" />
         <div id="clientSuggestions"></div>
       </div>
     </div>
 
-    <div>
-      <button class="button" id="btnAddAssignment">Add Assignment</button>
-    </div>
-
+    <button class="button" id="btnAddAssignment" type="button">Add Assignment</button>
     <div class="assignment-list" id="assignmentList"></div>
   </div>
 </div>
