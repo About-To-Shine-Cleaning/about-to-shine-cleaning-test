@@ -584,9 +584,8 @@ function renderInlineJobSuggestions(index, value) {
     row.style.textAlign = "left";
     row.style.marginBottom = "8px";
     row.innerHTML = `
-      <strong>${escapeHtml(client.clientName)}</strong>
-      ${client.address ? `<div class="assignment-address">${escapeHtml(client.address)}</div>` : ""}
-    `;
+  <strong>${escapeHtml(client.clientName)}</strong>
+`;
     row.addEventListener("click", () => applyJobChange(index, client));
     box.appendChild(row);
   });
@@ -691,10 +690,9 @@ function handleClientSearch() {
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-    div.innerHTML = `
-      <strong>${escapeHtml(client.clientName)}</strong>
-      ${client.address ? `<div class="assignment-address">${escapeHtml(client.address)}</div>` : ""}
-    `;
+   div.innerHTML = `
+  <strong>${escapeHtml(client.clientName)}</strong>
+`;
 
     div.addEventListener("click", () => {
       selectedClient = client;
