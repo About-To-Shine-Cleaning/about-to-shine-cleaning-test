@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3001"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3002"></script>
 
 <style>
 html,
@@ -81,7 +81,7 @@ body.ats-admin .ats-main{
   min-height:260px;
   min-width:0 !important;
   max-width:100% !important;
-  padding:12px;
+  padding:14px;
   display:flex;
   flex-direction:column;
   overflow:hidden;
@@ -92,7 +92,7 @@ body.ats-admin .ats-main{
   justify-content:space-between;
   align-items:flex-start;
   gap:10px;
-  margin-bottom:12px;
+  margin-bottom:14px;
   flex:0 0 auto;
 }
 
@@ -104,27 +104,48 @@ body.ats-admin .ats-main{
 .day-date{
   font-size:12px;
   color:rgba(255,255,255,.66);
-  margin-top:2px;
+  margin-top:4px;
 }
 
 .assignment{
-  background:rgba(0,0,0,.18);
+  background:rgba(0,0,0,.22);
   border:1px solid rgba(255,255,255,.10);
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:10px;
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:14px;
   max-width:100%;
   overflow-wrap:anywhere;
+  transition:border-color .18s ease, background .18s ease;
+}
+
+.assignment:hover{
+  border-color:rgba(255,230,0,.22);
+  background:rgba(255,255,255,.04);
 }
 
 .assignment strong{
   display:block;
-  margin-bottom:4px;
+  margin-bottom:8px;
+  font-size:18px;
+  line-height:1.25;
+  font-weight:900;
+  color:#fff;
+  letter-spacing:.01em;
 }
 
 .assignment-client{
-  line-height:1.35;
+  line-height:1.6;
   overflow-wrap:anywhere;
+  font-size:15px;
+  color:rgba(255,255,255,.92);
+}
+
+.assignment-address{
+  display:block;
+  margin-top:8px;
+  font-size:14px;
+  line-height:1.55;
+  color:rgba(255,255,255,.70);
 }
 
 .modal-backdrop{
@@ -161,7 +182,7 @@ body.ats-admin .ats-main{
   justify-content:space-between;
   align-items:center;
   gap:12px;
-  margin-bottom:16px;
+  margin-bottom:18px;
 }
 
 .modal-top h2{
@@ -172,7 +193,7 @@ body.ats-admin .ats-main{
 .modal-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:14px;
+  gap:16px;
   flex:0 0 auto !important;
 }
 
@@ -181,7 +202,7 @@ body.ats-admin .ats-main{
   font-size:13px;
   font-weight:800;
   color:rgba(255,255,255,.78);
-  margin-bottom:6px;
+  margin-bottom:8px;
 }
 
 .modal input,
@@ -196,15 +217,19 @@ body.ats-admin .ats-main{
 }
 
 #clientSuggestions{
-  max-height:180px;
+  max-height:240px;
   overflow-y:auto;
   overflow-x:hidden;
-  margin-top:8px;
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-right:4px;
 }
 
 #btnAddAssignment{
   flex:0 0 auto !important;
-  margin-top:14px;
+  margin-top:16px;
 }
 
 .assignment-list{
@@ -221,7 +246,7 @@ body.ats-admin .ats-main{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-  margin-top:16px;
+  margin-top:18px;
 }
 
 .assignment-actions .button,
@@ -307,7 +332,7 @@ body.ats-admin .ats-main{
           <div class="ats-eyebrow">Weekly Assignment Board</div>
           <h1 id="weekLabel">Loading week...</h1>
         </div>
-        <button class="button" id="btnSaveWeek">Refresh Board</button>
+        <button class="button" id="btnSaveWeek" type="button">Refresh Board</button>
       </div>
 
       <div class="week-board" id="weekBoard"></div>
