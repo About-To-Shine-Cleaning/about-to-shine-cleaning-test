@@ -4,48 +4,228 @@
 <meta charset="utf-8"/>
 <title>Client Info | ATS Admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
 
-<link rel="stylesheet" href="/admin/admin-layout.css"/>
+<link rel="stylesheet" href="/admin/admin-layout.css?v=6003"/>
 <link rel="stylesheet" href="/assets/css/style.css"/>
+<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
+<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
 
-<script defer src="/admin/admin-nav.js"></script>
-<script defer src="./client-info.js?v=2000"></script>
+<script defer src="/admin/admin-nav.js?v=8"></script>
+<script defer src="./client-info.js?v=2100"></script>
 
 <style>
+/* =========================================================
+   FILE: /admin/client-info/index.html
+   ATS Client Info — v2 Expandable UI
+   Safe frontend-only redesign. Uses existing board_clients route.
+========================================================= */
+
+body.ats-admin{
+  background-color:#07090f;
+}
+
+.client-page-shell{
+  display:grid;
+  grid-template-columns:minmax(300px,390px) minmax(0,1fr);
+  gap:18px;
+  align-items:start;
+}
+
+.client-panel,
+.client-profile{
+  position:relative;
+  overflow:hidden;
+}
+
+.client-panel::before,
+.client-profile::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  pointer-events:none;
+  background:
+    radial-gradient(520px 180px at 10% 0%, rgba(255,230,0,.12), transparent 60%),
+    radial-gradient(520px 220px at 90% 0%, rgba(91,52,190,.18), transparent 62%);
+  opacity:.9;
+}
+
+.client-panel > *,
+.client-profile > *{
+  position:relative;
+  z-index:1;
+}
+
+.client-hero{
+  margin-bottom:18px;
+}
+
+.ats-eyebrow{
+  color:rgba(255,230,0,.92);
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.client-hero h1,
+.client-profile h1{
+  margin:0;
+  font-size:clamp(30px,5vw,48px);
+  line-height:1;
+  letter-spacing:-.04em;
+}
+
+.ats-subtitle{
+  max-width:60ch;
+  margin:12px 0 0;
+  color:rgba(247,247,251,.78);
+  line-height:1.55;
+}
+
 .client-search-wrap{
   margin-top:18px;
 }
 
+.client-search-label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+  color:rgba(247,247,251,.74);
+  font-size:13px;
+  font-weight:850;
+}
+
+.client-count-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:5px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,230,0,.28);
+  background:rgba(255,230,0,.10);
+  color:#ffe600;
+  font-size:12px;
+  font-weight:950;
+  white-space:nowrap;
+}
+
 .client-search{
   width:100%;
-  padding:14px;
-  border-radius:14px;
+  padding:16px 16px;
+  border-radius:16px;
   border:1px solid rgba(255,255,255,.18);
-  background:rgba(0,0,0,.18);
-  color:#fff;
-  font-size:18px;
+  background:rgba(0,0,0,.35);
+  color:#f7f7fb;
+  font-size:17px;
+  outline:none;
+}
+
+.client-search:focus{
+  border-color:rgba(255,230,0,.72);
+  box-shadow:0 0 0 4px rgba(255,230,0,.13);
+}
+
+.client-filter-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.client-filter-chip{
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:rgba(247,247,251,.82);
+  border-radius:999px;
+  padding:8px 11px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+  width:auto;
+  min-height:0;
+  box-shadow:none;
+}
+
+.client-filter-chip.active{
+  border-color:rgba(255,230,0,.70);
+  background:rgba(255,230,0,.13);
+  color:#ffe600;
 }
 
 .client-results{
   margin-top:16px;
   display:grid;
   gap:12px;
+  max-height:calc(100svh - 310px);
+  overflow:auto;
+  padding-right:4px;
 }
 
 .client-result{
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.13);
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
   border-radius:18px;
   padding:14px;
   cursor:pointer;
+  transition:transform .16s ease, border-color .16s ease, background .16s ease;
 }
 
-.client-result:hover{
-  background:rgba(255,255,255,.11);
+.client-result:hover,
+.client-result.active{
+  transform:translateY(-1px);
+  border-color:rgba(255,230,0,.55);
+  background:linear-gradient(180deg, rgba(32,36,54,.98), rgba(15,18,28,.98));
+}
+
+.client-result-name{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+  font-weight:950;
+  font-size:16px;
+  line-height:1.2;
+}
+
+.client-result-address{
+  margin-top:7px;
+  color:rgba(247,247,251,.70);
+  font-size:13px;
+  line-height:1.35;
+}
+
+.client-result-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+
+.client-chip{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:rgba(247,247,251,.78);
+  font-size:11px;
+  font-weight:850;
+}
+
+.client-chip.yellow{
+  border-color:rgba(255,230,0,.35);
+  background:rgba(255,230,0,.10);
+  color:#ffe600;
 }
 
 .client-card{
-  margin-top:20px;
   display:none;
 }
 
@@ -53,227 +233,441 @@
   display:block;
 }
 
-.client-header{
+.client-empty-state{
+  display:flex;
+  min-height:420px;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:26px;
+  color:rgba(247,247,251,.75);
+}
+
+.client-empty-icon{
+  width:76px;
+  height:76px;
+  margin:0 auto 16px;
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,230,0,.30);
+  background:rgba(255,230,0,.08);
+  color:#ffe600;
+  font-size:34px;
+}
+
+.client-profile-top{
   display:flex;
   justify-content:space-between;
-  gap:16px;
+  align-items:flex-start;
+  gap:18px;
   flex-wrap:wrap;
   margin-bottom:18px;
 }
 
+.client-title-block{
+  min-width:0;
+  flex:1 1 320px;
+}
+
 .client-name{
-  font-size:28px;
-  font-weight:900;
+  font-size:clamp(30px,5vw,48px);
+  font-weight:950;
+  line-height:.98;
+  letter-spacing:-.045em;
+  word-break:break-word;
 }
 
 .client-address{
-  opacity:.85;
-  margin-top:4px;
-}
-
-.spec-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:14px;
-}
-
-.spec-box{
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(0,0,0,.14);
-  border-radius:18px;
-  padding:16px;
-}
-
-.spec-label{
-  color:#FFD700;
-  font-size:12px;
-  font-weight:900;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  margin-bottom:8px;
-}
-
-.spec-value{
-  white-space:pre-wrap;
+  color:rgba(247,247,251,.76);
+  margin-top:10px;
   line-height:1.45;
+  word-break:break-word;
 }
 
-.map-btn{
+.client-action-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+
+.map-btn,
+.client-action-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding:12px 16px;
-  border-radius:999px;
-  background:rgba(255,215,0,.18);
-  border:1px solid rgba(255,215,0,.55);
-  color:#fff;
-  font-weight:800;
+  gap:8px;
+  width:auto;
+  min-height:46px;
+  padding:12px 15px;
+  border-radius:14px;
+  background:#000 !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  color:#ffe600 !important;
+  font-weight:950;
   text-decoration:none;
+  white-space:nowrap;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
 }
 
-@media(max-width:760px){
-  .spec-grid{
+.map-btn:hover,
+.client-action-btn:hover{
+  background:#111 !important;
+  border-color:rgba(255,230,0,.85) !important;
+  color:#ffe600 !important;
+}
+
+.client-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin:18px 0;
+}
+
+.client-stat{
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.20);
+  min-width:0;
+}
+
+.client-stat-label{
+  color:rgba(247,247,251,.60);
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  margin-bottom:7px;
+}
+
+.client-stat-value{
+  color:#f7f7fb;
+  font-size:15px;
+  font-weight:950;
+  line-height:1.25;
+  word-break:break-word;
+}
+
+.client-stat-value.yellow{
+  color:#ffe600;
+}
+
+.client-accordion{
+  display:grid;
+  gap:12px;
+  margin-top:18px;
+}
+
+.client-accordion-item{
+  border:1px solid rgba(255,255,255,.13);
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 16px 40px rgba(0,0,0,.24);
+}
+
+.client-accordion-btn{
+  width:100%;
+  min-height:62px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:16px;
+  border:0;
+  border-radius:0;
+  background:transparent !important;
+  color:#f7f7fb !important;
+  box-shadow:none !important;
+  cursor:pointer;
+  text-align:left;
+}
+
+.client-accordion-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.client-accordion-icon{
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,230,0,.32);
+  background:rgba(255,230,0,.10);
+  color:#ffe600;
+  font-size:18px;
+}
+
+.client-accordion-heading{
+  font-size:15px;
+  font-weight:950;
+  line-height:1.2;
+}
+
+.client-accordion-sub{
+  margin-top:3px;
+  color:rgba(247,247,251,.58);
+  font-size:12px;
+  line-height:1.25;
+}
+
+.client-accordion-arrow{
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:#ffe600;
+  font-size:20px;
+  transition:transform .16s ease;
+}
+
+.client-accordion-item.open .client-accordion-arrow{
+  transform:rotate(180deg);
+}
+
+.client-accordion-body{
+  display:none;
+  padding:0 16px 16px 66px;
+  color:rgba(247,247,251,.86);
+  white-space:pre-wrap;
+  line-height:1.55;
+}
+
+.client-accordion-item.open .client-accordion-body{
+  display:block;
+}
+
+.client-accordion-body.empty{
+  color:rgba(247,247,251,.48);
+  font-style:italic;
+}
+
+.client-mini-note{
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,230,0,.18);
+  background:rgba(255,230,0,.07);
+  color:rgba(247,247,251,.78);
+  font-size:13px;
+  line-height:1.45;
+}
+
+@media(max-width:980px){
+  .client-page-shell{
     grid-template-columns:1fr;
   }
 
-  .client-name{
-    font-size:24px;
+  .client-results{
+    max-height:none;
+  }
+}
+
+@media(max-width:760px){
+  .client-profile-top{
+    gap:14px;
+  }
+
+  .client-action-row,
+  .map-btn,
+  .client-action-btn{
+    width:100%;
+  }
+
+  .client-stat-grid{
+    grid-template-columns:1fr;
+  }
+
+  .client-accordion-body{
+    padding:0 14px 14px;
+  }
+
+  .client-accordion-btn{
+    padding:14px;
+  }
+
+  .client-accordion-icon{
+    width:34px;
+    height:34px;
+    flex-basis:34px;
   }
 }
 </style>
-
-<style id="ats-unified-page-finish">
-/* Page-level finish: keeps layout CSS, forces ATS operational colors/buttons. */
-.ats-card,
-.day-card,
-.my-day-card,
-.my-job-card,
-.assignment,
-.client-result,
-.spec-box,
-.spec-card,
-.modal{
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96)) !important;
-  border:1px solid rgba(255,255,255,.13) !important;
-  color:#f7f7fb !important;
-  box-shadow:0 18px 50px rgba(0,0,0,.35) !important;
-}
-.button,
-a.button,
-button.button,
-#btnSaveWeek,
-#btnAddAssignment,
-.map-btn{
-  background:#000 !important;
-  color:#ffe600 !important;
-  border:1px solid rgba(255,230,0,.55) !important;
-  border-radius:10px !important;
-  font-weight:900 !important;
-  box-shadow:0 10px 24px rgba(0,0,0,.35) !important;
-}
-.button:hover,
-a.button:hover,
-button.button:hover,
-#btnSaveWeek:hover,
-#btnAddAssignment:hover,
-.map-btn:hover{
-  background:#111 !important;
-  color:#ffe600 !important;
-  border-color:rgba(255,230,0,.85) !important;
-  text-decoration:none !important;
-}
-.button-secondary,
-button.button-secondary{
-  background:rgba(0,0,0,.34) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-input,
-select,
-textarea,
-.client-search{
-  background:rgba(0,0,0,.35) !important;
-  color:#f7f7fb !important;
-  border:1px solid rgba(255,255,255,.18) !important;
-}
-.my-day-card.past-day{
-  opacity:.48 !important;
-  filter:grayscale(.75) !important;
-}
-.my-day-card.past-day button,
-.my-day-card.past-day a{
-  pointer-events:none !important;
-  cursor:not-allowed !important;
-}
-</style>
-
 </head>
 
 <body class="ats-admin">
-
 <header class="ats-header">
   <div class="ats-header-inner">
-
-    <a class="ats-brand" href="/admin/">
-      <img src="/assets/images/logo-v2.png" alt="">
+    <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
+      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo">
     </a>
 
     <div class="ats-header-actions">
-      <button class="ats-burger" type="button">
+      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
     </div>
-
   </div>
 </header>
 
 <main class="ats-main">
-<div class="ats-container">
+  <div class="ats-container">
+    <div class="client-page-shell">
 
-<section class="ats-card">
+      <section class="ats-card client-panel">
+        <div class="client-hero">
+          <div class="ats-eyebrow">Client Information</div>
+          <h1>Client Specs</h1>
+          <p class="ats-subtitle">
+            Search a client to view address, map link, cleaning notes, schedule details, and special instructions.
+          </p>
+        </div>
 
-  <div>
-    <div class="ats-eyebrow">Client Information</div>
-    <h1>Client Specs</h1>
-    <p class="ats-subtitle">
-      Search a client to view address, entry info, cleaning notes, and special instructions.
-    </p>
+        <div class="client-search-wrap">
+          <div class="client-search-label">
+            <span>Search clients</span>
+            <span class="client-count-pill" id="clientCount">Loading...</span>
+          </div>
+
+          <input
+            id="clientSearch"
+            class="client-search"
+            type="text"
+            placeholder="Start typing client name..."
+            autocomplete="off"
+          />
+
+          <div class="client-filter-row" aria-label="Client filters">
+            <button class="client-filter-chip active" type="button" data-filter="all">All</button>
+            <button class="client-filter-chip" type="button" data-filter="residential">Residential</button>
+            <button class="client-filter-chip" type="button" data-filter="commercial">Commercial</button>
+          </div>
+
+          <div id="clientResults" class="client-results"></div>
+        </div>
+      </section>
+
+      <section class="ats-card client-profile">
+        <div id="clientEmptyState" class="client-empty-state">
+          <div>
+            <div class="client-empty-icon">☀</div>
+            <h2 style="margin:0 0 8px;">Choose a client</h2>
+            <p style="margin:0;max-width:42ch;">
+              Client details will open here in expandable sections so the page stays clean on mobile and desktop.
+            </p>
+          </div>
+        </div>
+
+        <div class="client-card" id="clientCard">
+          <div class="client-profile-top">
+            <div class="client-title-block">
+              <div class="ats-eyebrow" id="clientTypeBadge">Client Profile</div>
+              <div class="client-name" id="clientName">—</div>
+              <div class="client-address" id="clientAddress">—</div>
+            </div>
+
+            <div class="client-action-row">
+              <a id="mapLink" class="map-btn" href="#" target="_blank" rel="noopener">📍 Open Map</a>
+            </div>
+          </div>
+
+          <div class="client-stat-grid">
+            <div class="client-stat">
+              <div class="client-stat-label">Frequency</div>
+              <div class="client-stat-value yellow" id="clientFrequency">—</div>
+            </div>
+
+            <div class="client-stat">
+              <div class="client-stat-label">Type</div>
+              <div class="client-stat-value" id="clientType">—</div>
+            </div>
+
+            <div class="client-stat">
+              <div class="client-stat-label">Internal Pay</div>
+              <div class="client-stat-value" id="clientPayout">—</div>
+            </div>
+          </div>
+
+          <div class="client-accordion" id="clientAccordion">
+            <div class="client-accordion-item open" data-section="specs">
+              <button class="client-accordion-btn" type="button" aria-expanded="true">
+                <span class="client-accordion-title">
+                  <span class="client-accordion-icon">🧽</span>
+                  <span>
+                    <span class="client-accordion-heading">Cleaning Specs</span>
+                    <span class="client-accordion-sub">Regular cleaning notes and room priorities</span>
+                  </span>
+                </span>
+                <span class="client-accordion-arrow">⌄</span>
+              </button>
+              <div class="client-accordion-body" id="clientSpecs">—</div>
+            </div>
+
+            <div class="client-accordion-item" data-section="special">
+              <button class="client-accordion-btn" type="button" aria-expanded="false">
+                <span class="client-accordion-title">
+                  <span class="client-accordion-icon">⭐</span>
+                  <span>
+                    <span class="client-accordion-heading">Special Info</span>
+                    <span class="client-accordion-sub">Preferences, pets, allergies, access, and warnings</span>
+                  </span>
+                </span>
+                <span class="client-accordion-arrow">⌄</span>
+              </button>
+              <div class="client-accordion-body" id="clientSpecialInfo">—</div>
+            </div>
+
+            <div class="client-accordion-item" data-section="schedule">
+              <button class="client-accordion-btn" type="button" aria-expanded="false">
+                <span class="client-accordion-title">
+                  <span class="client-accordion-icon">📅</span>
+                  <span>
+                    <span class="client-accordion-heading">Schedule Info</span>
+                    <span class="client-accordion-sub">Frequency and client category</span>
+                  </span>
+                </span>
+                <span class="client-accordion-arrow">⌄</span>
+              </button>
+              <div class="client-accordion-body" id="clientScheduleInfo">—</div>
+            </div>
+
+            <div class="client-accordion-item" data-section="office">
+              <button class="client-accordion-btn" type="button" aria-expanded="false">
+                <span class="client-accordion-title">
+                  <span class="client-accordion-icon">🔒</span>
+                  <span>
+                    <span class="client-accordion-heading">Office Info</span>
+                    <span class="client-accordion-sub">Internal payout / admin-only reference</span>
+                  </span>
+                </span>
+                <span class="client-accordion-arrow">⌄</span>
+              </button>
+              <div class="client-accordion-body" id="clientOfficeInfo">—</div>
+            </div>
+          </div>
+
+          <div class="client-mini-note">
+            Tip: keep the main notes short in the sheet. Use Special Info for anything cleaners must notice before entering the home or business.
+          </div>
+        </div>
+      </section>
+
+    </div>
   </div>
-
-  <div class="client-search-wrap">
-    <input
-      id="clientSearch"
-      class="client-search"
-      type="text"
-      placeholder="Start typing client name..."
-      autocomplete="off"
-    />
-
-    <div id="clientResults" class="client-results"></div>
-  </div>
-
-</section>
-
-<section class="ats-card client-card" id="clientCard">
-
-  <div class="client-header">
-    <div>
-      <div class="client-name" id="clientName">—</div>
-      <div class="client-address" id="clientAddress">—</div>
-    </div>
-
-    <a id="mapLink" class="map-btn" href="#" target="_blank" rel="noopener">
-      Open Map
-    </a>
-  </div>
-
-  <div class="spec-grid">
-
-    <div class="spec-box">
-      <div class="spec-label">Frequency</div>
-      <div class="spec-value" id="clientFrequency">—</div>
-    </div>
-
-    <div class="spec-box">
-      <div class="spec-label">Payout</div>
-      <div class="spec-value" id="clientPayout">—</div>
-    </div>
-
-    <div class="spec-box">
-      <div class="spec-label">Specs</div>
-      <div class="spec-value" id="clientSpecs">—</div>
-    </div>
-
-    <div class="spec-box">
-      <div class="spec-label">Special Info</div>
-      <div class="spec-value" id="clientSpecialInfo">—</div>
-    </div>
-
-  </div>
-
-</section>
-
-</div>
 </main>
 
 </body>
