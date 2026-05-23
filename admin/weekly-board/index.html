@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3006"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3007"></script>
 
 <style>
 html,
@@ -49,7 +49,7 @@ body.ats-admin .ats-main{
 .weekly-editor-top{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:16px;
   flex-wrap:wrap;
 }
@@ -227,9 +227,14 @@ body.ats-admin .ats-main{
   padding-right:4px;
 }
 
-#btnAddAssignment{
+#btnAddAssignment,
+#btnUpdateDay{
   flex:0 0 auto !important;
   margin-top:16px;
+}
+
+#btnUpdateDay{
+  border-color:rgba(255,230,0,.75) !important;
 }
 
 .assignment-list{
@@ -332,7 +337,6 @@ body.ats-admin .ats-main{
           <div class="ats-eyebrow">Weekly Assignment Board</div>
           <h1 id="weekLabel">Loading week...</h1>
         </div>
-        <button class="button" id="btnSaveWeek" type="button">Refresh Board</button>
       </div>
 
       <div class="week-board" id="weekBoard"></div>
