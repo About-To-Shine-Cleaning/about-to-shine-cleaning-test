@@ -2,9 +2,10 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3003:
-// ✅ Uses existing weekly_board_save backend route
-// ✅ Change Job no longer removes assignment from board
+// Fixed v3004:
+// ✅ Uses chunked weekly_board_save backend routes
+// ✅ Fixes jobs disappearing after refresh when changing a job
+// ✅ Avoids long JSONP URL truncation deleting/saving partial board data
 // ✅ Add / Change Employee / Change Job / Remove persist correctly
 // ✅ No rowId dependency
 // ✅ Live client search / inline employee + job changes
@@ -203,20 +204,53 @@ function rowPayload(row, index = 0) {
   };
 }
 
+function makeSaveId() {
+  return "wbs_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
+}
+
+function splitIntoChunks(text, size) {
+  const out = [];
+  const s = String(text || "");
+  for (let i = 0; i < s.length; i += size) out.push(s.slice(i, i + size));
+  return out;
+}
+
 async function persistAssignments() {
   const payload = {
     assignments: assignments
       .filter(row => String(row.active || "YES").toUpperCase() !== "NO")
       .map((row, index) => rowPayload(row, index))
+      .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName)
   };
 
-  const res = await jsonp("weekly_board_save", {
+  const raw = JSON.stringify(payload);
+  const saveId = makeSaveId();
+  const chunks = splitIntoChunks(raw, 1100);
+
+  const startRes = await jsonp("weekly_board_save_start", {
     weekStart: currentWeekStart,
-    payload: JSON.stringify(payload)
+    saveId
+  });
+  if (!startRes || !startRes.ok) throw new Error(startRes?.error || "weekly_board_save_start failed");
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkRes = await jsonp("weekly_board_save_chunk", {
+      weekStart: currentWeekStart,
+      saveId,
+      index: String(i),
+      chunk: chunks[i]
+    });
+    if (!chunkRes || !chunkRes.ok) throw new Error(chunkRes?.error || "weekly_board_save_chunk failed");
+  }
+
+  const finishRes = await jsonp("weekly_board_save_finish", {
+    weekStart: currentWeekStart,
+    saveId,
+    totalChunks: String(chunks.length)
   });
 
-  if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save failed");
-  return res;
+  if (!finishRes || !finishRes.ok) throw new Error(finishRes?.error || "weekly_board_save_finish failed");
+  return finishRes;
 }
 
 function setBusy(message) {
@@ -550,8 +584,9 @@ function renderInlineJobSuggestions(index, value) {
     row.style.textAlign = "left";
     row.style.marginBottom = "8px";
     row.innerHTML = `
-  <strong>${escapeHtml(client.clientName)}</strong>
-`;
+      <strong>${escapeHtml(client.clientName)}</strong>
+      ${client.address ? `<div class="assignment-address">${escapeHtml(client.address)}</div>` : ""}
+    `;
     row.addEventListener("click", () => applyJobChange(index, client));
     box.appendChild(row);
   });
@@ -656,9 +691,10 @@ function handleClientSearch() {
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-   div.innerHTML = `
-  <strong>${escapeHtml(client.clientName)}</strong>
-`;
+    div.innerHTML = `
+      <strong>${escapeHtml(client.clientName)}</strong>
+      ${client.address ? `<div class="assignment-address">${escapeHtml(client.address)}</div>` : ""}
+    `;
 
     div.addEventListener("click", () => {
       selectedClient = client;
