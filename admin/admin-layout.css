@@ -1,6 +1,6 @@
 /* =========================================================
    FILE: /admin/admin-layout.css
-   ATS Admin Layout — FULL FIXED v6001
+   ATS Admin Layout — FULL FIXED v6002
    Fixes: huge logo, header layout, admin home grid, hidden permissions,
    expandable Weekly Board card, hamburger drawer styling.
 ========================================================= */
@@ -451,10 +451,10 @@ button:disabled,
 .button:disabled,
 .button.disabled,
 .my-clock-btn.disabled{
-  opacity:.45;
+  opacity:.55;
   cursor:not-allowed;
   pointer-events:none;
-  filter:grayscale(.45);
+  filter:none !important;
 }
 
 /* EXPANDABLE WEEKLY BOARD CARD */
@@ -586,10 +586,16 @@ button:disabled,
 /* CLOCK / LIGHT CARDS */
 .ats-clock .button,
 .ats-clock a.button,
-.ats-clock button.button{
-  background:#000;
-  color:var(--ats-yellow);
-  border:2px solid #000;
+.ats-clock button.button,
+.ats-clock .button:disabled,
+.ats-clock button.button:disabled,
+.ats-clock .button[disabled],
+.ats-clock button.button[disabled]{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:var(--ats-yellow) !important;
+  -webkit-text-fill-color:var(--ats-yellow) !important;
+  border:1px solid rgba(255,230,0,.55) !important;
   border-radius:7px;
   box-shadow:none;
   min-width:160px;
@@ -597,19 +603,39 @@ button:disabled,
   font-weight:900;
   font-size:16px;
   text-align:center;
+  filter:none !important;
+  opacity:1 !important;
+}
+
+.ats-clock .button:hover,
+.ats-clock a.button:hover,
+.ats-clock button.button:hover{
+  background:#111 !important;
+  border-color:rgba(255,230,0,.85) !important;
+}
+
+.ats-clock .button:disabled,
+.ats-clock button.button:disabled,
+.ats-clock .button[disabled],
+.ats-clock button.button[disabled]{
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  transform:none !important;
 }
 
 .ats-clock .button.clock-action-locked,
-.ats-clock button.button.clock-action-locked,
-.ats-clock .button:disabled.clock-action-locked,
-.ats-clock button.button:disabled.clock-action-locked{
-  opacity:1;
-  filter:none;
-  background:#000;
-  color:var(--ats-yellow);
-  border-color:#000;
-  cursor:not-allowed;
-  pointer-events:auto;
+.ats-clock button.button.clock-action-locked{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:var(--ats-yellow) !important;
+  -webkit-text-fill-color:var(--ats-yellow) !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  filter:none !important;
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  transform:none !important;
 }
 
 .ats-card--light{
