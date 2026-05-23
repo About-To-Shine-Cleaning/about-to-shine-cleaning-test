@@ -2,7 +2,12 @@
 // FILE: /assets/js/clock.js
 // TYPE: .js
 // ATS Clock + Client Specs
-// Adds: accepts My Weekly Board direct job URL params and auto-selects matching job
+// Fixed:
+// ✅ Clock buttons stay black/yellow even when inactive
+// ✅ Inactive buttons are NOT clickable until correct action state
+// ✅ Avoids native disabled button grey styling on action buttons
+// ✅ Keeps notes locked until clocked in
+// ✅ Preserves My Weekly Board direct job URL params and auto-select
 // ==============================
 
 // ==============================
@@ -182,15 +187,55 @@ function showSelectedJobAddress(address) {
   }
 }
 
+function forceActionButtonStyle(btn) {
+  if (!btn) return;
+  btn.style.setProperty("background", "#000", "important");
+  btn.style.setProperty("background-color", "#000", "important");
+  btn.style.setProperty("color", "#ffe600", "important");
+  btn.style.setProperty("-webkit-text-fill-color", "#ffe600", "important");
+  btn.style.setProperty("border", "1px solid rgba(255,230,0,.55)", "important");
+  btn.style.setProperty("filter", "none", "important");
+  btn.style.setProperty("opacity", "1", "important");
+}
+
+function setActionButtonReady(btn, isReady) {
+  if (!btn) return;
+
+  // Do NOT use the native disabled attribute for clock action buttons.
+  // Native disabled buttons are what browsers keep rendering as grey.
+  btn.disabled = false;
+
+  btn.dataset.ready = isReady ? "true" : "false";
+  btn.setAttribute("aria-disabled", isReady ? "false" : "true");
+  btn.classList.toggle("clock-action-locked", !isReady);
+  btn.classList.toggle("is-disabled", !isReady);
+
+  if (isReady) {
+    btn.style.setProperty("cursor", "pointer", "important");
+    btn.style.setProperty("pointer-events", "auto", "important");
+  } else {
+    btn.style.setProperty("cursor", "not-allowed", "important");
+    btn.style.setProperty("pointer-events", "none", "important");
+  }
+
+  forceActionButtonStyle(btn);
+}
+
 function updateButtons() {
   const hasJob = !!selectedJob;
 
-  if (btnClockIn) btnClockIn.disabled = isClockedIn || !hasJob;
-  if (btnBreakStart) btnBreakStart.disabled = !isClockedIn || onBreak || !hasJob;
-  if (btnBreakEnd) btnBreakEnd.disabled = !isClockedIn || !onBreak || !hasJob;
-  if (btnClockOut) btnClockOut.disabled = !isClockedIn || !hasJob;
+  setActionButtonReady(btnClockIn, !isClockedIn && hasJob);
+  setActionButtonReady(btnBreakStart, isClockedIn && !onBreak && hasJob);
+  setActionButtonReady(btnBreakEnd, isClockedIn && onBreak && hasJob);
+  setActionButtonReady(btnClockOut, isClockedIn && hasJob);
 
+  // Notes can use native disabled because it is not one of the big action buttons.
   if (notesEl) notesEl.disabled = !isClockedIn;
+}
+
+// Extra safety: if a click somehow fires on a locked action, block it.
+function actionIsReady(btn) {
+  return btn && btn.dataset.ready === "true";
 }
 
 // ==============================
@@ -640,6 +685,7 @@ function logEvent(action) {
 // Actions
 // ==============================
 window.clockIn = function () {
+  if (!actionIsReady(btnClockIn)) return;
   if (!selectedJob) return setStatus("Please select a job before clocking in.", "warn");
   if (isClockedIn) return setStatus("You are already clocked in.", "warn");
 
@@ -655,6 +701,7 @@ window.clockIn = function () {
 };
 
 window.startBreak = function () {
+  if (!actionIsReady(btnBreakStart)) return;
   if (!selectedJob) return setStatus("Select a job before starting break.", "warn");
   if (!isClockedIn) return setStatus("You must Clock In before starting break.", "warn");
   if (onBreak) return setStatus("Break is already active.", "warn");
@@ -668,6 +715,7 @@ window.startBreak = function () {
 };
 
 window.endBreak = function () {
+  if (!actionIsReady(btnBreakEnd)) return;
   if (!selectedJob) return setStatus("Select a job before ending break.", "warn");
   if (!isClockedIn) return setStatus("You must Clock In before ending break.", "warn");
   if (!onBreak) return setStatus("No active break to end.", "warn");
@@ -681,6 +729,7 @@ window.endBreak = function () {
 };
 
 window.clockOut = function () {
+  if (!actionIsReady(btnClockOut)) return;
   if (!selectedJob) return setStatus("Please select a job before clocking out.", "warn");
   if (!isClockedIn) return setStatus("You are not clocked in.", "warn");
 
@@ -706,7 +755,14 @@ window.clockOut = function () {
 // Init
 updateButtons();
 
+// Re-force button style after full page/CSS paint.
+window.addEventListener("load", updateButtons);
+setTimeout(updateButtons, 50);
+setTimeout(updateButtons, 250);
+setTimeout(updateButtons, 750);
+
 document.addEventListener("DOMContentLoaded", function () {
   if (directJobFromWeeklyBoard.source === "weekly_board") return;
   if (jobSearch) jobSearch.focus();
+  updateButtons();
 });
