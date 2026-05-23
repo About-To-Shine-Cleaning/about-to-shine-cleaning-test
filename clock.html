@@ -21,6 +21,37 @@
   border:1px solid rgba(0,0,0,.12);
   background:#f8fafc;
 }
+
+/* Keep locked clock buttons on-brand instead of greyed out */
+.ats-clock button.button,
+.ats-clock a.button{
+  background:#000 !important;
+  color:#ffe600 !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.20);
+}
+
+.ats-clock button.button:disabled,
+.ats-clock button.button[disabled],
+.ats-clock button.button.is-disabled,
+.ats-clock .clock-actions button.button:disabled,
+.ats-clock .clock-actions button.button[disabled]{
+  background:#000 !important;
+  color:#ffe600 !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  opacity:.55;
+  cursor:not-allowed !important;
+  pointer-events:none;
+  filter:none !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.20);
+}
+
+.ats-clock button.button:not(:disabled):hover,
+.ats-clock a.button:hover{
+  background:#080808 !important;
+  color:#fff200 !important;
+  border-color:rgba(255,230,0,.85) !important;
+}
 </style>
 </head>
 
@@ -130,6 +161,6 @@
   </div>
 </main>
 
-<script defer src="/assets/js/clock.js?v=204"></script>
+<script defer src="/assets/js/clock.js?v=205"></script>
 </body>
 </html>
