@@ -2,11 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Admin / Payroll / Scheduler only
-// Fixed flow:
-// ✅ Change Employee opens an inline picker inside that assignment card
-// ✅ Change Job opens an inline client search with live suggestions
-// ✅ No more prompt boxes / no more select-first confusion
+// Fixed v3001:
+// ✅ Row-level add/update/remove routes
+// ✅ No more unknown_action when saving assignments
+// ✅ Refresh button only refreshes
+// ✅ Modal stays scrollable and mobile-safe
+// ✅ Live client search / inline employee + job changes
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -37,7 +38,7 @@ let clients = [];
 let assignments = [];
 let currentWeekStart = "";
 let auth = null;
-let editMode = null; // { type: "employee" | "job", index: number }
+let editMode = null;
 let isSavingChange = false;
 
 function getDeviceKey() {
@@ -67,19 +68,12 @@ function normalizeRole(role, employeeId) {
   const r = String(role || "").trim().toLowerCase();
   const id = String(employeeId || "").trim().toUpperCase();
 
-  if (r === "admin") {
-    if (id === "E01" || id === "E04") return "full_admin";
-    if (id === "E02") return "schedule_payroll";
-    return "clock_only";
-  }
-
-  if (r === "full_admin") return "full_admin";
-  if (r === "schedule_payroll") return "schedule_payroll";
-  if (r === "payroll") return "payroll";
-  if (r === "clock_only") return "clock_only";
-
   if (id === "E01" || id === "E04") return "full_admin";
   if (id === "E02") return "schedule_payroll";
+
+  if (r === "admin" || r === "full_admin") return "full_admin";
+  if (r === "schedule_payroll" || r === "schedule_payr" || r === "scheduler_payroll") return "schedule_payroll";
+  if (r === "payroll") return "payroll";
   return "clock_only";
 }
 
@@ -100,7 +94,7 @@ function escapeHtml(s) {
 function setMessage(msg, isError) {
   if (!weekLabel) return;
   weekLabel.textContent = msg;
-  if (isError) weekLabel.style.color = "#ffb4b4";
+  weekLabel.style.color = isError ? "#ffb4b4" : "";
 }
 
 function jsonp(action, paramsObj = {}) {
@@ -125,7 +119,14 @@ function jsonp(action, paramsObj = {}) {
       ...paramsObj
     });
 
+    const timeout = setTimeout(() => {
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+      reject(new Error("JSONP timeout: " + action));
+    }, 30000);
+
     window[cb] = function (data) {
+      clearTimeout(timeout);
       try { resolve(data); }
       finally {
         try { delete window[cb]; } catch (e) {}
@@ -134,6 +135,7 @@ function jsonp(action, paramsObj = {}) {
     };
 
     script.onerror = function () {
+      clearTimeout(timeout);
       try { delete window[cb]; } catch (e) {}
       try { script.remove(); } catch (e) {}
       reject(new Error("JSONP failed: " + action));
@@ -183,7 +185,6 @@ function getActiveRowsForCurrentDay() {
     .map((row, realIndex) => ({ row, realIndex }))
     .filter(x => x.row.serviceDate === currentDay && String(x.row.active || "YES").toUpperCase() !== "NO");
 }
-
 
 function rowPayload(row) {
   return {
@@ -246,8 +247,6 @@ async function refreshBoard() {
   }
 }
 
-
-
 async function init() {
   try {
     if (btnSaveWeek) btnSaveWeek.textContent = "Refresh Board";
@@ -262,11 +261,7 @@ async function init() {
     if (!canEditWeeklyBoard(auth)) {
       setMessage("Weekly Board editor is not available for this role.", true);
       if (boardEl) {
-        boardEl.innerHTML = `
-          <div class="assignment" style="grid-column:1/-1;">
-            This page is for office/admin editing only. Your read-only weekly board is on My Weekly Board.
-          </div>
-        `;
+        boardEl.innerHTML = `<div class="assignment" style="grid-column:1/-1;">This page is for office/admin editing only. Your read-only weekly board is on My Weekly Board.</div>`;
       }
       if (btnSaveWeek) btnSaveWeek.style.display = "none";
       return;
@@ -399,9 +394,7 @@ function renderAssignments(dateStr) {
       <div class="assignment">
         <strong>${escapeHtml(group.employeeName)}</strong>
         ${group.items.map(item => `
-          <div class="assignment-client">
-            <span>• ${escapeHtml(item.clientName)}</span>
-          </div>
+          <div class="assignment-client"><span>• ${escapeHtml(item.clientName)}</span></div>
         `).join("")}
       </div>
     `;
@@ -421,7 +414,7 @@ function renderEmployeeEditPanel(row, realIndex) {
       <select data-employee-picker-index="${realIndex}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
         ${options}
       </select>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <div class="assignment-actions">
         <button class="button button-secondary" type="button" data-apply-employee-index="${realIndex}">Apply Employee</button>
         <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
       </div>
@@ -433,15 +426,9 @@ function renderJobEditPanel(row, realIndex) {
   return `
     <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
       <strong>Choose new client/job</strong>
-      <input
-        type="text"
-        data-job-search-index="${realIndex}"
-        placeholder="Start typing client name..."
-        autocomplete="off"
-        style="width:100%;margin-top:10px;padding:12px;border-radius:12px;"
-      >
+      <input type="text" data-job-search-index="${realIndex}" placeholder="Start typing client name..." autocomplete="off" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
       <div data-job-suggestions-index="${realIndex}" style="margin-top:10px;"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <div class="assignment-actions">
         <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
       </div>
     </div>
@@ -468,7 +455,7 @@ function renderModalAssignments() {
         <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
         ${x.row.address ? `<div class="assignment-address" style="opacity:.85;margin-top:4px;">${escapeHtml(x.row.address)}</div>` : ""}
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+        <div class="assignment-actions">
           <button class="button button-secondary" type="button" data-open-employee-edit="${x.realIndex}">Change Employee</button>
           <button class="button button-secondary" type="button" data-open-job-edit="${x.realIndex}">Change Job</button>
           <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
@@ -660,9 +647,12 @@ function handleClientSearch() {
   }
 
   matches.forEach(client => {
-    const div = document.createElement("div");
+    const div = document.createElement("button");
+    div.type = "button";
     div.className = "assignment";
     div.style.cursor = "pointer";
+    div.style.width = "100%";
+    div.style.textAlign = "left";
     div.innerHTML = `
       <strong>${escapeHtml(client.clientName)}</strong>
       <div style="opacity:.75;font-size:13px;">${escapeHtml(client.address || "")}</div>
@@ -741,7 +731,6 @@ async function removeAssignment(index) {
   }
 }
 
-// Legacy name kept on purpose so old console tests do not break.
 function saveBoard() {
   return refreshBoard();
 }
