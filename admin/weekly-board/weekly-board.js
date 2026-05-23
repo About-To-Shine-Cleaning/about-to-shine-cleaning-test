@@ -267,6 +267,7 @@ async function saveCurrentDay() {
     setBusy("Updating day...");
 
     const dayRowsBeforeSave = getCurrentDayRowsPayload();
+    const expectedCount = dayRowsBeforeSave.length;
     const payload = {
       serviceDate: currentDay,
       assignments: dayRowsBeforeSave
@@ -275,12 +276,18 @@ async function saveCurrentDay() {
     const res = await jsonp("weekly_board_save_day", {
       weekStart: currentWeekStart,
       serviceDate: currentDay,
+      expectedCount: String(expectedCount),
+      allowEmptyDay: expectedCount === 0 ? "YES" : "NO",
       payload: JSON.stringify(payload)
     });
 
     if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
 
-    if (Array.isArray(res.rows) && res.rows.length) {
+    if (Number(res.rowCount || 0) !== expectedCount) {
+      throw new Error("day_save_count_mismatch_expected_" + expectedCount + "_got_" + Number(res.rowCount || 0));
+    }
+
+    if (Array.isArray(res.rows)) {
       assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(res.rows);
     } else {
       assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
