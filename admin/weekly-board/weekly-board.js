@@ -2,12 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3005:
-// ✅ Uses single-row backend routes for add/update/remove
-// ✅ Change Job updates only that assignment row and never rewrites the whole board
-// ✅ Fixes jobs disappearing after refresh after changing an assignment
+// Fixed v3006:
+// ✅ Day-edit workflow: add/change/remove locally first
+// ✅ One "Update This Day" button saves the whole day at once
+// ✅ No waiting between each job/employee change
+// ✅ Saves only the selected day, not the whole week
 // ✅ Client picker shows names only
-// ✅ Add / Change Employee / Change Job / Remove persist correctly
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -40,6 +40,8 @@ let currentWeekStart = "";
 let auth = null;
 let editMode = null;
 let isSavingChange = false;
+let dayDirty = false;
+let btnUpdateDay = null;
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -204,26 +206,51 @@ function rowPayload(row, index = 0) {
   };
 }
 
-async function saveRow(action, row) {
-  const payload = JSON.stringify(rowPayload(row));
-  const res = await jsonp(action, {
-    weekStart: currentWeekStart,
-    rowId: row.rowId || "",
-    payload
-  });
+function getCurrentDayRowsPayload() {
+  return assignments
+    .filter(row => row.serviceDate === currentDay && String(row.active || "YES").toUpperCase() !== "NO")
+    .map((row, index) => rowPayload(row, index))
+    .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName);
+}
 
-  if (!res || !res.ok) throw new Error(res?.error || action + " failed");
+function ensureUpdateDayButton() {
+  if (btnUpdateDay) return btnUpdateDay;
 
-  if (res.row && res.row.rowId) {
-    row.rowId = String(res.row.rowId);
+  btnUpdateDay = document.createElement("button");
+  btnUpdateDay.id = "btnUpdateDay";
+  btnUpdateDay.type = "button";
+  btnUpdateDay.className = "button";
+  btnUpdateDay.textContent = "Update This Day";
+  btnUpdateDay.style.marginTop = "12px";
+  btnUpdateDay.addEventListener("click", saveCurrentDay);
+
+  if (assignmentList && assignmentList.parentNode) {
+    assignmentList.parentNode.insertBefore(btnUpdateDay, assignmentList);
   }
 
-  return res;
+  updateDayButtonState();
+  return btnUpdateDay;
+}
+
+function markDayDirty(isDirty = true) {
+  dayDirty = !!isDirty;
+  updateDayButtonState();
+}
+
+function updateDayButtonState() {
+  if (!btnUpdateDay) return;
+  btnUpdateDay.disabled = isSavingChange || !dayDirty;
+  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ✓";
+  btnUpdateDay.style.opacity = dayDirty ? "1" : ".55";
 }
 
 function setBusy(message) {
   isSavingChange = true;
   if (btnAddAssignment) btnAddAssignment.disabled = true;
+  if (btnUpdateDay) {
+    btnUpdateDay.disabled = true;
+    btnUpdateDay.textContent = message || "Working...";
+  }
   if (btnSaveWeek) {
     btnSaveWeek.disabled = true;
     btnSaveWeek.textContent = message || "Working...";
@@ -237,12 +264,48 @@ function clearBusy() {
     btnSaveWeek.disabled = false;
     btnSaveWeek.textContent = "Refresh Board";
   }
+  updateDayButtonState();
+}
+
+async function saveCurrentDay() {
+  if (isSavingChange) return;
+  if (!currentDay) return alert("Choose a day first.");
+
+  try {
+    setBusy("Updating day...");
+
+    const payload = {
+      serviceDate: currentDay,
+      assignments: getCurrentDayRowsPayload()
+    };
+
+    const res = await jsonp("weekly_board_save_day", {
+      weekStart: currentWeekStart,
+      serviceDate: currentDay,
+      payload: JSON.stringify(payload)
+    });
+
+    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
+
+    await loadBoard(currentWeekStart);
+    markDayDirty(false);
+    buildWeekBoard();
+    renderModalAssignments();
+  } catch (err) {
+    console.error(err);
+    alert(String(err?.message || err));
+  } finally {
+    clearBusy();
+  }
 }
 
 async function refreshBoard() {
   try {
+    if (dayDirty && !confirm("You have unsaved changes for this day. Refresh anyway and lose those changes?")) return;
+
     setBusy("Refreshing...");
     await loadBoard(currentWeekStart);
+    markDayDirty(false);
     buildWeekBoard();
     if (currentDay) renderModalAssignments();
   } catch (err) {
@@ -283,6 +346,7 @@ async function init() {
     ]);
 
     buildWeekBoard();
+    ensureUpdateDayButton();
 
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
@@ -359,16 +423,25 @@ function buildWeekBoard() {
 }
 
 function openDay(dateStr, day) {
+  if (dayDirty && currentDay && currentDay !== dateStr) {
+    if (!confirm("You have unsaved changes for this day. Switch days and lose those changes?")) return;
+    markDayDirty(false);
+  }
+
   currentDay = dateStr;
   editMode = null;
   clearClientSelection();
+  ensureUpdateDayButton();
+  markDayDirty(false);
   if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
 }
 
 function closeModal() {
+  if (dayDirty && !confirm("You have unsaved changes. Close without updating this day?")) return;
   editMode = null;
+  markDayDirty(false);
   modal?.classList.remove("open");
 }
 
@@ -551,15 +624,13 @@ function renderInlineJobSuggestions(index, value) {
     row.style.cursor = "pointer";
     row.style.textAlign = "left";
     row.style.marginBottom = "8px";
-    row.innerHTML = `
-      <strong>${escapeHtml(client.clientName)}</strong>
-    `;
+    row.innerHTML = `<strong>${escapeHtml(client.clientName)}</strong>`;
     row.addEventListener("click", () => applyJobChange(index, client));
     box.appendChild(row);
   });
 }
 
-async function applyEmployeeChange(index, employeeId) {
+function applyEmployeeChange(index, employeeId) {
   if (isSavingChange) return;
 
   const row = assignments[index];
@@ -568,70 +639,40 @@ async function applyEmployeeChange(index, employeeId) {
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Employee not found.");
 
-  const oldAssignments = assignments.map(x => ({ ...x }));
+  row.employeeId = employee.employeeId;
+  row.employeeName = employee.employeeName;
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
 
-  try {
-    setBusy("Saving...");
-
-    row.employeeId = employee.employeeId;
-    row.employeeName = employee.employeeName;
-    row.weekStart = currentWeekStart;
-    row.serviceDate = currentDay;
-    row.dayName = getDayNameFromYMD(currentDay);
-    row.active = row.active || "YES";
-
-    await saveRow("weekly_board_update", row);
-
-    editMode = null;
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } catch (err) {
-    assignments = oldAssignments;
-    console.error(err);
-    alert(String(err?.message || err));
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } finally {
-    clearBusy();
-  }
+  markDayDirty(true);
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(currentDay);
 }
 
-async function applyJobChange(index, client) {
+function applyJobChange(index, client) {
   if (isSavingChange) return;
 
   const row = assignments[index];
   if (!row) return alert("Assignment not found.");
   if (!client) return alert("Client not found.");
 
-  const oldAssignments = assignments.map(x => ({ ...x }));
+  row.clientId = client.clientId || "";
+  row.clientName = client.clientName || client.name || "";
+  row.address = client.address || "";
+  row.weekStart = currentWeekStart;
+  row.serviceDate = currentDay;
+  row.dayName = getDayNameFromYMD(currentDay);
+  row.active = row.active || "YES";
 
-  try {
-    setBusy("Saving...");
+  if (!row.clientName) return alert("Selected client is missing a client name.");
 
-    row.clientId = client.clientId || "";
-    row.clientName = client.clientName || client.name || "";
-    row.address = client.address || "";
-    row.weekStart = currentWeekStart;
-    row.serviceDate = currentDay;
-    row.dayName = getDayNameFromYMD(currentDay);
-    row.active = row.active || "YES";
-
-    if (!row.clientName) throw new Error("Selected client is missing a client name.");
-
-    await saveRow("weekly_board_update", row);
-
-    editMode = null;
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } catch (err) {
-    assignments = oldAssignments;
-    console.error(err);
-    alert(String(err?.message || err));
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } finally {
-    clearBusy();
-  }
+  markDayDirty(true);
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(currentDay);
 }
 
 function handleClientSearch() {
@@ -658,9 +699,7 @@ function handleClientSearch() {
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-    div.innerHTML = `
-      <strong>${escapeHtml(client.clientName)}</strong>
-    `;
+    div.innerHTML = `<strong>${escapeHtml(client.clientName)}</strong>`;
 
     div.addEventListener("click", () => {
       selectedClient = client;
@@ -672,7 +711,7 @@ function handleClientSearch() {
   });
 }
 
-async function addAssignment() {
+function addAssignment() {
   if (isSavingChange) return;
   if (!currentDay) return alert("Choose a day first.");
   if (!selectedClient) return alert("Select a client from the search results.");
@@ -695,54 +734,25 @@ async function addAssignment() {
     active: "YES"
   };
 
-  const oldAssignments = assignments.map(x => ({ ...x }));
-
-  try {
-    setBusy("Saving...");
-    const res = await saveRow("weekly_board_add", newRow);
-    if (res.row && res.row.rowId) newRow.rowId = String(res.row.rowId);
-    assignments.push(newRow);
-
-    clearClientSelection();
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } catch (err) {
-    assignments = oldAssignments;
-    console.error(err);
-    alert(String(err?.message || err));
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } finally {
-    clearBusy();
-  }
+  assignments.push(newRow);
+  markDayDirty(true);
+  clearClientSelection();
+  renderModalAssignments();
+  renderAssignments(currentDay);
 }
 
-async function removeAssignment(index) {
+function removeAssignment(index) {
   if (isSavingChange) return;
 
   const row = assignments[index];
   if (!row) return;
-  if (!confirm("Remove this assignment?")) return;
+  if (!confirm("Remove this assignment from this day? Click Update This Day to save changes.")) return;
 
-  const oldAssignments = assignments.map(x => ({ ...x }));
-
-  try {
-    setBusy("Removing...");
-    await saveRow("weekly_board_remove", row);
-    assignments.splice(index, 1);
-
-    editMode = null;
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } catch (err) {
-    assignments = oldAssignments;
-    console.error(err);
-    alert(String(err?.message || err));
-    renderModalAssignments();
-    renderAssignments(currentDay);
-  } finally {
-    clearBusy();
-  }
+  assignments.splice(index, 1);
+  markDayDirty(true);
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(currentDay);
 }
 
 function saveBoard() {
