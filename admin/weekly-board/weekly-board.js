@@ -2,13 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3004:
-// ✅ Uses chunked weekly_board_save backend routes
-// ✅ Fixes jobs disappearing after refresh when changing a job
-// ✅ Avoids long JSONP URL truncation deleting/saving partial board data
+// Fixed v3005:
+// ✅ Uses single-row backend routes for add/update/remove
+// ✅ Change Job updates only that assignment row and never rewrites the whole board
+// ✅ Fixes jobs disappearing after refresh after changing an assignment
+// ✅ Client picker shows names only
 // ✅ Add / Change Employee / Change Job / Remove persist correctly
-// ✅ No rowId dependency
-// ✅ Live client search / inline employee + job changes
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -190,6 +189,7 @@ function getActiveRowsForCurrentDay() {
 function rowPayload(row, index = 0) {
   const serviceDate = row.serviceDate || currentDay;
   return {
+    rowId: row.rowId || "",
     weekStart: row.weekStart || currentWeekStart,
     serviceDate: serviceDate,
     dayName: row.dayName || getDayNameFromYMD(serviceDate),
@@ -204,53 +204,21 @@ function rowPayload(row, index = 0) {
   };
 }
 
-function makeSaveId() {
-  return "wbs_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2);
-}
-
-function splitIntoChunks(text, size) {
-  const out = [];
-  const s = String(text || "");
-  for (let i = 0; i < s.length; i += size) out.push(s.slice(i, i + size));
-  return out;
-}
-
-async function persistAssignments() {
-  const payload = {
-    assignments: assignments
-      .filter(row => String(row.active || "YES").toUpperCase() !== "NO")
-      .map((row, index) => rowPayload(row, index))
-      .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName)
-  };
-
-  const raw = JSON.stringify(payload);
-  const saveId = makeSaveId();
-  const chunks = splitIntoChunks(raw, 1100);
-
-  const startRes = await jsonp("weekly_board_save_start", {
+async function saveRow(action, row) {
+  const payload = JSON.stringify(rowPayload(row));
+  const res = await jsonp(action, {
     weekStart: currentWeekStart,
-    saveId
+    rowId: row.rowId || "",
+    payload
   });
-  if (!startRes || !startRes.ok) throw new Error(startRes?.error || "weekly_board_save_start failed");
 
-  for (let i = 0; i < chunks.length; i++) {
-    const chunkRes = await jsonp("weekly_board_save_chunk", {
-      weekStart: currentWeekStart,
-      saveId,
-      index: String(i),
-      chunk: chunks[i]
-    });
-    if (!chunkRes || !chunkRes.ok) throw new Error(chunkRes?.error || "weekly_board_save_chunk failed");
+  if (!res || !res.ok) throw new Error(res?.error || action + " failed");
+
+  if (res.row && res.row.rowId) {
+    row.rowId = String(res.row.rowId);
   }
 
-  const finishRes = await jsonp("weekly_board_save_finish", {
-    weekStart: currentWeekStart,
-    saveId,
-    totalChunks: String(chunks.length)
-  });
-
-  if (!finishRes || !finishRes.ok) throw new Error(finishRes?.error || "weekly_board_save_finish failed");
-  return finishRes;
+  return res;
 }
 
 function setBusy(message) {
@@ -584,8 +552,8 @@ function renderInlineJobSuggestions(index, value) {
     row.style.textAlign = "left";
     row.style.marginBottom = "8px";
     row.innerHTML = `
-  <strong>${escapeHtml(client.clientName)}</strong>
-`;
+      <strong>${escapeHtml(client.clientName)}</strong>
+    `;
     row.addEventListener("click", () => applyJobChange(index, client));
     box.appendChild(row);
   });
@@ -612,7 +580,7 @@ async function applyEmployeeChange(index, employeeId) {
     row.dayName = getDayNameFromYMD(currentDay);
     row.active = row.active || "YES";
 
-    await persistAssignments();
+    await saveRow("weekly_board_update", row);
 
     editMode = null;
     renderModalAssignments();
@@ -650,7 +618,7 @@ async function applyJobChange(index, client) {
 
     if (!row.clientName) throw new Error("Selected client is missing a client name.");
 
-    await persistAssignments();
+    await saveRow("weekly_board_update", row);
 
     editMode = null;
     renderModalAssignments();
@@ -690,9 +658,9 @@ function handleClientSearch() {
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-   div.innerHTML = `
-  <strong>${escapeHtml(client.clientName)}</strong>
-`;
+    div.innerHTML = `
+      <strong>${escapeHtml(client.clientName)}</strong>
+    `;
 
     div.addEventListener("click", () => {
       selectedClient = client;
@@ -714,6 +682,7 @@ async function addAssignment() {
   if (!employee) return alert("Select an employee.");
 
   const newRow = {
+    rowId: "",
     weekStart: currentWeekStart,
     serviceDate: currentDay,
     dayName: getDayNameFromYMD(currentDay),
@@ -730,8 +699,9 @@ async function addAssignment() {
 
   try {
     setBusy("Saving...");
+    const res = await saveRow("weekly_board_add", newRow);
+    if (res.row && res.row.rowId) newRow.rowId = String(res.row.rowId);
     assignments.push(newRow);
-    await persistAssignments();
 
     clearClientSelection();
     renderModalAssignments();
@@ -758,8 +728,8 @@ async function removeAssignment(index) {
 
   try {
     setBusy("Removing...");
+    await saveRow("weekly_board_remove", row);
     assignments.splice(index, 1);
-    await persistAssignments();
 
     editMode = null;
     renderModalAssignments();
