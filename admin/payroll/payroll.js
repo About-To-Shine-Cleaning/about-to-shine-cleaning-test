@@ -1,10 +1,9 @@
 /* =========================================================
-   ATS Payroll (Admin UI) — Card Layout Version
-   - Auto-loads current payroll
-   - Renders Payroll Review as expandable employee cards
-   - Renders Payroll Finalization as employee cards instead of wide table
+   FILE: /admin/payroll/payroll.js
+   ATS Payroll (Admin UI) — v2 Preserve Functions
+   - Same working backend/routes/functions
    - Keeps Add Job to Employee, Past Payroll, Unlock, QB popup, and finalize routes working
-   - Uses JSONP unified Apps Script backend
+   - Render structure preserved for the new v2 styling
 ========================================================= */
 
 (() => {
@@ -162,31 +161,13 @@
 
     return (Array.isArray(jobs) ? jobs : []).filter(j => {
       const date = String(j.date || "").trim();
-
-      const rawName = String(
-        j.clientName ||
-        j.jobName ||
-        j.job ||
-        j.client ||
-        ""
-      )
+      const rawName = String(j.clientName || j.jobName || j.job || j.client || "")
         .trim()
         .toLowerCase()
         .replace(/\s+/g, " ");
-
-      const rawId = String(j.jobId || "")
-        .trim()
-        .toLowerCase();
-
-      const pay = cleanMoneyNumber(
-        j.jobPay ??
-        j.pay ??
-        j.amount ??
-        0
-      ).toFixed(2);
-
+      const rawId = String(j.jobId || "").trim().toLowerCase();
+      const pay = cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0).toFixed(2);
       const key = [date, rawId || rawName, pay].join("|");
-
       if (seen[key]) return false;
       seen[key] = true;
       return true;
@@ -197,18 +178,13 @@
     return (Array.isArray(employees) ? employees : []).map(emp => {
       const copy = { ...emp };
       copy.jobs = dedupePayrollJobsForDisplay(copy.jobs || []);
-      copy.totalPay = copy.jobs.reduce((sum, j) => {
-        return sum + cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0);
-      }, 0);
+      copy.totalPay = copy.jobs.reduce((sum, j) => sum + cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0), 0);
       return copy;
     });
   }
 
   function employeeInitials(name) {
-    const parts = String(name || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return "?";
     return parts.slice(0, 2).map(p => p.charAt(0).toUpperCase()).join("");
   }
@@ -314,14 +290,7 @@
     const qbWindow = window.open(
       "https://www.quickbooks.com",
       "ATSQuickBooksPayroll",
-      [
-        `width=${qbWidth}`,
-        `height=${qbHeight}`,
-        `left=${left}`,
-        `top=${top}`,
-        "resizable=yes",
-        "scrollbars=yes"
-      ].join(",")
+      [`width=${qbWidth}`, `height=${qbHeight}`, `left=${left}`, `top=${top}`, "resizable=yes", "scrollbars=yes"].join(",")
     );
 
     if (qbWindow) {
@@ -401,13 +370,7 @@
         const name = String(j.name || j.jobName || clientName || "").trim();
         const id = String(j.id || j.jobId || j.clientId || name.replace(/\s+/g, "_")).trim();
         const pay = cleanMoneyNumber(j.pay ?? j.jobPay ?? j.amount ?? j.fullPay ?? j.halfPay ?? 0);
-        return {
-          id,
-          name,
-          clientName,
-          pay,
-          address: String(j.address || "").trim()
-        };
+        return { id, name, clientName, pay, address: String(j.address || "").trim() };
       })
       .filter(j => j.id && j.name && j.pay > 0 && !seen[j.id] && (seen[j.id] = true));
   }
@@ -443,8 +406,9 @@
     const grossTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.totalPay || r.grossPay || r.total || 0), 0);
     const taxTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || 0), 0);
     const netTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.netPay || r.finalNetPay || 0), 0);
+
     if (paymentsTotals) {
-      paymentsTotals.textContent = `Gross Total: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net Recorded: ${money(netTotal)}` : ""}`;
+      paymentsTotals.textContent = `Gross: ${money(grossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net: ${money(netTotal)}` : ""}`;
     }
 
     paymentsBody.innerHTML = data.map(r => {
@@ -768,12 +732,7 @@
     if (!employeeId) return setStatus("Choose an employee.", "err");
     if (!selectedAddJob || !selectedAddJob.id) return setStatus("Start typing and select a client/job first.", "err");
 
-    const basePayload = {
-      serviceDate,
-      employeeId,
-      jobId: selectedAddJob.id,
-      notes
-    };
+    const basePayload = { serviceDate, employeeId, jobId: selectedAddJob.id, notes };
 
     try {
       if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = true; btnAddJobToEmployee.textContent = "Adding..."; }
@@ -842,10 +801,7 @@
     if (!currentPeriodId) return;
     const rows = collectFinalPaymentRows();
 
-    if (!rows.length) {
-      setStatus("No open payment rows found. This period may already be finalized.", "err");
-      return;
-    }
+    if (!rows.length) return setStatus("No open payment rows found. This period may already be finalized.", "err");
 
     for (const row of rows) {
       if (!row.employeeId) return setStatus("Missing employee ID in one payment row.", "err");
@@ -872,7 +828,7 @@
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnFinalizeQB) { btnFinalizeQB.disabled = false; btnFinalizeQB.textContent = "Finalize Payroll"; }
+      if (btnFinalizeQB) { btnFinalizeQB.disabled = false; btnFinalizeQB.textContent = "▦ Finalize Payroll"; }
     }
   }
 
@@ -932,10 +888,7 @@
     const p = await ping();
     if (!p || !p.ok) throw new Error("Ping did not return ok");
 
-    await Promise.allSettled([
-      loadPayrollEmployeesList(),
-      loadClockJobsList()
-    ]);
+    await Promise.allSettled([loadPayrollEmployeesList(), loadClockJobsList()]);
 
     await autoloadCurrentPayroll();
     renderAddJobEmployees(payrollEmployees);
@@ -948,8 +901,7 @@
 
     if (btnLoadPastPayroll) {
       btnLoadPastPayroll.onclick = () =>
-        loadPeriod(pastPayrollSelect?.value || "")
-          .catch(err => setStatus(String(err?.message || err), "err"));
+        loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
     }
 
     if (btnFinalizeQB) btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
