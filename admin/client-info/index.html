@@ -1,674 +1,731 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<title>Client Info | ATS Admin</title>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow,noarchive"/>
-
-<link rel="stylesheet" href="/admin/admin-layout.css?v=6003"/>
-<link rel="stylesheet" href="/assets/css/style.css"/>
-<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
-<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
-
-<script defer src="/admin/admin-nav.js?v=8"></script>
-<script defer src="./client-info.js?v=2100"></script>
-
-<style>
 /* =========================================================
-   FILE: /admin/client-info/index.html
-   ATS Client Info — v2 Expandable UI
-   Safe frontend-only redesign. Uses existing board_clients route.
+   FILE: /admin/admin-layout.css
+   ATS Admin Layout — FULL FIXED v6002
+   Fixes: huge logo, header layout, admin home grid, hidden permissions,
+   expandable Weekly Board card, hamburger drawer styling.
 ========================================================= */
 
+:root{
+  --ats-bg:#07090f;
+  --ats-purple:#3b2479;
+  --ats-purple2:#24164a;
+  --ats-blue:#121b45;
+  --ats-yellow:#ffe600;
+  --ats-text:#f7f7fb;
+  --ats-muted:#b9bed0;
+  --ats-border:rgba(255,255,255,.13);
+  --ats-card:rgba(16,19,28,.92);
+  --ats-shadow:0 18px 50px rgba(0,0,0,.35);
+  --ats-shadow2:0 24px 70px rgba(0,0,0,.45);
+  --ats-r-lg:22px;
+  --ats-r-md:14px;
+  --ats-r-sm:12px;
+  --ats-container:1100px;
+}
+
+*{box-sizing:border-box}
+
+html,
+body{
+  min-height:100%;
+  width:100%;
+  max-width:100%;
+}
+
 body.ats-admin{
-  background-color:#07090f;
-}
-
-.client-page-shell{
-  display:grid;
-  grid-template-columns:minmax(300px,390px) minmax(0,1fr);
-  gap:18px;
-  align-items:start;
-}
-
-.client-panel,
-.client-profile{
-  position:relative;
-  overflow:hidden;
-}
-
-.client-panel::before,
-.client-profile::before{
-  content:"";
-  position:absolute;
-  inset:-1px;
-  pointer-events:none;
-  background:
-    radial-gradient(520px 180px at 10% 0%, rgba(255,230,0,.12), transparent 60%),
-    radial-gradient(520px 220px at 90% 0%, rgba(91,52,190,.18), transparent 62%);
-  opacity:.9;
-}
-
-.client-panel > *,
-.client-profile > *{
-  position:relative;
-  z-index:1;
-}
-
-.client-hero{
-  margin-bottom:18px;
-}
-
-.ats-eyebrow{
-  color:rgba(255,230,0,.92);
-  font-size:12px;
-  font-weight:950;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  margin-bottom:8px;
-}
-
-.client-hero h1,
-.client-profile h1{
   margin:0;
-  font-size:clamp(30px,5vw,48px);
-  line-height:1;
-  letter-spacing:-.04em;
+  min-height:100vh;
+  min-height:100svh;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+  color:var(--ats-text);
+  background-color:var(--ats-bg);
+  background-image:
+    radial-gradient(900px 460px at 8% 4%, rgba(255,230,0,.10), transparent 60%),
+    radial-gradient(760px 420px at 88% 12%, rgba(82,49,170,.20), transparent 62%),
+    linear-gradient(135deg, #120d22 0%, #111735 46%, #07090f 100%);
+  background-repeat:no-repeat;
+  background-attachment:scroll;
+  background-size:cover;
+  background-position:center top;
+  overflow-x:hidden;
 }
 
-.ats-subtitle{
-  max-width:60ch;
-  margin:12px 0 0;
-  color:rgba(247,247,251,.78);
-  line-height:1.55;
+a{color:inherit;text-decoration:none}
+a:hover{text-decoration:none}
+
+/* HEADER */
+.ats-header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  width:100%;
+  backdrop-filter:blur(10px);
+  background:linear-gradient(135deg, rgba(59,36,121,.86), rgba(18,27,69,.86));
+  border-bottom:1px solid rgba(255,255,255,.12);
+  box-shadow:0 10px 30px rgba(0,0,0,.28);
 }
 
-.client-search-wrap{
-  margin-top:18px;
-}
-
-.client-search-label{
+.ats-header-inner{
+  max-width:var(--ats-container);
+  margin:0 auto;
+  padding:12px 16px;
   display:flex;
+  align-items:center;
   justify-content:space-between;
+  gap:12px;
+}
+
+.ats-brand{
+  display:flex;
   align-items:center;
   gap:10px;
-  margin-bottom:8px;
-  color:rgba(247,247,251,.74);
-  font-size:13px;
-  font-weight:850;
+  text-decoration:none;
+  flex:0 0 auto;
 }
 
-.client-count-pill{
+.ats-brand img{
+  height:44px !important;
+  width:44px !important;
+  max-height:44px !important;
+  max-width:44px !important;
+  min-height:44px !important;
+  min-width:44px !important;
+  object-fit:cover !important;
+  display:block !important;
+  border-radius:8px;
+  filter:drop-shadow(0 6px 18px rgba(0,0,0,.35));
+}
+
+.ats-header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.ats-live-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-height:28px;
-  padding:5px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,230,0,.28);
-  background:rgba(255,230,0,.10);
-  color:#ffe600;
-  font-size:12px;
-  font-weight:950;
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,230,0,.65);
+  background:#000;
+  color:var(--ats-yellow);
+  text-decoration:none;
+  font-weight:900;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
   white-space:nowrap;
 }
 
-.client-search{
+.ats-live-btn:hover{
+  background:#111;
+  color:var(--ats-yellow);
+}
+
+.ats-burger{
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  border-radius:999px;
+  border:1px solid var(--ats-border);
+  background:rgba(255,255,255,.08);
+  display:inline-flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  cursor:pointer;
+  padding:0;
+}
+
+.ats-burger span{
+  display:block;
+  width:18px;
+  height:2px;
+  background:rgba(255,255,255,.86);
+  border-radius:999px;
+}
+
+.ats-main{
+  padding:18px 0 40px;
+}
+
+.ats-container{
+  max-width:var(--ats-container);
+  margin:0 auto;
+  padding:0 16px;
+}
+
+/* ADMIN HOME TOP */
+.topbar{
+  padding:18px 0 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.brand-logo{
+  width:44px !important;
+  height:44px !important;
+  max-width:44px !important;
+  max-height:44px !important;
+  min-width:44px !important;
+  min-height:44px !important;
+  flex:0 0 44px !important;
+  border-radius:14px;
+  border:1px solid var(--ats-border);
+  background:rgba(255,255,255,.12);
+  box-shadow:var(--ats-shadow);
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.brand-logo img{
+  width:44px !important;
+  height:44px !important;
+  max-width:44px !important;
+  max-height:44px !important;
+  min-width:44px !important;
+  min-height:44px !important;
+  object-fit:cover !important;
+  display:block !important;
+}
+
+.title{
+  font-weight:900;
+  letter-spacing:.2px;
+  font-size:18px;
+  line-height:1.15;
+}
+
+.sub,
+#who{
+  font-size:12px;
+  color:var(--ats-muted);
+  margin-top:4px;
+  line-height:1.3;
+}
+
+#who{
+  text-align:right;
+  white-space:nowrap;
+}
+
+.accentline{
+  height:6px;
+  background:var(--ats-yellow);
+  border-radius:999px;
+  margin:0;
+  box-shadow:0 6px 16px rgba(0,0,0,.18);
+}
+
+.wrap{
+  max-width:var(--ats-container);
+  margin:0 auto;
+  padding:18px 0;
+}
+
+.status{
+  margin:16px 0 18px;
+  padding:14px;
+  border-radius:var(--ats-r-md);
+  background:rgba(255,255,255,.10);
+  border:1px solid var(--ats-border);
+  color:#fff;
+  font-size:14px;
+  white-space:pre-wrap;
+  line-height:1.45;
+  box-shadow:var(--ats-shadow);
+}
+
+.status.is-loading{border-color:rgba(255,255,255,.22)}
+.status.is-success{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.14)}
+.status.is-error{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.14)}
+
+/* GRID / CARDS */
+.grid,
+#cards.grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  align-items:stretch;
+}
+
+.card,
+.ats-card,
+.hero,
+.day-card,
+.my-day-card,
+.my-job-card,
+.assignment,
+.client-result,
+.spec-box,
+.spec-card,
+.modal,
+.payroll-employee-card,
+.final-employee-card,
+.section-toggle-card,
+details{
+  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
+  border:1px solid var(--ats-border);
+  border-radius:var(--ats-r-lg);
+  box-shadow:var(--ats-shadow);
+  color:var(--ats-text);
+}
+
+.card{
+  padding:18px;
+  min-height:230px;
+  height:230px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.ats-card h1,
+.ats-card h2,
+.ats-card h3,
+.ats-card h4{
+  color:var(--ats-text);
+}
+
+.card h3{
+  margin:0 0 10px;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+
+.card p{
+  margin:0 0 14px;
+  min-height:48px;
+  color:var(--ats-text);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.small,
+.muted,
+.payroll-sub,
+.payroll-total-label,
+.toggle-help,
+.job-date{
+  font-size:12px;
+  color:var(--ats-muted);
+  opacity:1;
+  margin-top:10px;
+  line-height:1.45;
+  word-break:break-word;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.input,
+.ats-input,
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+select,
+textarea,
+.client-search,
+.pay-input,
+.pay-method,
+.admin-input,
+.admin-textarea,
+select.payroll-select{
   width:100%;
-  padding:16px 16px;
-  border-radius:16px;
+  padding:12px;
+  border-radius:12px;
   border:1px solid rgba(255,255,255,.18);
   background:rgba(0,0,0,.35);
-  color:#f7f7fb;
-  font-size:17px;
+  color:var(--ats-text);
   outline:none;
 }
 
+textarea{min-height:96px}
+.input::placeholder,
+textarea::placeholder{color:rgba(255,255,255,.60)}
+
+input:focus,
+select:focus,
+textarea:focus,
 .client-search:focus{
-  border-color:rgba(255,230,0,.72);
-  box-shadow:0 0 0 4px rgba(255,230,0,.13);
-}
-
-.client-filter-row{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-top:12px;
-}
-
-.client-filter-chip{
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:rgba(247,247,251,.82);
-  border-radius:999px;
-  padding:8px 11px;
-  font-size:12px;
-  font-weight:900;
-  cursor:pointer;
-  width:auto;
-  min-height:0;
-  box-shadow:none;
-}
-
-.client-filter-chip.active{
   border-color:rgba(255,230,0,.70);
-  background:rgba(255,230,0,.13);
-  color:#ffe600;
+  box-shadow:0 0 0 3px rgba(255,230,0,.14);
 }
 
-.client-results{
-  margin-top:16px;
-  display:grid;
-  gap:12px;
-  max-height:calc(100svh - 310px);
-  overflow:auto;
-  padding-right:4px;
+select option,
+.pay-method option,
+select.payroll-select option{
+  color:#111827;
+  background:#fff;
 }
 
-.client-result{
-  border:1px solid rgba(255,255,255,.13);
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
-  border-radius:18px;
-  padding:14px;
-  cursor:pointer;
-  transition:transform .16s ease, border-color .16s ease, background .16s ease;
-}
-
-.client-result:hover,
-.client-result.active{
-  transform:translateY(-1px);
-  border-color:rgba(255,230,0,.55);
-  background:linear-gradient(180deg, rgba(32,36,54,.98), rgba(15,18,28,.98));
-}
-
-.client-result-name{
+label.chk{
   display:flex;
-  justify-content:space-between;
-  gap:10px;
-  align-items:flex-start;
-  font-weight:950;
-  font-size:16px;
-  line-height:1.2;
-}
-
-.client-result-address{
-  margin-top:7px;
-  color:rgba(247,247,251,.70);
+  align-items:center;
+  gap:8px;
   font-size:13px;
-  line-height:1.35;
+  color:var(--ats-muted);
+  user-select:none;
 }
 
-.client-result-meta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin-top:10px;
-}
-
-.client-chip{
+/* BUTTONS */
+.btn,
+.button,
+a.button,
+button.button,
+.ats-btn,
+button,
+.map-btn,
+#btnSaveWeek,
+#btnAddAssignment{
   display:inline-flex;
   align-items:center;
-  min-height:24px;
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.06);
-  color:rgba(247,247,251,.78);
-  font-size:11px;
-  font-weight:850;
+  justify-content:center;
+  width:100%;
+  min-height:48px;
+  padding:12px 20px;
+  border-radius:10px;
+  border:1px solid rgba(255,230,0,.55);
+  background:#000;
+  color:var(--ats-yellow);
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
+  font-weight:900;
+  text-decoration:none;
+  cursor:pointer;
+  transition:all .18s ease;
 }
 
-.client-chip.yellow{
-  border-color:rgba(255,230,0,.35);
-  background:rgba(255,230,0,.10);
-  color:#ffe600;
+.card .btn,
+.card .button{margin-top:auto}
+
+.btn:hover,
+.button:hover,
+a.button:hover,
+button.button:hover,
+.ats-btn:hover,
+button:hover,
+.map-btn:hover,
+#btnSaveWeek:hover,
+#btnAddAssignment:hover{
+  background:#111;
+  color:var(--ats-yellow);
+  border-color:rgba(255,230,0,.85);
+  transform:translateY(-1px);
+  text-decoration:none;
 }
 
-.client-card{
+.btn.secondary,
+.button-secondary,
+.ats-btn.secondary,
+button.button-secondary,
+a.button-secondary{
+  background:rgba(0,0,0,.34);
+  color:var(--ats-text);
+  border:1px solid rgba(255,255,255,.18);
+}
+
+button:disabled,
+.button:disabled,
+.button.disabled,
+.my-clock-btn.disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  pointer-events:none;
+  filter:none !important;
+}
+
+/* EXPANDABLE WEEKLY BOARD CARD */
+.board-card{
+  position:relative;
+  overflow:hidden;
+  transition:min-height .18s ease,height .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+
+.board-card:not(.expanded){
+  height:230px;
+  min-height:230px;
+}
+
+.board-card.expanded{
+  height:auto;
+  min-height:330px;
+  z-index:5;
+  border-color:rgba(255,230,0,.70);
+  box-shadow:0 24px 70px rgba(0,0,0,.45);
+}
+
+.board-card-main{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:auto;
+}
+
+.board-card-main .btn,
+.board-card-main .button{
+  flex:1 1 auto;
+  margin-top:0;
+}
+
+.board-card-toggle{
+  flex:0 0 54px;
+  width:54px;
+  min-width:54px;
+  height:54px;
+  min-height:54px;
+  padding:0;
+  border-radius:12px;
+  font-size:0;
+  line-height:1;
+  position:relative;
+}
+
+.board-card-toggle::before{
+  content:"⌄";
+  font-size:28px;
+  line-height:1;
+  color:var(--ats-yellow);
+  font-weight:900;
+}
+
+.board-card.expanded .board-card-toggle::before{
+  content:"⌃";
+}
+
+.board-card-extra{
   display:none;
+  width:100%;
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.13);
 }
 
-.client-card.open{
+.board-card.expanded .board-card-extra{
   display:block;
 }
 
-.client-empty-state{
-  display:flex;
-  min-height:420px;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding:26px;
-  color:rgba(247,247,251,.75);
+/* DRAWER NAV */
+.ats-nav-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .16s ease;
+  z-index:80;
 }
 
-.client-empty-icon{
-  width:76px;
-  height:76px;
-  margin:0 auto 16px;
-  border-radius:24px;
+.ats-nav-drawer{
+  position:fixed;
+  top:0;
+  right:0;
+  height:100%;
+  width:min(360px,92vw);
+  background:linear-gradient(180deg, rgba(63,28,131,.92), rgba(11,16,32,.96));
+  border-left:1px solid var(--ats-border);
+  box-shadow:var(--ats-shadow2);
+  transform:translateX(105%);
+  transition:transform .18s ease;
+  z-index:90;
   display:flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid rgba(255,230,0,.30);
-  background:rgba(255,230,0,.08);
-  color:#ffe600;
-  font-size:34px;
+  flex-direction:column;
 }
 
-.client-profile-top{
+.ats-nav-drawer header{
+  padding:14px 14px 10px;
   display:flex;
   justify-content:space-between;
-  align-items:flex-start;
-  gap:18px;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-
-.client-title-block{
-  min-width:0;
-  flex:1 1 320px;
-}
-
-.client-name{
-  font-size:clamp(30px,5vw,48px);
-  font-weight:950;
-  line-height:.98;
-  letter-spacing:-.045em;
-  word-break:break-word;
-}
-
-.client-address{
-  color:rgba(247,247,251,.76);
-  margin-top:10px;
-  line-height:1.45;
-  word-break:break-word;
-}
-
-.client-action-row{
-  display:flex;
+  align-items:center;
   gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  align-items:center;
+  border-bottom:1px solid var(--ats-border);
 }
 
-.map-btn,
-.client-action-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  width:auto;
-  min-height:46px;
-  padding:12px 15px;
-  border-radius:14px;
-  background:#000 !important;
-  border:1px solid rgba(255,230,0,.55) !important;
-  color:#ffe600 !important;
-  font-weight:950;
+.ats-nav-drawer h2{font-size:16px;margin:0;letter-spacing:.3px}
+.ats-nav-close{width:42px;height:42px;border-radius:999px}
+.ats-nav-list{padding:10px;display:flex;flex-direction:column;gap:8px}
+
+.ats-nav-item{
+  padding:12px;
+  border-radius:var(--ats-r-md);
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
   text-decoration:none;
-  white-space:nowrap;
-  box-shadow:0 10px 24px rgba(0,0,0,.35);
+  font-weight:800;
 }
 
-.map-btn:hover,
-.client-action-btn:hover{
+.ats-nav-item:hover{background:rgba(255,255,255,.10)}
+.ats-nav-item[aria-current="page"]{border-color:rgba(255,230,0,.60);background:rgba(255,230,0,.14);color:var(--ats-yellow)}
+.ats-nav-footer{margin-top:auto;padding:12px 10px 16px;border-top:1px solid var(--ats-border)}
+.ats-nav-footer .ats-live-btn{width:100%}
+.ats-nav-backdrop.open{opacity:1;pointer-events:auto}
+.ats-nav-drawer.open{transform:translateX(0)}
+
+/* CLOCK / LIGHT CARDS */
+.ats-clock .button,
+.ats-clock a.button,
+.ats-clock button.button,
+.ats-clock .button:disabled,
+.ats-clock button.button:disabled,
+.ats-clock .button[disabled],
+.ats-clock button.button[disabled]{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:var(--ats-yellow) !important;
+  -webkit-text-fill-color:var(--ats-yellow) !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  border-radius:7px;
+  box-shadow:none;
+  min-width:160px;
+  padding:16px 22px;
+  font-weight:900;
+  font-size:16px;
+  text-align:center;
+  filter:none !important;
+  opacity:1 !important;
+}
+
+.ats-clock .button:hover,
+.ats-clock a.button:hover,
+.ats-clock button.button:hover{
   background:#111 !important;
   border-color:rgba(255,230,0,.85) !important;
-  color:#ffe600 !important;
 }
 
-.client-stat-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px;
-  margin:18px 0;
+.ats-clock .button:disabled,
+.ats-clock button.button:disabled,
+.ats-clock .button[disabled],
+.ats-clock button.button[disabled]{
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  transform:none !important;
 }
 
-.client-stat{
-  padding:14px;
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.20);
-  min-width:0;
+.ats-clock .button.clock-action-locked,
+.ats-clock button.button.clock-action-locked{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:var(--ats-yellow) !important;
+  -webkit-text-fill-color:var(--ats-yellow) !important;
+  border:1px solid rgba(255,230,0,.55) !important;
+  filter:none !important;
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  transform:none !important;
 }
 
-.client-stat-label{
-  color:rgba(247,247,251,.60);
-  font-size:11px;
-  font-weight:950;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  margin-bottom:7px;
+.ats-card--light{
+  background:#fff;
+  color:#111827;
+  border:1px solid rgba(17,24,39,.10);
+  box-shadow:0 18px 60px rgba(0,0,0,.28);
 }
 
-.client-stat-value{
-  color:#f7f7fb;
-  font-size:15px;
-  font-weight:950;
-  line-height:1.25;
-  word-break:break-word;
+.ats-card--light h1,
+.ats-card--light h2,
+.ats-card--light h3,
+.ats-card--light h4,
+.ats-card--light label{color:#111827}
+
+.ats-card--light input,
+.ats-card--light select,
+.ats-card--light textarea{
+  background:#fff;
+  color:#111827;
+  border:1px solid rgba(17,24,39,.18);
 }
 
-.client-stat-value.yellow{
-  color:#ffe600;
+/* TABLES / MISC */
+table th,
+table td{border-color:rgba(255,255,255,.10)}
+th{color:var(--ats-yellow)}
+.table-wrap{background:rgba(0,0,0,.22);border-color:var(--ats-border)}
+.my-client-btn{color:var(--ats-text)}
+.my-job-address a,.client-address a,a[href*="maps"]{color:var(--ats-yellow);font-weight:900}
+
+.my-day-card.past-day{
+  opacity:.48;
+  filter:grayscale(.75);
+  background:linear-gradient(180deg, rgba(28,30,38,.80), rgba(12,14,20,.86));
 }
 
-.client-accordion{
-  display:grid;
-  gap:12px;
-  margin-top:18px;
+.my-day-card.past-day button,
+.my-day-card.past-day a{pointer-events:none;cursor:not-allowed}
+.my-day-card.past-day .my-clock-btn{background:#141414;color:#a9a9a9;border-color:rgba(255,255,255,.12)}
+
+/* MUST STAY LAST — PERMISSIONS + LOGO REPAIR */
+.hidden,
+.card.hidden,
+#cards.hidden,
+#cards .card.hidden,
+body.ats-admin .hidden,
+body.ats-admin .card.hidden,
+body.ats-admin #cards .card.hidden{
+  display:none !important;
 }
 
-.client-accordion-item{
-  border:1px solid rgba(255,255,255,.13);
-  background:linear-gradient(180deg, rgba(22,26,40,.96), rgba(13,16,25,.96));
-  border-radius:20px;
-  overflow:hidden;
-  box-shadow:0 16px 40px rgba(0,0,0,.24);
+body.ats-admin .ats-brand img,
+body.ats-admin .brand-logo,
+body.ats-admin .topbar .brand-logo,
+body.ats-admin .brand-logo img,
+body.ats-admin .topbar .brand-logo img{
+  max-width:44px !important;
+  max-height:44px !important;
 }
 
-.client-accordion-btn{
-  width:100%;
-  min-height:62px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  padding:16px;
-  border:0;
-  border-radius:0;
-  background:transparent !important;
-  color:#f7f7fb !important;
-  box-shadow:none !important;
-  cursor:pointer;
-  text-align:left;
+body.ats-admin #cards.grid{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:14px !important;
+  align-items:stretch !important;
 }
 
-.client-accordion-title{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-width:0;
-}
-
-.client-accordion-icon{
-  width:38px;
-  height:38px;
-  flex:0 0 38px;
-  border-radius:14px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid rgba(255,230,0,.32);
-  background:rgba(255,230,0,.10);
-  color:#ffe600;
-  font-size:18px;
-}
-
-.client-accordion-heading{
-  font-size:15px;
-  font-weight:950;
-  line-height:1.2;
-}
-
-.client-accordion-sub{
-  margin-top:3px;
-  color:rgba(247,247,251,.58);
-  font-size:12px;
-  line-height:1.25;
-}
-
-.client-accordion-arrow{
-  width:34px;
-  height:34px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.05);
-  color:#ffe600;
-  font-size:20px;
-  transition:transform .16s ease;
-}
-
-.client-accordion-item.open .client-accordion-arrow{
-  transform:rotate(180deg);
-}
-
-.client-accordion-body{
-  display:none;
-  padding:0 16px 16px 66px;
-  color:rgba(247,247,251,.86);
-  white-space:pre-wrap;
-  line-height:1.55;
-}
-
-.client-accordion-item.open .client-accordion-body{
-  display:block;
-}
-
-.client-accordion-body.empty{
-  color:rgba(247,247,251,.48);
-  font-style:italic;
-}
-
-.client-mini-note{
-  margin-top:14px;
-  padding:12px 14px;
-  border-radius:16px;
-  border:1px solid rgba(255,230,0,.18);
-  background:rgba(255,230,0,.07);
-  color:rgba(247,247,251,.78);
-  font-size:13px;
-  line-height:1.45;
-}
-
-@media(max-width:980px){
-  .client-page-shell{
-    grid-template-columns:1fr;
-  }
-
-  .client-results{
-    max-height:none;
-  }
+@media(max-width:900px){
+  body.ats-admin #cards.grid{grid-template-columns:1fr !important}
 }
 
 @media(max-width:760px){
-  .client-profile-top{
-    gap:14px;
+  body.ats-admin{
+    min-height:100vh;
+    min-height:100svh;
+    background-attachment:scroll;
+    overflow-x:hidden;
   }
 
-  .client-action-row,
-  .map-btn,
-  .client-action-btn{
-    width:100%;
-  }
-
-  .client-stat-grid{
-    grid-template-columns:1fr;
-  }
-
-  .client-accordion-body{
-    padding:0 14px 14px;
-  }
-
-  .client-accordion-btn{
-    padding:14px;
-  }
-
-  .client-accordion-icon{
-    width:34px;
-    height:34px;
-    flex-basis:34px;
-  }
+  .ats-live-btn{display:none}
+  .ats-brand img{height:40px !important;width:40px !important;max-height:40px !important;max-width:40px !important}
+  .ats-main{padding-top:14px}
+  .topbar{padding:16px 0 12px}
+  .wrap{padding:14px 0}
+  .card{height:auto;min-height:210px;padding:18px}
+  .board-card:not(.expanded){height:auto;min-height:210px}
+  .board-card.expanded{min-height:320px}
+  .accentline{margin:0}
+  .status{font-size:15px;padding:16px 14px}
+  .board-card-main{display:flex}
+  .board-card .btn,.board-card .button{width:100%}
 }
-</style>
-</head>
-
-<body class="ats-admin">
-<header class="ats-header">
-  <div class="ats-header-inner">
-    <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
-      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo">
-    </a>
-
-    <div class="ats-header-actions">
-      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </div>
-</header>
-
-<main class="ats-main">
-  <div class="ats-container">
-    <div class="client-page-shell">
-
-      <section class="ats-card client-panel">
-        <div class="client-hero">
-          <div class="ats-eyebrow">Client Information</div>
-          <h1>Client Specs</h1>
-          <p class="ats-subtitle">
-            Search a client to view address, map link, cleaning notes, schedule details, and special instructions.
-          </p>
-        </div>
-
-        <div class="client-search-wrap">
-          <div class="client-search-label">
-            <span>Search clients</span>
-            <span class="client-count-pill" id="clientCount">Loading...</span>
-          </div>
-
-          <input
-            id="clientSearch"
-            class="client-search"
-            type="text"
-            placeholder="Start typing client name..."
-            autocomplete="off"
-          />
-
-          <div class="client-filter-row" aria-label="Client filters">
-            <button class="client-filter-chip active" type="button" data-filter="all">All</button>
-            <button class="client-filter-chip" type="button" data-filter="residential">Residential</button>
-            <button class="client-filter-chip" type="button" data-filter="commercial">Commercial</button>
-          </div>
-
-          <div id="clientResults" class="client-results"></div>
-        </div>
-      </section>
-
-      <section class="ats-card client-profile">
-        <div id="clientEmptyState" class="client-empty-state">
-          <div>
-            <div class="client-empty-icon">☀</div>
-            <h2 style="margin:0 0 8px;">Choose a client</h2>
-            <p style="margin:0;max-width:42ch;">
-              Client details will open here in expandable sections so the page stays clean on mobile and desktop.
-            </p>
-          </div>
-        </div>
-
-        <div class="client-card" id="clientCard">
-          <div class="client-profile-top">
-            <div class="client-title-block">
-              <div class="ats-eyebrow" id="clientTypeBadge">Client Profile</div>
-              <div class="client-name" id="clientName">—</div>
-              <div class="client-address" id="clientAddress">—</div>
-            </div>
-
-            <div class="client-action-row">
-              <a id="mapLink" class="map-btn" href="#" target="_blank" rel="noopener">📍 Open Map</a>
-            </div>
-          </div>
-
-          <div class="client-stat-grid">
-            <div class="client-stat">
-              <div class="client-stat-label">Frequency</div>
-              <div class="client-stat-value yellow" id="clientFrequency">—</div>
-            </div>
-
-            <div class="client-stat">
-              <div class="client-stat-label">Type</div>
-              <div class="client-stat-value" id="clientType">—</div>
-            </div>
-
-            <div class="client-stat">
-              <div class="client-stat-label">Internal Pay</div>
-              <div class="client-stat-value" id="clientPayout">—</div>
-            </div>
-          </div>
-
-          <div class="client-accordion" id="clientAccordion">
-            <div class="client-accordion-item open" data-section="specs">
-              <button class="client-accordion-btn" type="button" aria-expanded="true">
-                <span class="client-accordion-title">
-                  <span class="client-accordion-icon">🧽</span>
-                  <span>
-                    <span class="client-accordion-heading">Cleaning Specs</span>
-                    <span class="client-accordion-sub">Regular cleaning notes and room priorities</span>
-                  </span>
-                </span>
-                <span class="client-accordion-arrow">⌄</span>
-              </button>
-              <div class="client-accordion-body" id="clientSpecs">—</div>
-            </div>
-
-            <div class="client-accordion-item" data-section="special">
-              <button class="client-accordion-btn" type="button" aria-expanded="false">
-                <span class="client-accordion-title">
-                  <span class="client-accordion-icon">⭐</span>
-                  <span>
-                    <span class="client-accordion-heading">Special Info</span>
-                    <span class="client-accordion-sub">Preferences, pets, allergies, access, and warnings</span>
-                  </span>
-                </span>
-                <span class="client-accordion-arrow">⌄</span>
-              </button>
-              <div class="client-accordion-body" id="clientSpecialInfo">—</div>
-            </div>
-
-            <div class="client-accordion-item" data-section="schedule">
-              <button class="client-accordion-btn" type="button" aria-expanded="false">
-                <span class="client-accordion-title">
-                  <span class="client-accordion-icon">📅</span>
-                  <span>
-                    <span class="client-accordion-heading">Schedule Info</span>
-                    <span class="client-accordion-sub">Frequency and client category</span>
-                  </span>
-                </span>
-                <span class="client-accordion-arrow">⌄</span>
-              </button>
-              <div class="client-accordion-body" id="clientScheduleInfo">—</div>
-            </div>
-
-            <div class="client-accordion-item" data-section="office">
-              <button class="client-accordion-btn" type="button" aria-expanded="false">
-                <span class="client-accordion-title">
-                  <span class="client-accordion-icon">🔒</span>
-                  <span>
-                    <span class="client-accordion-heading">Office Info</span>
-                    <span class="client-accordion-sub">Internal payout / admin-only reference</span>
-                  </span>
-                </span>
-                <span class="client-accordion-arrow">⌄</span>
-              </button>
-              <div class="client-accordion-body" id="clientOfficeInfo">—</div>
-            </div>
-          </div>
-
-          <div class="client-mini-note">
-            Tip: keep the main notes short in the sheet. Use Special Info for anything cleaners must notice before entering the home or business.
-          </div>
-        </div>
-      </section>
-
-    </div>
-  </div>
-</main>
-
-</body>
-</html>
