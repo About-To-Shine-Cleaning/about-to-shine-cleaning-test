@@ -2,10 +2,11 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3006:
+// Fixed v3007:
+// ✅ Removed Refresh Board fallback button support
 // ✅ Day-edit workflow: add/change/remove locally first
 // ✅ One "Update This Day" button saves the whole day at once
-// ✅ No waiting between each job/employee change
+// ✅ Board updates immediately after local edits and again after save
 // ✅ Saves only the selected day, not the whole week
 // ✅ Client picker shows names only
 // =========================================================
@@ -25,7 +26,6 @@ const employeeSelect = document.getElementById("employeeSelect");
 const clientSearch = document.getElementById("clientSearch");
 const clientSuggestions = document.getElementById("clientSuggestions");
 const assignmentList = document.getElementById("assignmentList");
-const btnSaveWeek = document.getElementById("btnSaveWeek");
 const closeModalBtn = document.getElementById("closeModal");
 const btnAddAssignment = document.getElementById("btnAddAssignment");
 
@@ -220,7 +220,7 @@ function ensureUpdateDayButton() {
   btnUpdateDay.id = "btnUpdateDay";
   btnUpdateDay.type = "button";
   btnUpdateDay.className = "button";
-  btnUpdateDay.textContent = "Update This Day";
+  btnUpdateDay.textContent = "Day Saved ✓";
   btnUpdateDay.style.marginTop = "12px";
   btnUpdateDay.addEventListener("click", saveCurrentDay);
 
@@ -251,19 +251,11 @@ function setBusy(message) {
     btnUpdateDay.disabled = true;
     btnUpdateDay.textContent = message || "Working...";
   }
-  if (btnSaveWeek) {
-    btnSaveWeek.disabled = true;
-    btnSaveWeek.textContent = message || "Working...";
-  }
 }
 
 function clearBusy() {
   isSavingChange = false;
   if (btnAddAssignment) btnAddAssignment.disabled = false;
-  if (btnSaveWeek) {
-    btnSaveWeek.disabled = false;
-    btnSaveWeek.textContent = "Refresh Board";
-  }
   updateDayButtonState();
 }
 
@@ -274,9 +266,10 @@ async function saveCurrentDay() {
   try {
     setBusy("Updating day...");
 
+    const dayRowsBeforeSave = getCurrentDayRowsPayload();
     const payload = {
       serviceDate: currentDay,
-      assignments: getCurrentDayRowsPayload()
+      assignments: dayRowsBeforeSave
     };
 
     const res = await jsonp("weekly_board_save_day", {
@@ -287,7 +280,12 @@ async function saveCurrentDay() {
 
     if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
 
-    await loadBoard(currentWeekStart);
+    if (Array.isArray(res.rows) && res.rows.length) {
+      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(res.rows);
+    } else {
+      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
+    }
+
     markDayDirty(false);
     buildWeekBoard();
     renderModalAssignments();
@@ -299,27 +297,8 @@ async function saveCurrentDay() {
   }
 }
 
-async function refreshBoard() {
-  try {
-    if (dayDirty && !confirm("You have unsaved changes for this day. Refresh anyway and lose those changes?")) return;
-
-    setBusy("Refreshing...");
-    await loadBoard(currentWeekStart);
-    markDayDirty(false);
-    buildWeekBoard();
-    if (currentDay) renderModalAssignments();
-  } catch (err) {
-    console.error(err);
-    alert(String(err?.message || err));
-  } finally {
-    clearBusy();
-  }
-}
-
 async function init() {
   try {
-    if (btnSaveWeek) btnSaveWeek.textContent = "Refresh Board";
-
     const authRes = await jsonp("auth");
     if (!authRes || !authRes.ok) throw new Error(authRes?.error || "Not authorized");
     auth = authRes;
@@ -332,7 +311,6 @@ async function init() {
       if (boardEl) {
         boardEl.innerHTML = `<div class="assignment" style="grid-column:1/-1;">This page is for office/admin editing only. Your read-only weekly board is on My Weekly Board.</div>`;
       }
-      if (btnSaveWeek) btnSaveWeek.style.display = "none";
       return;
     }
 
@@ -351,7 +329,6 @@ async function init() {
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
     clientSearch?.addEventListener("input", handleClientSearch);
-    btnSaveWeek?.addEventListener("click", refreshBoard);
 
     modal?.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
@@ -753,10 +730,6 @@ function removeAssignment(index) {
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
-}
-
-function saveBoard() {
-  return refreshBoard();
 }
 
 if (document.readyState === "loading") {
