@@ -27,7 +27,7 @@
 
 <script
   defer
-  src="./my-weekly-board.js?v=6009"
+  src="./my-weekly-board.js?v=6010"
 ></script>
 
 <style>
@@ -75,14 +75,6 @@ body.ats-admin{
   flex-wrap:wrap;
 }
 
-.my-board-actions{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
 .my-board-meta{
   opacity:.78;
   margin-top:8px;
@@ -108,7 +100,6 @@ body.ats-admin{
 }
 
 .board-toggle-btn,
-.my-clock-top-btn,
 .my-clock-job-btn{
   min-height:42px;
   display:inline-flex;
@@ -126,7 +117,6 @@ body.ats-admin{
 }
 
 .board-toggle-btn.active,
-.my-clock-top-btn,
 .my-clock-job-btn{
   background:#ffe600;
   color:#10121f;
@@ -148,7 +138,6 @@ body.ats-admin{
       7,
       minmax(0,1fr)
     );
-
   gap:12px;
   margin-top:22px;
 }
@@ -160,27 +149,21 @@ body.ats-admin{
       rgba(255,255,255,.06),
       rgba(255,255,255,.03)
     );
-
-  border:
-    1px solid
-    rgba(255,255,255,.10);
-
+  border:1px solid rgba(255,255,255,.10);
   border-radius:20px;
-
   padding:14px;
-
   min-width:0;
-
-  transition:
-    transform .18s ease,
-    border-color .18s ease;
+  transition:transform .18s ease,border-color .18s ease;
 }
 
 .my-day-card:hover{
   transform:translateY(-2px);
+  border-color:rgba(255,230,0,.25);
+}
 
-  border-color:
-    rgba(255,230,0,.25);
+.my-day-card.today-day{
+  border-color:rgba(255,230,0,.45);
+  box-shadow:0 0 22px rgba(255,230,0,.10);
 }
 
 .my-day-card.past-day{
@@ -196,25 +179,15 @@ body.ats-admin{
 .my-day-date{
   margin-top:4px;
   margin-bottom:14px;
-
   font-size:12px;
-
-  color:
-    rgba(255,255,255,.68);
+  color:rgba(255,255,255,.68);
 }
 
 .my-job-card{
-  background:
-    rgba(0,0,0,.22);
-
-  border:
-    1px solid
-    rgba(255,255,255,.10);
-
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
-
   padding:14px;
-
   margin-bottom:12px;
 }
 
@@ -222,20 +195,14 @@ body.ats-admin{
   appearance:none;
   border:0;
   background:transparent;
-
   color:#fff;
-
   padding:0;
   margin:0;
-
   font:inherit;
   font-size:18px;
   font-weight:900;
-
   text-align:left;
-
   cursor:pointer;
-
   text-decoration:underline;
   text-underline-offset:3px;
 }
@@ -250,14 +217,9 @@ body.ats-admin{
 .my-job-notes,
 .my-job-shared{
   margin-top:10px;
-
   font-size:13px;
-
   line-height:1.45;
-
-  color:
-    rgba(255,255,255,.82);
-
+  color:rgba(255,255,255,.82);
   overflow-wrap:anywhere;
 }
 
@@ -274,30 +236,17 @@ body.ats-admin{
 
 .my-job-date-lock{
   margin-top:12px;
-
   display:inline-flex;
   align-items:center;
   justify-content:center;
-
   min-height:34px;
-
-  padding:
-    8px 12px;
-
+  padding:8px 12px;
   border-radius:999px;
-
-  background:
-    rgba(255,255,255,.07);
-
-  border:
-    1px solid
-    rgba(255,255,255,.12);
-
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
   font-size:12px;
   font-weight:900;
-
-  color:
-    rgba(255,255,255,.72);
+  color:rgba(255,255,255,.72);
 }
 
 .full-week-job{
@@ -324,22 +273,15 @@ body.ats-admin{
 
 .spec-card{
   display:none;
-
   margin-top:20px;
-
   background:
     linear-gradient(
       180deg,
       rgba(255,255,255,.06),
       rgba(255,255,255,.03)
     );
-
-  border:
-    1px solid
-    rgba(255,255,255,.10);
-
+  border:1px solid rgba(255,255,255,.10);
   border-radius:20px;
-
   padding:20px;
 }
 
@@ -353,7 +295,6 @@ body.ats-admin{
   align-items:center;
   gap:12px;
   flex-wrap:wrap;
-
   margin-bottom:14px;
 }
 
@@ -364,13 +305,9 @@ body.ats-admin{
 .spec-label{
   font-size:12px;
   font-weight:900;
-
   text-transform:uppercase;
-
   letter-spacing:.06em;
-
   opacity:.68;
-
   margin-bottom:5px;
 }
 
@@ -380,31 +317,18 @@ body.ats-admin{
 }
 
 @media(max-width:1200px){
-
   .my-board-week{
-    grid-template-columns:
-      repeat(
-        3,
-        minmax(0,1fr)
-      );
+    grid-template-columns:repeat(3,minmax(0,1fr));
   }
-
 }
 
 @media(max-width:850px){
-
   .my-board-week{
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0,1fr)
-      );
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
-
 }
 
 @media(max-width:760px){
-
   .my-board-container{
     padding:12px;
   }
@@ -417,16 +341,9 @@ body.ats-admin{
     grid-template-columns:1fr;
   }
 
-  .my-board-actions{
-    width:100%;
-    justify-content:stretch;
-  }
-
-  .my-clock-top-btn,
   .board-toggle-btn{
     flex:1 1 auto;
   }
-
 }
 
 </style>
@@ -435,157 +352,73 @@ body.ats-admin{
 <body class="ats-admin">
 
 <header class="ats-header">
-
   <div class="ats-header-inner">
-
-    <a
-      class="ats-brand"
-      href="/admin/"
-    >
-      <img
-        src="/assets/images/logo-v2.png"
-        alt="About To Shine Cleaning"
-      />
+    <a class="ats-brand" href="/admin/">
+      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning"/>
     </a>
 
     <div class="ats-header-actions">
-
-      <a
-        class="ats-live-btn"
-        href="https://abouttoshinecleaning.com"
-        target="_blank"
-      >
+      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank">
         Go to Live Website
       </a>
 
-      <button
-        class="ats-burger"
-        type="button"
-        aria-label="Open menu"
-      >
+      <button class="ats-burger" type="button" aria-label="Open menu">
         <span></span>
         <span></span>
         <span></span>
       </button>
-
     </div>
-
   </div>
-
 </header>
 
 <main class="ats-main">
-
   <div class="my-board-container">
-
     <section class="ats-card my-board-shell">
-
       <div class="my-board-top">
-
         <div>
+          <div class="ats-eyebrow">Employee Weekly Board</div>
 
-          <div class="ats-eyebrow">
-            Employee Weekly Board
-          </div>
-
-          <h1 id="pageTitle">
-            My Weekly Board
-          </h1>
+          <h1 id="pageTitle">My Weekly Board</h1>
 
           <h2 id="weekLabel" style="margin:.35rem 0 0;">
             Loading week...
           </h2>
 
-          <div
-            class="my-board-meta"
-            id="statusBox"
-          >
+          <div class="my-board-meta" id="statusBox">
             Loading assignments...
           </div>
-
         </div>
-
-        <div class="my-board-actions">
-          <a
-            class="my-clock-top-btn"
-            id="clockLink"
-            href="/admin/clock/"
-          >
-            Open Clock
-          </a>
-        </div>
-
       </div>
 
-      <div
-        class="view-toolbar"
-        id="viewToolbar"
-      >
-        <button
-          class="board-toggle-btn active"
-          type="button"
-          id="btnMyJobs"
-          aria-pressed="true"
-        >
+      <div class="view-toolbar" id="viewToolbar">
+        <button class="board-toggle-btn active" type="button" id="btnMyJobs" aria-pressed="true">
           My Jobs
         </button>
 
-        <button
-          class="board-toggle-btn"
-          type="button"
-          id="btnFullWeek"
-          aria-pressed="false"
-        >
+        <button class="board-toggle-btn" type="button" id="btnFullWeek" aria-pressed="false">
           Full Week
         </button>
 
-        <div
-          class="view-help"
-          id="viewHelp"
-        >
-          My Jobs shows maps, specs, and clock-in for active service days.
+        <div class="view-help" id="viewHelp">
+          My Jobs shows maps and specs. Clock-in only appears on today's jobs.
         </div>
       </div>
 
-      <div
-        class="my-board-week"
-        id="weekBoard"
-      ></div>
-
+      <div class="my-board-week" id="weekBoard"></div>
     </section>
 
-    <section
-      class="spec-card"
-      id="clientSpecsCard"
-    >
-
+    <section class="spec-card" id="clientSpecsCard">
       <div class="spec-head">
+        <h2 id="specTitle" style="margin:0;">Client Specs</h2>
 
-        <h2
-          id="specTitle"
-          style="margin:0;"
-        >
-          Client Specs
-        </h2>
-
-        <button
-          class="button button-secondary"
-          type="button"
-          id="closeSpecsBtn"
-        >
+        <button class="button button-secondary" type="button" id="closeSpecsBtn">
           Close
         </button>
-
       </div>
 
-      <div id="clientSpecsBody">
-        Loading...
-      </div>
-
+      <div id="clientSpecsBody">Loading...</div>
     </section>
-
   </div>
-
 </main>
 
 </body>
