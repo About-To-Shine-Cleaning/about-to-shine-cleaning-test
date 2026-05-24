@@ -2,13 +2,13 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3010:
-// ✅ Removed Refresh Board fallback button support
-// ✅ Day-edit workflow: add/change/remove locally first
-// ✅ One "Update This Day" button saves the whole day at once
-// ✅ Board updates immediately after local edits and again after save
-// ✅ Saves only the selected day, not the whole week
-// ✅ Client picker shows names only
+// Fixed v3012:
+// ✅ Fixes Add Assignment not actually adding when client is typed but not clicked
+// ✅ Blocks fake “Day Saved” when no assignment was added
+// ✅ Keeps local assignment on screen after save even if backend returns empty rows
+// ✅ Saves only selected day
+// ✅ Allows empty-day save only after removing an existing assignment
+// ✅ Re-loads board after save so refresh/display matches backend
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -42,6 +42,7 @@ let editMode = null;
 let isSavingChange = false;
 let dayDirty = false;
 let btnUpdateDay = null;
+let allowEmptyCurrentDaySave = false;
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -91,6 +92,14 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function clientKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 function setMessage(msg, isError) {
@@ -176,6 +185,23 @@ function getEmployeeById(employeeId) {
   return employees.find(x => String(x.employeeId || "").trim().toUpperCase() === String(employeeId || "").trim().toUpperCase());
 }
 
+function findClientFromInput() {
+  const typed = String(clientSearch?.value || "").trim();
+  if (!typed) return null;
+
+  if (selectedClient && clientKey(selectedClient.clientName) === clientKey(typed)) {
+    return selectedClient;
+  }
+
+  let match = clients.find(c => clientKey(c.clientName) === clientKey(typed));
+  if (match) return match;
+
+  const contains = clients.filter(c => String(c.clientName || "").toLowerCase().includes(typed.toLowerCase()));
+  if (contains.length === 1) return contains[0];
+
+  return null;
+}
+
 function clearClientSelection() {
   selectedClient = null;
   if (clientSearch) clientSearch.value = "";
@@ -212,17 +238,13 @@ function getCurrentDayRowsPayload() {
     .map((row, index) => {
       const payload = rowPayload(row, index);
 
-      // Safety: if a row has employeeId but lost employeeName, fill it before save.
       if (payload.employeeId && !payload.employeeName) {
         const emp = getEmployeeById(payload.employeeId);
         if (emp) payload.employeeName = emp.employeeName || "";
       }
 
-      // Safety: if a row has clientName but lost address/clientId, refill from loaded clients.
       if (payload.clientName) {
-        const match = clients.find(c =>
-          String(c.clientName || "").trim().toLowerCase() === String(payload.clientName || "").trim().toLowerCase()
-        );
+        const match = clients.find(c => clientKey(c.clientName) === clientKey(payload.clientName));
         if (match) {
           if (!payload.clientId) payload.clientId = match.clientId || "";
           if (!payload.address) payload.address = match.address || "";
@@ -284,10 +306,15 @@ async function saveCurrentDay() {
   if (isSavingChange) return;
   if (!currentDay) return alert("Choose a day first.");
 
+  const dayRowsBeforeSave = getCurrentDayRowsPayload();
+
+  if (!dayRowsBeforeSave.length && !allowEmptyCurrentDaySave) {
+    return alert("No assignments were added. Pick a client from the search results, click Add Assignment, then click Update This Day.");
+  }
+
   try {
     setBusy("Updating day...");
 
-    const dayRowsBeforeSave = getCurrentDayRowsPayload();
     const expectedCount = dayRowsBeforeSave.length;
     const payload = {
       serviceDate: currentDay,
@@ -298,22 +325,25 @@ async function saveCurrentDay() {
       weekStart: currentWeekStart,
       serviceDate: currentDay,
       expectedCount: String(expectedCount),
-      allowEmptyDay: expectedCount === 0 ? "YES" : "NO",
+      allowEmptyDay: expectedCount === 0 && allowEmptyCurrentDaySave ? "YES" : "NO",
       payload: JSON.stringify(payload)
     });
 
     if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
 
-    // Backend may normalize/skip a bad row instead of failing the whole save.
-    // Do not block the user on count mismatch here. Use returned rows when available.
     console.log("Weekly board day save result:", res);
 
-    if (Array.isArray(res.rows)) {
-      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(res.rows);
-    } else {
+    // Always keep local rows on screen after save. Backend rows may be empty when verification/read lags.
+    assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
+
+    try {
+      await loadBoard(currentWeekStart);
+    } catch (loadErr) {
+      console.warn("Board reload after save failed; keeping local rows.", loadErr);
       assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
     }
 
+    allowEmptyCurrentDaySave = false;
     markDayDirty(false);
     buildWeekBoard();
     renderModalAssignments();
@@ -357,6 +387,12 @@ async function init() {
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
     clientSearch?.addEventListener("input", handleClientSearch);
+    clientSearch?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addAssignment();
+      }
+    });
 
     modal?.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
@@ -435,6 +471,7 @@ function openDay(dateStr, day) {
 
   currentDay = dateStr;
   editMode = null;
+  allowEmptyCurrentDaySave = false;
   clearClientSelection();
   ensureUpdateDayButton();
   markDayDirty(false);
@@ -719,7 +756,11 @@ function handleClientSearch() {
 function addAssignment() {
   if (isSavingChange) return;
   if (!currentDay) return alert("Choose a day first.");
-  if (!selectedClient) return alert("Select a client from the search results.");
+
+  const client = findClientFromInput();
+  if (!client) {
+    return alert("Select a client from the search results first. If you typed the full name, click the matching client suggestion or press Enter.");
+  }
 
   const employeeId = employeeSelect?.value || "";
   const employee = getEmployeeById(employeeId);
@@ -732,14 +773,18 @@ function addAssignment() {
     dayName: getDayNameFromYMD(currentDay),
     employeeId: employee.employeeId,
     employeeName: employee.employeeName,
-    clientId: selectedClient.clientId || "",
-    clientName: selectedClient.clientName,
-    address: selectedClient.address || "",
+    clientId: client.clientId || "",
+    clientName: client.clientName || client.name || "",
+    address: client.address || "",
     notes: "",
+    sortOrder: getActiveRowsForCurrentDay().length + 1,
     active: "YES"
   };
 
+  if (!newRow.clientName) return alert("Selected client is missing a client name.");
+
   assignments.push(newRow);
+  allowEmptyCurrentDaySave = false;
   markDayDirty(true);
   clearClientSelection();
   renderModalAssignments();
@@ -754,6 +799,7 @@ function removeAssignment(index) {
   if (!confirm("Remove this assignment from this day? Click Update This Day to save changes.")) return;
 
   assignments.splice(index, 1);
+  allowEmptyCurrentDaySave = true;
   markDayDirty(true);
   editMode = null;
   renderModalAssignments();
