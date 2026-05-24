@@ -2,12 +2,13 @@
 // FILE: /assets/js/clock.js
 // TYPE: .js
 // ATS Clock + Client Specs
-// Fixed:
-// ✅ Clock buttons stay black/yellow even when inactive
-// ✅ Inactive buttons are NOT clickable until correct action state
-// ✅ Avoids native disabled button grey styling on action buttons
-// ✅ Keeps notes locked until clocked in
-// ✅ Preserves My Weekly Board direct job URL params and auto-select
+// Updated:
+// ✅ Future jobs disabled until actual service day
+// ✅ Search bar X clear button
+// ✅ Preserved clock in/out/break logic
+// ✅ Preserved GPS/location logic
+// ✅ Preserved client specs loading
+// ✅ Preserved Weekly Board direct job params + auto-select
 // ==============================
 
 // ==============================
@@ -85,9 +86,48 @@ let isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
 let selectedJob = null;
 let allJobs = [];
 let activeClientSpecs = null;
+let jobSearchClearBtn = null;
 
 const lastJobKey = `lastJob_${employeeId}`;
 const activeSpecsKey = `activeClientSpecs_${employeeId}`;
+
+// ==============================
+// Future service-day logic
+// ==============================
+function todayDateKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function normalizeDateKey(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const direct = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (direct) return raw;
+
+  const parsed = new Date(raw);
+  if (isNaN(parsed.getTime())) return "";
+
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, "0");
+  const d = String(parsed.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function isFutureServiceDate(dateStr) {
+  const normalized = normalizeDateKey(dateStr);
+  if (!normalized) return false;
+  return normalized > todayDateKey();
+}
+
+function currentSelectedJobIsFutureLocked() {
+  if (!selectedJob) return false;
+  return !!selectedJob.futureLocked;
+}
 
 // ==============================
 // UI helpers
@@ -160,12 +200,17 @@ function normalizeJob(raw) {
   if (!id && name) id = slugJobId(name);
   if (!clientName) clientName = normalizeBaseClientName(name);
 
+  const serviceDate = String(raw.serviceDate || raw.date || raw.jobDate || "").trim();
+  const futureLocked = isFutureServiceDate(serviceDate);
+
   return {
     id,
     name,
     clientName,
     pay: isNumericValue(pay) ? Number(pay) : 0,
-    address
+    address,
+    serviceDate,
+    futureLocked
   };
 }
 
@@ -201,8 +246,6 @@ function forceActionButtonStyle(btn) {
 function setActionButtonReady(btn, isReady) {
   if (!btn) return;
 
-  // Do NOT use the native disabled attribute for clock action buttons.
-  // Native disabled buttons are what browsers keep rendering as grey.
   btn.disabled = false;
 
   btn.dataset.ready = isReady ? "true" : "false";
@@ -223,19 +266,75 @@ function setActionButtonReady(btn, isReady) {
 
 function updateButtons() {
   const hasJob = !!selectedJob;
+  const futureLocked = currentSelectedJobIsFutureLocked();
 
-  setActionButtonReady(btnClockIn, !isClockedIn && hasJob);
-  setActionButtonReady(btnBreakStart, isClockedIn && !onBreak && hasJob);
-  setActionButtonReady(btnBreakEnd, isClockedIn && onBreak && hasJob);
-  setActionButtonReady(btnClockOut, isClockedIn && hasJob);
+  setActionButtonReady(btnClockIn, !isClockedIn && hasJob && !futureLocked);
+  setActionButtonReady(btnBreakStart, isClockedIn && !onBreak && hasJob && !futureLocked);
+  setActionButtonReady(btnBreakEnd, isClockedIn && onBreak && hasJob && !futureLocked);
+  setActionButtonReady(btnClockOut, isClockedIn && hasJob && !futureLocked);
 
-  // Notes can use native disabled because it is not one of the big action buttons.
-  if (notesEl) notesEl.disabled = !isClockedIn;
+  if (notesEl) notesEl.disabled = !isClockedIn || futureLocked;
 }
 
-// Extra safety: if a click somehow fires on a locked action, block it.
 function actionIsReady(btn) {
   return btn && btn.dataset.ready === "true";
+}
+
+function ensureJobSearchClearButton() {
+  if (!jobSearch) return;
+
+  const parent = jobSearch.parentElement;
+  if (!parent) return;
+
+  parent.style.position = "relative";
+
+  jobSearch.style.paddingRight = "52px";
+
+  let btn = document.getElementById("jobSearchClearBtn");
+
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "jobSearchClearBtn";
+    btn.innerHTML = "×";
+    btn.setAttribute("aria-label", "Clear job search");
+
+    btn.style.position = "absolute";
+    btn.style.right = "10px";
+    btn.style.top = "50%";
+    btn.style.transform = "translateY(-50%)";
+    btn.style.width = "32px";
+    btn.style.height = "32px";
+    btn.style.borderRadius = "999px";
+    btn.style.border = "1px solid rgba(255,255,255,.15)";
+    btn.style.background = "rgba(0,0,0,.35)";
+    btn.style.color = "#ffe600";
+    btn.style.fontSize = "20px";
+    btn.style.fontWeight = "900";
+    btn.style.cursor = "pointer";
+    btn.style.display = "none";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.zIndex = "5";
+
+    parent.appendChild(btn);
+
+    btn.addEventListener("click", () => {
+      jobSearch.value = "";
+      jobResults.innerHTML = "";
+      btn.style.display = "none";
+      jobSearch.focus();
+    });
+  }
+
+  jobSearchClearBtn = btn;
+
+  updateJobSearchClearVisibility();
+}
+
+function updateJobSearchClearVisibility() {
+  if (!jobSearch || !jobSearchClearBtn) return;
+  jobSearchClearBtn.style.display = jobSearch.value.trim() ? "flex" : "none";
 }
 
 // ==============================
@@ -377,21 +476,37 @@ function setSelectedJobFromOption(opt, sourceMessage) {
       name: opt.dataset.jobName || opt.dataset.name || opt.textContent || "",
       clientName: opt.dataset.clientName || normalizeBaseClientName(opt.dataset.jobName || opt.dataset.name || opt.textContent || ""),
       pay: Number(opt.dataset.jobPay || opt.dataset.pay || 0),
-      address: opt.dataset.address || ""
+      address: opt.dataset.address || "",
+      serviceDate: opt.dataset.serviceDate || "",
+      futureLocked: String(opt.dataset.futureLocked || "") === "true"
     };
 
     sessionStorage.setItem(lastJobKey, selectedJob.id);
 
-    if (jobSearch) jobSearch.value = selectedJob.name;
+    if (jobSearch) {
+      jobSearch.value = selectedJob.name;
+      updateJobSearchClearVisibility();
+    }
+
     if (jobResults) jobResults.innerHTML = "";
 
-    setStatus(sourceMessage || `Selected: ${selectedJob.name}`, "info");
+    if (selectedJob.futureLocked) {
+      const dateText = normalizeDateKey(selectedJob.serviceDate) || selectedJob.serviceDate || "future date";
+      setStatus(`⏳ This job is scheduled for ${dateText}. Clock actions unlock on the actual service day.`, "warn");
+    } else {
+      setStatus(sourceMessage || `Selected: ${selectedJob.name}`, "info");
+    }
+
     showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
     sessionStorage.removeItem(lastJobKey);
 
-    if (jobSearch) jobSearch.value = "";
+    if (jobSearch) {
+      jobSearch.value = "";
+      updateJobSearchClearVisibility();
+    }
+
     if (jobResults) jobResults.innerHTML = "";
 
     setStatus("Please select a job to continue.", "warn");
@@ -457,7 +572,8 @@ function addWeeklyBoardFallbackJob() {
     name,
     clientName,
     pay: 0,
-    address: directJobFromWeeklyBoard.address || ""
+    address: directJobFromWeeklyBoard.address || "",
+    serviceDate: directJobFromWeeklyBoard.serviceDate || ""
   });
 
   allJobs.unshift(fallback);
@@ -483,6 +599,8 @@ function applyDirectWeeklyBoardJobIfPresent() {
     opt.dataset.name = job.name;
     opt.dataset.pay = String(job.pay || 0);
     opt.dataset.address = job.address || directJobFromWeeklyBoard.address || "";
+    opt.dataset.serviceDate = job.serviceDate || directJobFromWeeklyBoard.serviceDate || "";
+    opt.dataset.futureLocked = job.futureLocked ? "true" : "false";
     jobSelect.appendChild(opt);
   }
 
@@ -512,16 +630,19 @@ function renderJobResults(term) {
     const id = escapeHtml(job.id);
     const name = escapeHtml(job.name || "");
     const address = escapeHtml(job.address || "");
+    const isFuture = !!job.futureLocked;
+    const dateText = normalizeDateKey(job.serviceDate) || job.serviceDate || "future service day";
 
     return `
       <button
         type="button"
         class="job-result-btn"
         data-job-id="${id}"
-        style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;"
+        style="display:block;width:100%;margin:6px 0;text-align:left;padding:12px;border-radius:10px;${isFuture ? 'opacity:.65;border:1px solid rgba(255,230,0,.25);' : ''}"
       >
         <strong>${name}</strong>
         ${address ? `<br><small style="opacity:.8;">📍 ${address}</small>` : ""}
+        ${isFuture ? `<br><small style="color:#ffe600;">⏳ Locked until ${escapeHtml(dateText)}</small>` : ""}
       </button>
     `;
   }).join("");
@@ -529,6 +650,7 @@ function renderJobResults(term) {
 
 if (jobSearch) {
   jobSearch.addEventListener("input", function () {
+    updateJobSearchClearVisibility();
     renderJobResults(this.value);
   });
 
@@ -574,6 +696,8 @@ window.loadJobs = function (res) {
     opt.dataset.name = job.name;
     opt.dataset.pay = String(job.pay || 0);
     opt.dataset.address = job.address || "";
+    opt.dataset.serviceDate = job.serviceDate || "";
+    opt.dataset.futureLocked = job.futureLocked ? "true" : "false";
     jobSelect.appendChild(opt);
   });
 
@@ -687,6 +811,7 @@ function logEvent(action) {
 window.clockIn = function () {
   if (!actionIsReady(btnClockIn)) return;
   if (!selectedJob) return setStatus("Please select a job before clocking in.", "warn");
+  if (selectedJob.futureLocked) return setStatus("This job is locked until the actual service day.", "warn");
   if (isClockedIn) return setStatus("You are already clocked in.", "warn");
 
   onBreak = false;
@@ -703,6 +828,7 @@ window.clockIn = function () {
 window.startBreak = function () {
   if (!actionIsReady(btnBreakStart)) return;
   if (!selectedJob) return setStatus("Select a job before starting break.", "warn");
+  if (selectedJob.futureLocked) return setStatus("This job is locked until the actual service day.", "warn");
   if (!isClockedIn) return setStatus("You must Clock In before starting break.", "warn");
   if (onBreak) return setStatus("Break is already active.", "warn");
 
@@ -717,6 +843,7 @@ window.startBreak = function () {
 window.endBreak = function () {
   if (!actionIsReady(btnBreakEnd)) return;
   if (!selectedJob) return setStatus("Select a job before ending break.", "warn");
+  if (selectedJob.futureLocked) return setStatus("This job is locked until the actual service day.", "warn");
   if (!isClockedIn) return setStatus("You must Clock In before ending break.", "warn");
   if (!onBreak) return setStatus("No active break to end.", "warn");
 
@@ -731,6 +858,7 @@ window.endBreak = function () {
 window.clockOut = function () {
   if (!actionIsReady(btnClockOut)) return;
   if (!selectedJob) return setStatus("Please select a job before clocking out.", "warn");
+  if (selectedJob.futureLocked) return setStatus("This job is locked until the actual service day.", "warn");
   if (!isClockedIn) return setStatus("You are not clocked in.", "warn");
 
   if (onBreak) {
@@ -753,9 +881,9 @@ window.clockOut = function () {
 };
 
 // Init
+ensureJobSearchClearButton();
 updateButtons();
 
-// Re-force button style after full page/CSS paint.
 window.addEventListener("load", updateButtons);
 setTimeout(updateButtons, 50);
 setTimeout(updateButtons, 250);
@@ -765,4 +893,5 @@ document.addEventListener("DOMContentLoaded", function () {
   if (directJobFromWeeklyBoard.source === "weekly_board") return;
   if (jobSearch) jobSearch.focus();
   updateButtons();
+  ensureJobSearchClearButton();
 });
