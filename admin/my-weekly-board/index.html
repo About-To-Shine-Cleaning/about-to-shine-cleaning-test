@@ -27,7 +27,7 @@
 
 <script
   defer
-  src="./my-weekly-board.js?v=6008"
+  src="./my-weekly-board.js?v=6009"
 ></script>
 
 <style>
@@ -75,6 +75,14 @@ body.ats-admin{
   flex-wrap:wrap;
 }
 
+.my-board-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
 .my-board-meta{
   opacity:.78;
   margin-top:8px;
@@ -85,6 +93,52 @@ body.ats-admin{
   margin-top:14px;
   line-height:1.45;
   opacity:.9;
+}
+
+.view-toolbar{
+  display:none;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:18px;
+}
+
+.view-toolbar.open{
+  display:flex;
+}
+
+.board-toggle-btn,
+.my-clock-top-btn,
+.my-clock-job-btn{
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:10px 16px;
+  border-radius:999px;
+  border:1px solid rgba(255,230,0,.44);
+  background:rgba(255,230,0,.10);
+  color:#ffe600;
+  font-weight:950;
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.board-toggle-btn.active,
+.my-clock-top-btn,
+.my-clock-job-btn{
+  background:#ffe600;
+  color:#10121f;
+  border-color:#ffe600;
+  box-shadow:0 0 22px rgba(255,230,0,.16);
+}
+
+.view-help{
+  width:100%;
+  color:rgba(255,255,255,.66);
+  font-size:13px;
+  line-height:1.4;
 }
 
 .my-board-week{
@@ -193,7 +247,8 @@ body.ats-admin{
 }
 
 .my-job-address,
-.my-job-notes{
+.my-job-notes,
+.my-job-shared{
   margin-top:10px;
 
   font-size:13px;
@@ -209,6 +264,12 @@ body.ats-admin{
 .my-job-address a{
   color:#ffe600;
   font-weight:900;
+}
+
+.my-clock-job-btn{
+  width:100%;
+  margin-top:12px;
+  border-radius:14px;
 }
 
 .my-job-date-lock{
@@ -237,6 +298,23 @@ body.ats-admin{
 
   color:
     rgba(255,255,255,.72);
+}
+
+.full-week-job{
+  display:grid;
+  gap:6px;
+}
+
+.full-week-employee{
+  color:#ffe600;
+  font-size:13px;
+  font-weight:950;
+}
+
+.full-week-client{
+  color:#fff;
+  font-size:16px;
+  font-weight:950;
 }
 
 .empty-day{
@@ -339,6 +417,16 @@ body.ats-admin{
     grid-template-columns:1fr;
   }
 
+  .my-board-actions{
+    width:100%;
+    justify-content:stretch;
+  }
+
+  .my-clock-top-btn,
+  .board-toggle-btn{
+    flex:1 1 auto;
+  }
+
 }
 
 </style>
@@ -400,9 +488,13 @@ body.ats-admin{
             Employee Weekly Board
           </div>
 
-          <h1 id="weekLabel">
-            Loading week...
+          <h1 id="pageTitle">
+            My Weekly Board
           </h1>
+
+          <h2 id="weekLabel" style="margin:.35rem 0 0;">
+            Loading week...
+          </h2>
 
           <div
             class="my-board-meta"
@@ -413,6 +505,46 @@ body.ats-admin{
 
         </div>
 
+        <div class="my-board-actions">
+          <a
+            class="my-clock-top-btn"
+            id="clockLink"
+            href="/admin/clock/"
+          >
+            Open Clock
+          </a>
+        </div>
+
+      </div>
+
+      <div
+        class="view-toolbar"
+        id="viewToolbar"
+      >
+        <button
+          class="board-toggle-btn active"
+          type="button"
+          id="btnMyJobs"
+          aria-pressed="true"
+        >
+          My Jobs
+        </button>
+
+        <button
+          class="board-toggle-btn"
+          type="button"
+          id="btnFullWeek"
+          aria-pressed="false"
+        >
+          Full Week
+        </button>
+
+        <div
+          class="view-help"
+          id="viewHelp"
+        >
+          My Jobs shows maps, specs, and clock-in for active service days.
+        </div>
       </div>
 
       <div
