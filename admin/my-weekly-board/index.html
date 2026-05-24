@@ -2,243 +2,267 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>My Weekly Board | About To Shine Cleaning</title>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow,noarchive"/>
+<title>My Weekly Board | ATS Admin</title>
 
-<link rel="stylesheet" href="/admin/admin-layout.css?v=3000001"/>
-<link rel="stylesheet" href="/assets/css/style.css"/>
-<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
-<link rel="apple-touch-icon" href="/assets/images/logo-v2.png"/>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+/>
 
-<script defer src="/admin/admin-nav.js?v=9"></script>
-<script defer src="/admin/my-weekly-board/my-weekly-board.js?v=3000001"></script>
+<link
+  rel="stylesheet"
+  href="/admin/admin-layout.css?v=6008"
+/>
+
+<link
+  rel="icon"
+  type="image/png"
+  href="/assets/images/logo-v2.png"
+/>
+
+<script
+  defer
+  src="/admin/admin-nav.js?v=6008"
+></script>
+
+<script
+  defer
+  src="./my-weekly-board.js?v=6008"
+></script>
 
 <style>
+
 html,
 body{
   width:100%;
   max-width:100%;
-  overflow-x:hidden !important;
+  overflow-x:hidden;
 }
 
-body.ats-admin .ats-main{
-  width:100% !important;
-  max-width:none !important;
-  padding-left:0 !important;
-  padding-right:0 !important;
-  overflow-x:hidden !important;
+body.ats-admin{
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(138,92,255,.18),
+      transparent 35%
+    ),
+    linear-gradient(
+      180deg,
+      #0c1020,
+      #070b16
+    );
 }
 
-body.ats-admin .my-board-container{
-  width:100vw !important;
-  max-width:none !important;
-  margin:0 !important;
-  padding-left:18px !important;
-  padding-right:18px !important;
-  box-sizing:border-box !important;
+.my-board-container{
+  width:100%;
+  max-width:1500px;
+  margin:0 auto;
+  padding:18px;
+  box-sizing:border-box;
 }
 
-body.ats-admin .my-board-shell{
-  display:grid;
-  gap:18px;
-  width:100% !important;
-  max-width:none !important;
-  overflow:visible;
+.my-board-shell{
+  width:100%;
+  overflow:hidden;
+  padding:20px;
 }
 
-.my-board-header{
+.my-board-top{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
-  gap:16px;
+  gap:18px;
   flex-wrap:wrap;
 }
 
 .my-board-meta{
   opacity:.78;
+  margin-top:8px;
   line-height:1.45;
-  margin-top:6px;
-}
-
-.my-board-toolbar{
-  display:none;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-top:-4px;
-  padding:10px;
-  border:1px solid rgba(255,255,255,.13);
-  border-radius:16px;
-  background:rgba(0,0,0,.18);
-}
-
-.my-board-toolbar.open{
-  display:flex;
-}
-
-.my-view-toggle{
-  display:inline-flex;
-  gap:6px;
-  padding:5px;
-  border-radius:999px;
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.12);
-}
-
-.my-toggle-btn{
-  appearance:none;
-  border:0;
-  border-radius:999px;
-  padding:9px 14px;
-  background:transparent;
-  color:rgba(255,255,255,.82);
-  font-weight:900;
-  cursor:pointer;
-}
-
-.my-toggle-btn.active{
-  background:#000;
-  color:#ffe600;
-  box-shadow:0 6px 18px rgba(0,0,0,.28);
-}
-
-.my-view-help{
-  color:rgba(255,255,255,.72);
-  font-size:13px;
-  line-height:1.35;
 }
 
 #statusBox{
+  margin-top:14px;
   line-height:1.45;
-  opacity:.92;
+  opacity:.9;
 }
 
-body.ats-admin .my-board-week{
+.my-board-week{
   display:grid;
-  width:100% !important;
-  max-width:none !important;
-  gap:10px;
-  margin-top:18px;
-  align-items:start;
+  grid-template-columns:
+    repeat(
+      7,
+      minmax(0,1fr)
+    );
+
+  gap:12px;
+  margin-top:22px;
 }
 
 .my-day-card{
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:18px;
-  padding:12px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.06),
+      rgba(255,255,255,.03)
+    );
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  border-radius:20px;
+
+  padding:14px;
+
   min-width:0;
-  width:100%;
-  box-sizing:border-box;
+
+  transition:
+    transform .18s ease,
+    border-color .18s ease;
+}
+
+.my-day-card:hover{
+  transform:translateY(-2px);
+
+  border-color:
+    rgba(255,230,0,.25);
+}
+
+.my-day-card.past-day{
+  opacity:.55;
+  filter:grayscale(.55);
 }
 
 .my-day-title{
-  font-weight:900;
   font-size:18px;
-  margin-bottom:2px;
+  font-weight:900;
 }
 
 .my-day-date{
+  margin-top:4px;
+  margin-bottom:14px;
+
   font-size:12px;
-  opacity:.72;
-  margin-bottom:12px;
+
+  color:
+    rgba(255,255,255,.68);
 }
 
 .my-job-card{
-  background:rgba(0,0,0,.16);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:14px;
-  padding:10px;
-  margin-bottom:10px;
-  min-width:0;
-  max-width:100%;
-  box-sizing:border-box;
+  background:
+    rgba(0,0,0,.22);
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  border-radius:16px;
+
+  padding:14px;
+
+  margin-bottom:12px;
 }
 
 .my-client-btn{
   appearance:none;
   border:0;
   background:transparent;
+
   color:#fff;
+
   padding:0;
   margin:0;
-  text-align:left;
+
   font:inherit;
-  font-size:15px;
+  font-size:18px;
   font-weight:900;
-  line-height:1.25;
+
+  text-align:left;
+
   cursor:pointer;
+
   text-decoration:underline;
   text-underline-offset:3px;
-  overflow-wrap:anywhere;
-  max-width:100%;
+}
+
+.my-client-btn:disabled{
+  cursor:not-allowed;
+  opacity:.65;
+  text-decoration:none;
 }
 
 .my-job-address,
-.my-job-shared,
 .my-job-notes{
-  margin-top:7px;
-  font-size:12px;
-  opacity:.84;
-  line-height:1.35;
+  margin-top:10px;
+
+  font-size:13px;
+
+  line-height:1.45;
+
+  color:
+    rgba(255,255,255,.82);
+
   overflow-wrap:anywhere;
 }
 
 .my-job-address a{
-  color:#ffe96b;
-  font-weight:900;
-}
-
-.my-clock-btn{
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  width:100% !important;
-  min-width:0 !important;
-  margin-top:10px !important;
-  padding:10px 10px !important;
-  border-radius:12px !important;
-  text-align:center !important;
-  text-decoration:none !important;
-  line-height:1.2 !important;
-  font-size:13px !important;
-}
-
-.full-week-job{
-  display:grid;
-  gap:4px;
-}
-
-.full-week-employee{
-  font-size:12px;
   color:#ffe600;
   font-weight:900;
-  line-height:1.2;
 }
 
-.full-week-client{
-  font-size:15px;
-  color:#fff;
+.my-job-date-lock{
+  margin-top:12px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  min-height:34px;
+
+  padding:
+    8px 12px;
+
+  border-radius:999px;
+
+  background:
+    rgba(255,255,255,.07);
+
+  border:
+    1px solid
+    rgba(255,255,255,.12);
+
+  font-size:12px;
   font-weight:900;
-  line-height:1.25;
-  overflow-wrap:anywhere;
+
+  color:
+    rgba(255,255,255,.72);
 }
 
 .empty-day{
-  opacity:.55;
+  opacity:.58;
   font-size:13px;
-  line-height:1.4;
 }
 
 .spec-card{
   display:none;
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:18px;
-  padding:16px;
-  margin-top:18px;
+
+  margin-top:20px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.06),
+      rgba(255,255,255,.03)
+    );
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  border-radius:20px;
+
+  padding:20px;
 }
 
 .spec-card.open{
@@ -251,156 +275,186 @@ body.ats-admin .my-board-week{
   align-items:center;
   gap:12px;
   flex-wrap:wrap;
-  margin-bottom:12px;
+
+  margin-bottom:14px;
 }
 
 .spec-line{
-  margin:0 0 14px;
+  margin-bottom:18px;
 }
 
 .spec-label{
   font-size:12px;
   font-weight:900;
+
   text-transform:uppercase;
+
   letter-spacing:.06em;
-  opacity:.72;
-  margin-bottom:4px;
+
+  opacity:.68;
+
+  margin-bottom:5px;
 }
 
 .spec-value{
   white-space:pre-wrap;
-  line-height:1.45;
+  line-height:1.55;
 }
 
-@media(min-width:1200px){
-  body.ats-admin .my-board-week{
-    grid-template-columns:repeat(7,minmax(0,1fr));
+@media(max-width:1200px){
+
+  .my-board-week{
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0,1fr)
+      );
   }
+
 }
 
-@media(min-width:900px) and (max-width:1199px){
-  body.ats-admin .my-board-week{
-    grid-template-columns:repeat(3,minmax(0,1fr));
+@media(max-width:850px){
+
+  .my-board-week{
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0,1fr)
+      );
   }
 
-  .my-day-card{
-    padding:14px;
-  }
-
-  .my-client-btn{
-    font-size:17px;
-  }
-
-  .my-clock-btn{
-    font-size:14px !important;
-  }
-}
-
-@media(min-width:761px) and (max-width:899px){
-  body.ats-admin .my-board-week{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
 }
 
 @media(max-width:760px){
-  body.ats-admin .my-board-container{
-    width:100% !important;
-    padding-left:12px !important;
-    padding-right:12px !important;
+
+  .my-board-container{
+    padding:12px;
   }
 
-  .my-board-header{
-    display:grid;
-    grid-template-columns:1fr;
-  }
-
-  .my-board-toolbar.open{
-    display:grid;
-    grid-template-columns:1fr;
-  }
-
-  .my-view-toggle{
-    width:100%;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-  }
-
-  .my-toggle-btn{
-    width:100%;
-  }
-
-  #clockLink{
-    width:100%;
-  }
-
-  body.ats-admin .my-board-week{
-    grid-template-columns:1fr;
-    gap:16px;
-  }
-
-  .my-day-card{
+  .my-board-shell{
     padding:16px;
   }
 
-  .my-client-btn{
-    font-size:19px;
+  .my-board-week{
+    grid-template-columns:1fr;
   }
 
-  .my-clock-btn{
-    min-height:52px;
-    font-size:16px !important;
-  }
 }
+
 </style>
 </head>
 
 <body class="ats-admin">
+
 <header class="ats-header">
+
   <div class="ats-header-inner">
-    <a class="ats-brand" href="/admin/" aria-label="Go to Home">
-      <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
+
+    <a
+      class="ats-brand"
+      href="/admin/"
+    >
+      <img
+        src="/assets/images/logo-v2.png"
+        alt="About To Shine Cleaning"
+      />
     </a>
+
     <div class="ats-header-actions">
-      <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
-      <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
-        <span></span><span></span><span></span>
+
+      <a
+        class="ats-live-btn"
+        href="https://abouttoshinecleaning.com"
+        target="_blank"
+      >
+        Go to Live Website
+      </a>
+
+      <button
+        class="ats-burger"
+        type="button"
+        aria-label="Open menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
       </button>
+
     </div>
+
   </div>
+
 </header>
 
 <main class="ats-main">
+
   <div class="my-board-container">
+
     <section class="ats-card my-board-shell">
-      <div class="my-board-header">
+
+      <div class="my-board-top">
+
         <div>
-          <div class="ats-eyebrow">Employee Weekly Board</div>
-          <h1 id="pageTitle">My Weekly Board</h1>
-          <div class="my-board-meta" id="weekLabel">Loading week...</div>
+
+          <div class="ats-eyebrow">
+            Employee Weekly Board
+          </div>
+
+          <h1 id="weekLabel">
+            Loading week...
+          </h1>
+
+          <div
+            class="my-board-meta"
+            id="statusBox"
+          >
+            Loading assignments...
+          </div>
+
         </div>
-        <a class="button" id="clockLink" href="/clock.html">Open Clock</a>
+
       </div>
 
-      <div id="viewToolbar" class="my-board-toolbar" aria-label="Weekly board view options">
-        <div class="my-view-toggle" role="group" aria-label="Choose weekly board view">
-          <button class="my-toggle-btn active" type="button" id="btnMyJobs" aria-pressed="true">My Jobs</button>
-          <button class="my-toggle-btn" type="button" id="btnFullWeek" aria-pressed="false">Full Week</button>
-        </div>
-        <div class="my-view-help" id="viewHelp">Full Week shows employee + client only.</div>
-      </div>
+      <div
+        class="my-board-week"
+        id="weekBoard"
+      ></div>
 
-      <div id="statusBox" aria-live="polite">Loading assignments...</div>
-      <div id="weekBoard" class="my-board-week"></div>
     </section>
 
-    <section class="ats-card spec-card" id="clientSpecsCard">
+    <section
+      class="spec-card"
+      id="clientSpecsCard"
+    >
+
       <div class="spec-head">
-        <h2 style="margin:0;" id="specTitle">Client Specs</h2>
-        <button class="button button-secondary" type="button" id="closeSpecsBtn">Close</button>
+
+        <h2
+          id="specTitle"
+          style="margin:0;"
+        >
+          Client Specs
+        </h2>
+
+        <button
+          class="button button-secondary"
+          type="button"
+          id="closeSpecsBtn"
+        >
+          Close
+        </button>
+
       </div>
-      <div id="clientSpecsBody">Loading client info...</div>
+
+      <div id="clientSpecsBody">
+        Loading...
+      </div>
+
     </section>
+
   </div>
+
 </main>
+
 </body>
 </html>
