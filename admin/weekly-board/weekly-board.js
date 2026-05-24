@@ -333,15 +333,11 @@ async function saveCurrentDay() {
 
     console.log("Weekly board day save result:", res);
 
-    // Always keep local rows on screen after save. Backend rows may be empty when verification/read lags.
+    // IMPORTANT:
+    // Do NOT reload weekly_board_get here.
+    // Current backend write is succeeding, but weekly_board_get can lag/filter the new row.
+    // Reloading immediately was wiping the visible assignment right after save.
     assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
-
-    try {
-      await loadBoard(currentWeekStart);
-    } catch (loadErr) {
-      console.warn("Board reload after save failed; keeping local rows.", loadErr);
-      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
-    }
 
     allowEmptyCurrentDaySave = false;
     markDayDirty(false);
