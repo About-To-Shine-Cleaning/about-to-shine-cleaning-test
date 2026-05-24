@@ -1,14 +1,8 @@
 // =========================================================
 // FILE: /admin/my-weekly-board/my-weekly-board.js
 // TYPE: .js
-// ATS My Weekly Board — employee schedule + approved Full Week view
-// Updated:
-// ✅ Default = My Jobs
-// ✅ E01/E02/E04 can toggle Full Week
-// ✅ Full Week stays clean: employee + client only
-// ✅ My Jobs keeps specs/maps
-// ✅ Restored Clock Into This Job for today/future active jobs
-// ✅ Past days greyed out and inactive
+// ATS My Weekly Board - employee schedule + approved Full Week view
+// Default My Jobs, Full Week for E01/E02/E04, clock-in restored
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -42,7 +36,6 @@ const clientSpecsCard = document.getElementById("clientSpecsCard");
 const clientSpecsBody = document.getElementById("clientSpecsBody");
 const specTitle = document.getElementById("specTitle");
 const closeSpecsBtn = document.getElementById("closeSpecsBtn");
-
 const viewToolbar = document.getElementById("viewToolbar");
 const btnMyJobs = document.getElementById("btnMyJobs");
 const btnFullWeek = document.getElementById("btnFullWeek");
@@ -57,7 +50,7 @@ let currentWeekStart = "";
 let currentView = "mine";
 
 function escapeHtml(s) {
-  return String(s ?? "")
+  return String(s == null ? "" : s)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -102,74 +95,6 @@ function getDeviceKey() {
 
 function canViewFullWeek() {
   return FULL_WEEK_ALLOWED.has(String(employeeId || "").trim().toUpperCase());
-}
-
-function resolveEmployee() {
-  const params = new URLSearchParams(window.location.search);
-  const auth = getStoredAuth();
-  const fromUrl = String(params.get("emp") || "").trim().toUpperCase();
-  const fromAuth = String(auth.employeeId || "").trim().toUpperCase();
-
-  employeeId = fromUrl || fromAuth;
-  employeeName = EMPLOYEES[employeeId] || auth.employeeName || employeeId;
-
-  if (!employeeId || !employeeName) {
-    throw new Error("Missing employee. Open this from the Home page or use ?emp=E05.");
-  }
-
-  if (pageTitle) pageTitle.textContent = `${employeeName}'s Weekly Board`;
-
-  if (clockLink) clockLink.href = getClockUrl({});
-
-  if (viewToolbar) {
-    viewToolbar.classList.toggle("open", canViewFullWeek());
-    viewToolbar.style.display = canViewFullWeek() ? "flex" : "none";
-  }
-
-  if (btnFullWeek) {
-    btnFullWeek.style.display = canViewFullWeek() ? "inline-flex" : "none";
-  }
-}
-
-function jsonp(action, paramsObj = {}) {
-  return new Promise((resolve, reject) => {
-    const cb = "cb_" + Math.random().toString(36).slice(2);
-    const qs = new URLSearchParams({ action, ...paramsObj, callback: cb });
-    const script = document.createElement("script");
-    script.async = true;
-
-    window[cb] = function (res) {
-      try {
-        resolve(res);
-      } finally {
-        try { delete window[cb]; } catch (e) {}
-        try { script.remove(); } catch (e) {}
-      }
-    };
-
-    script.onerror = function () {
-      try { delete window[cb]; } catch (e) {}
-      try { script.remove(); } catch (e) {}
-      reject(new Error("JSONP failed: " + action));
-    };
-
-    script.src = API_URL + "?" + qs.toString();
-    document.body.appendChild(script);
-  });
-}
-
-function authedJsonp(action, paramsObj = {}) {
-  const token = getStoredToken();
-  const device = getDeviceKey();
-
-  if (!token) throw new Error("Missing saved admin token. Return to Admin Home first.");
-  if (!device) throw new Error("Missing device key. Return to Admin Home first.");
-
-  return jsonp(action, {
-    ...paramsObj,
-    t: token,
-    d: device
-  });
 }
 
 function getSaturdayForDate(date = new Date()) {
@@ -228,6 +153,73 @@ function getClockUrl(job) {
   return `/admin/clock/?${qs.toString()}`;
 }
 
+function resolveEmployee() {
+  const params = new URLSearchParams(window.location.search);
+  const auth = getStoredAuth();
+  const fromUrl = String(params.get("emp") || "").trim().toUpperCase();
+  const fromAuth = String(auth.employeeId || "").trim().toUpperCase();
+
+  employeeId = fromUrl || fromAuth;
+  employeeName = EMPLOYEES[employeeId] || auth.employeeName || employeeId;
+
+  if (!employeeId || !employeeName) {
+    throw new Error("Missing employee. Open this from the Home page or use ?emp=E05.");
+  }
+
+  if (pageTitle) pageTitle.textContent = `${employeeName}'s Weekly Board`;
+  if (clockLink) clockLink.href = getClockUrl({});
+
+  if (viewToolbar) {
+    viewToolbar.classList.toggle("open", canViewFullWeek());
+    viewToolbar.style.display = canViewFullWeek() ? "flex" : "none";
+  }
+
+  if (btnFullWeek) {
+    btnFullWeek.style.display = canViewFullWeek() ? "inline-flex" : "none";
+  }
+}
+
+function jsonp(action, paramsObj = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = "cb_" + Math.random().toString(36).slice(2);
+    const qs = new URLSearchParams({ action, ...paramsObj, callback: cb });
+    const script = document.createElement("script");
+    script.async = true;
+
+    window[cb] = function (res) {
+      try {
+        resolve(res);
+      } finally {
+        try { delete window[cb]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+      }
+    };
+
+    script.onerror = function () {
+      try { delete window[cb]; } catch (e) {}
+      try { script.remove(); } catch (e) {}
+      reject(new Error("JSONP failed: " + action));
+    };
+
+    script.src = API_URL + "?" + qs.toString();
+    document.body.appendChild(script);
+  });
+}
+
+function authedJsonp(action, paramsObj = {}) {
+  const token = getStoredToken();
+  const device = getDeviceKey();
+
+  if (!token) throw new Error("Missing saved admin token. Return to Admin Home first.");
+  if (!device) throw new Error("Missing device key. Return to Admin Home first.");
+
+  return jsonp(action, {
+    ...paramsObj,
+    t: token,
+    d: device
+  });
+}
+
 function groupByDate(rows) {
   const out = {};
   rows.forEach(row => {
@@ -270,7 +262,7 @@ function updateWeekLabel(rows, weekStart, labelMode) {
 
   if (weekLabel) {
     const name = labelMode === "full" ? "Full Week" : "My Jobs";
-    weekLabel.textContent = `${prettyDate(weekStart)} → ${prettyDate(formatYMD(end))} • ${rows.length} ${rows.length === 1 ? "job" : "jobs"} • ${name}`;
+    weekLabel.textContent = `${prettyDate(weekStart)} -> ${prettyDate(formatYMD(end))} - ${rows.length} ${rows.length === 1 ? "job" : "jobs"} - ${name}`;
   }
 }
 
@@ -339,13 +331,10 @@ function renderMyJob(job, isPast) {
       <button class="my-client-btn" type="button" ${isPast ? "disabled aria-disabled=\"true\"" : ""} data-client-name="${clientName}" data-client-id="${escapeHtml(job.clientId || "")}">
         ${clientName}
       </button>
-      ${address ? `<div class="my-job-address"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open Map</a><br>${escapeHtml(address)}</div>` : ""}
+      ${address ? `<div class="my-job-address"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">Open Map</a><br>${escapeHtml(address)}</div>` : ""}
       ${sharedText ? `<div class="my-job-shared">With: ${escapeHtml(sharedText)}</div>` : ""}
       ${notes ? `<div class="my-job-notes">${escapeHtml(notes)}</div>` : ""}
-      ${isPast
-        ? `<span class="my-job-date-lock">Past Day</span>`
-        : `<a class="my-clock-job-btn" href="${clockUrl}">Clock Into This Job</a>`
-      }
+      ${isPast ? `<span class="my-job-date-lock">Past Day</span>` : `<a class="my-clock-job-btn" href="${clockUrl}">Clock Into This Job</a>`}
     </div>
   `;
 }
@@ -377,7 +366,7 @@ function renderSpecs(specs, fallbackName) {
   if (specTitle) specTitle.textContent = specs.clientName || fallbackName || "Client Specs";
 
   clientSpecsBody.innerHTML = `
-    ${address ? `<p style="margin:0 0 12px;"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">📍 Open address in Maps</a><br>${escapeHtml(address)}</p>` : ""}
+    ${address ? `<p style="margin:0 0 12px;"><a href="${getMapUrl(address)}" target="_blank" rel="noopener">Open address in Maps</a><br>${escapeHtml(address)}</p>` : ""}
     ${formatSpecLine("Frequency", specs.frequency)}
     ${formatSpecLine("Specs", specs.specs)}
     ${formatSpecLine("Special Info", specs.specialInfo)}
@@ -413,7 +402,7 @@ async function loadMyBoard() {
   });
 
   if (!res || !res.ok) {
-    throw new Error(res?.error || "weekly_board_employee_view failed");
+    throw new Error(res && res.error ? res.error : "weekly_board_employee_view failed");
   }
 
   renderWeek(res.rows || [], res.weekStart || currentWeekStart, "mine");
@@ -431,7 +420,7 @@ async function loadFullWeekBoard() {
   });
 
   if (!res || !res.ok) {
-    throw new Error(res?.error || "weekly_board_full_week failed");
+    throw new Error(res && res.error ? res.error : "weekly_board_full_week failed");
   }
 
   renderWeek(res.rows || [], res.weekStart || currentWeekStart, "full");
@@ -449,7 +438,7 @@ async function loadBoard() {
 if (btnMyJobs) {
   btnMyJobs.addEventListener("click", () => {
     loadMyBoard().catch(err => {
-      if (statusBox) statusBox.textContent = String(err?.message || err);
+      if (statusBox) statusBox.textContent = String(err && err.message ? err.message : err);
     });
   });
 }
@@ -457,7 +446,7 @@ if (btnMyJobs) {
 if (btnFullWeek) {
   btnFullWeek.addEventListener("click", () => {
     loadFullWeekBoard().catch(err => {
-      if (statusBox) statusBox.textContent = String(err?.message || err);
+      if (statusBox) statusBox.textContent = String(err && err.message ? err.message : err);
     });
   });
 }
@@ -473,18 +462,18 @@ if (weekBoard) {
 
 if (closeSpecsBtn) {
   closeSpecsBtn.addEventListener("click", function () {
-    clientSpecsCard?.classList.remove("open");
+    if (clientSpecsCard) clientSpecsCard.classList.remove("open");
   });
 }
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     loadBoard().catch(err => {
-      if (statusBox) statusBox.textContent = String(err?.message || err);
+      if (statusBox) statusBox.textContent = String(err && err.message ? err.message : err);
     });
   });
 } else {
   loadBoard().catch(err => {
-    if (statusBox) statusBox.textContent = String(err?.message || err);
+    if (statusBox) statusBox.textContent = String(err && err.message ? err.message : err);
   });
 }
