@@ -2,13 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3012:
-// ✅ Fixes Add Assignment not actually adding when client is typed but not clicked
+// Fixed v3017:
+// ✅ Fixes Add Assignment when client is typed but not clicked
 // ✅ Blocks fake “Day Saved” when no assignment was added
-// ✅ Keeps local assignment on screen after save even if backend returns empty rows
-// ✅ Saves only selected day
-// ✅ Allows empty-day save only after removing an existing assignment
-// ✅ Re-loads board after save so refresh/display matches backend
+// ✅ Saves selected day only
+// ✅ Re-reads board after save and keeps local row visible if backend read lags
+// ✅ Works with Code.gs RowID / WeekStart / ServiceDate schema fix
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -333,11 +332,23 @@ async function saveCurrentDay() {
 
     console.log("Weekly board day save result:", res);
 
-    // IMPORTANT:
-    // Do NOT reload weekly_board_get here.
-    // Current backend write is succeeding, but weekly_board_get can lag/filter the new row.
-    // Reloading immediately was wiping the visible assignment right after save.
-    assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(dayRowsBeforeSave);
+    // With Code.gs v3017+, saved rows are written to the real RowID/WeekStart/ServiceDate schema.
+    // Re-read the board so the editor screen matches what will survive a refresh.
+    const localRows = dayRowsBeforeSave.slice();
+    assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
+
+    try {
+      await loadBoard(currentWeekStart);
+
+      // Safety net: if the backend read is still delayed/filtered, keep the local saved rows visible.
+      const stillHasCurrentDay = assignments.some(row => row.serviceDate === currentDay && String(row.active || "YES").toUpperCase() !== "NO");
+      if (localRows.length && !stillHasCurrentDay) {
+        assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
+      }
+    } catch (reloadErr) {
+      console.warn("weekly_board_get reload failed after save; keeping local rows", reloadErr);
+      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
+    }
 
     allowEmptyCurrentDaySave = false;
     markDayDirty(false);
