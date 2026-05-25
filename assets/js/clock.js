@@ -9,6 +9,7 @@
 // ✅ Preserved GPS/location logic
 // ✅ Preserved client specs loading
 // ✅ Preserved Weekly Board direct job params + auto-select
+// ✅ Restores active clocked-in job after refresh so Clock Out still works
 // ==============================
 
 // ==============================
@@ -90,6 +91,8 @@ let jobSearchClearBtn = null;
 
 const lastJobKey = `lastJob_${employeeId}`;
 const activeSpecsKey = `activeClientSpecs_${employeeId}`;
+const activeJobKey = `activeClockJob_${employeeId}`;
+const activeJobLocalKey = `activeClockJobLocal_${employeeId}`;
 
 // ==============================
 // Future service-day logic
@@ -320,10 +323,18 @@ function ensureJobSearchClearButton() {
     parent.appendChild(btn);
 
     btn.addEventListener("click", () => {
+      if (isClockedIn && selectedJob) {
+        setStatus("You are clocked into a job. Clock out before clearing the active job.", "warn");
+        return;
+      }
+
       jobSearch.value = "";
-      jobResults.innerHTML = "";
+      if (jobResults) jobResults.innerHTML = "";
       btn.style.display = "none";
       jobSearch.focus();
+      selectedJob = null;
+      clearActiveJobState(false);
+      updateButtons();
     });
   }
 
@@ -335,6 +346,75 @@ function ensureJobSearchClearButton() {
 function updateJobSearchClearVisibility() {
   if (!jobSearch || !jobSearchClearBtn) return;
   jobSearchClearBtn.style.display = jobSearch.value.trim() ? "flex" : "none";
+}
+
+// ==============================
+// Active job persistence
+// ==============================
+function persistActiveJobState() {
+  if (!selectedJob) return;
+
+  const payload = {
+    id: selectedJob.id || "",
+    name: selectedJob.name || "",
+    clientName: selectedJob.clientName || normalizeBaseClientName(selectedJob.name || ""),
+    pay: Number(selectedJob.pay || 0),
+    address: selectedJob.address || "",
+    serviceDate: selectedJob.serviceDate || "",
+    savedAt: new Date().toISOString()
+  };
+
+  try { sessionStorage.setItem(lastJobKey, payload.id || payload.name || ""); } catch (e) {}
+  try { sessionStorage.setItem(activeJobKey, JSON.stringify(payload)); } catch (e) {}
+  try { localStorage.setItem(activeJobLocalKey, JSON.stringify(payload)); } catch (e) {}
+}
+
+function clearActiveJobState(clearSelected = true) {
+  try { sessionStorage.removeItem(activeJobKey); } catch (e) {}
+  try { localStorage.removeItem(activeJobLocalKey); } catch (e) {}
+  try { sessionStorage.removeItem(lastJobKey); } catch (e) {}
+
+  if (clearSelected) selectedJob = null;
+}
+
+function restoreActiveJobState(sourceLabel = "Restored active job") {
+  if (!isClockedIn) return false;
+
+  let raw = "";
+  try { raw = sessionStorage.getItem(activeJobKey) || ""; } catch (e) {}
+  if (!raw) {
+    try { raw = localStorage.getItem(activeJobLocalKey) || ""; } catch (e) {}
+  }
+
+  if (!raw) return false;
+
+  try {
+    const saved = JSON.parse(raw);
+    const normalized = normalizeJob(saved);
+    if (!normalized || !normalized.name) return false;
+
+    selectedJob = normalized;
+
+    if (jobSearch) {
+      jobSearch.value = selectedJob.name;
+      updateJobSearchClearVisibility();
+    }
+
+    if (jobResults) jobResults.innerHTML = "";
+
+    showSelectedJobAddress(selectedJob.address || "");
+
+    if (selectedJob.futureLocked) {
+      setStatus("This active job is locked because the saved service date is in the future.", "warn");
+    } else {
+      setStatus(`${sourceLabel}: ${selectedJob.name}. You can clock out when finished.`, "ok");
+    }
+
+    updateButtons();
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ==============================
@@ -482,6 +562,7 @@ function setSelectedJobFromOption(opt, sourceMessage) {
     };
 
     sessionStorage.setItem(lastJobKey, selectedJob.id);
+    persistActiveJobState();
 
     if (jobSearch) {
       jobSearch.value = selectedJob.name;
@@ -500,7 +581,7 @@ function setSelectedJobFromOption(opt, sourceMessage) {
     showSelectedJobAddress(selectedJob.address);
   } else {
     selectedJob = null;
-    sessionStorage.removeItem(lastJobKey);
+    if (!isClockedIn) clearActiveJobState(false);
 
     if (jobSearch) {
       jobSearch.value = "";
@@ -702,6 +783,7 @@ window.loadJobs = function (res) {
   });
 
   if (applyDirectWeeklyBoardJobIfPresent()) {
+    persistActiveJobState();
     updateButtons();
     return;
   }
@@ -712,16 +794,20 @@ window.loadJobs = function (res) {
     const opt = jobSelect.selectedOptions[0];
 
     if (opt && opt.value) {
-      setSelectedJobFromOption(opt);
+      setSelectedJobFromOption(opt, isClockedIn ? "Restored clocked-in job" : undefined);
       return;
     }
   }
+
+  if (restoreActiveJobState("Restored clocked-in job")) return;
 
   setStatus("Start typing a client name, then tap Full or .5.", "info");
   updateButtons();
 };
 
 (function injectJobsScript() {
+  restoreActiveJobState("Restored clocked-in job");
+
   const s = document.createElement("script");
   s.src = `${UNIFIED_URL}?action=clock_jobs_list&callback=loadJobs`;
   s.async = true;
@@ -818,6 +904,7 @@ window.clockIn = function () {
   isClockedIn = true;
   sessionStorage.setItem("onBreak", "false");
   sessionStorage.setItem("isClockedIn", "true");
+  persistActiveJobState();
 
   logEvent("Clock In");
   setStatus(`Clocked In ✅ (${selectedJob.name})`, "ok");
@@ -834,6 +921,7 @@ window.startBreak = function () {
 
   onBreak = true;
   sessionStorage.setItem("onBreak", "true");
+  persistActiveJobState();
 
   logEvent("Break Start");
   setStatus("Break Started 🟡", "ok");
@@ -849,6 +937,7 @@ window.endBreak = function () {
 
   onBreak = false;
   sessionStorage.setItem("onBreak", "false");
+  persistActiveJobState();
 
   logEvent("Break End");
   setStatus("Break Ended ✅", "ok");
@@ -856,6 +945,8 @@ window.endBreak = function () {
 };
 
 window.clockOut = function () {
+  if (!selectedJob && isClockedIn) restoreActiveJobState("Restored clocked-in job");
+
   if (!actionIsReady(btnClockOut)) return;
   if (!selectedJob) return setStatus("Please select a job before clocking out.", "warn");
   if (selectedJob.futureLocked) return setStatus("This job is locked until the actual service day.", "warn");
@@ -871,17 +962,27 @@ window.clockOut = function () {
 
   isClockedIn = false;
   sessionStorage.setItem("isClockedIn", "false");
+  sessionStorage.setItem("onBreak", "false");
 
   setStatus("Clocked Out ✅ (Notes saved if entered)", "ok");
 
   if (notesEl) notesEl.value = "";
 
   hideClientSpecs();
+  clearActiveJobState(true);
+
+  if (jobSearch) {
+    jobSearch.value = "";
+    updateJobSearchClearVisibility();
+  }
+
+  showSelectedJobAddress("");
   updateButtons();
 };
 
 // Init
 ensureJobSearchClearButton();
+restoreActiveJobState("Restored clocked-in job");
 updateButtons();
 
 window.addEventListener("load", updateButtons);
@@ -889,9 +990,20 @@ setTimeout(updateButtons, 50);
 setTimeout(updateButtons, 250);
 setTimeout(updateButtons, 750);
 
+window.addEventListener("pageshow", function () {
+  if (isClockedIn && !selectedJob) restoreActiveJobState("Restored clocked-in job");
+  updateButtons();
+});
+
 document.addEventListener("DOMContentLoaded", function () {
-  if (directJobFromWeeklyBoard.source === "weekly_board") return;
-  if (jobSearch) jobSearch.focus();
+  if (directJobFromWeeklyBoard.source === "weekly_board") {
+    if (isClockedIn && !selectedJob) restoreActiveJobState("Restored clocked-in job");
+    updateButtons();
+    return;
+  }
+
+  if (jobSearch && !isClockedIn) jobSearch.focus();
+  if (isClockedIn && !selectedJob) restoreActiveJobState("Restored clocked-in job");
   updateButtons();
   ensureJobSearchClearButton();
 });
