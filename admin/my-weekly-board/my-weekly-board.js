@@ -158,7 +158,7 @@ function getClockUrl(job) {
     qs.set("address", job.address || "");
   }
 
-  return "/admin/clock/index.html?" + qs.toString();
+  return "/admin/clock/?" + qs.toString();
 }
 
 function resolveEmployee() {
