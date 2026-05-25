@@ -4,6 +4,7 @@
 // ATS My Weekly Board - employee schedule + approved Full Week view
 // Full Week: E01/E02/E04 only
 // Clock Into This Job: today only
+// Clock page path: /clock.html
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -158,7 +159,7 @@ function getClockUrl(job) {
     qs.set("address", job.address || "");
   }
 
-  return "/admin/clock/?" + qs.toString();
+  return "/clock.html?" + qs.toString();
 }
 
 function resolveEmployee() {
