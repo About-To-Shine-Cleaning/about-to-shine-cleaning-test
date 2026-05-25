@@ -3,7 +3,8 @@
 // TYPE: .js
 // ATS My Weekly Board - employee schedule + approved Full Week view
 // Full Week: E01/E02/E04 only
-// Clock Into This Job: today only
+// Clock button: today only
+// Clock button switches to Clock Out when active job is already clocked in
 // Clock page path: /clock.html
 // =========================================================
 
@@ -147,7 +148,54 @@ function getMapUrl(address) {
   return "https://www.google.com/maps/search/?api=1&query=" + encoded;
 }
 
-function getClockUrl(job) {
+function normalizeClockMatch(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function getActiveClockJob() {
+  if (!employeeId) return null;
+
+  const isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
+  if (!isClockedIn) return null;
+
+  const sessionKey = `activeClockJob_${employeeId}`;
+  const localKey = `activeClockJobLocal_${employeeId}`;
+
+  let raw = "";
+  try { raw = sessionStorage.getItem(sessionKey) || ""; } catch (error) {}
+  if (!raw) {
+    try { raw = localStorage.getItem(localKey) || ""; } catch (error) {}
+  }
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
+function isSameActiveClockJob(job) {
+  const active = getActiveClockJob();
+  if (!active || !job) return false;
+
+  const activeId = String(active.id || active.jobId || active.clientId || "").trim();
+  const jobId = String(job.clientId || job.id || "").trim();
+
+  if (activeId && jobId && activeId === jobId) return true;
+
+  const activeName = normalizeClockMatch(active.clientName || active.name || active.jobName || "");
+  const jobName = normalizeClockMatch(job.clientName || job.name || job.jobName || "");
+
+  return !!activeName && !!jobName && (activeName === jobName || activeName.indexOf(jobName) >= 0 || jobName.indexOf(activeName) >= 0);
+}
+
+function getClockUrl(job, intent) {
   const qs = new URLSearchParams({ emp: employeeId });
 
   if (job && (job.clientName || job.clientId || job.serviceDate)) {
@@ -158,6 +206,8 @@ function getClockUrl(job) {
     qs.set("jobName", job.clientName || "");
     qs.set("address", job.address || "");
   }
+
+  if (intent) qs.set("intent", intent);
 
   return "/clock.html?" + qs.toString();
 }
@@ -292,7 +342,7 @@ function renderWeek(rows, weekStart, labelMode) {
         : "No assignments posted for this week yet.";
     } else {
       statusBox.textContent = safeRows.length
-        ? "Tap a client name to view specs. Clock Into This Job only appears on today's jobs."
+        ? "Tap a client name to view specs. Today's active job can be opened for Clock In or Clock Out."
         : "No assignments posted for this week yet.";
     }
   }
@@ -339,10 +389,12 @@ function renderMyJob(job, isPast, isToday) {
   const notes = String(job.notes || "").trim();
   const shared = Array.isArray(job.sharedEmployees) ? job.sharedEmployees : [];
   const sharedText = shared.length ? shared.join(", ") : "";
+  const isActiveClockJob = isToday && isSameActiveClockJob(job);
 
   let actionHtml = '<span class="my-job-date-lock">Locked Until Service Day</span>';
   if (isPast) actionHtml = '<span class="my-job-date-lock">Past Day</span>';
-  if (isToday) actionHtml = '<a class="my-clock-job-btn" href="' + escapeHtml(getClockUrl(job)) + '">Clock Into This Job</a>';
+  if (isToday && !isActiveClockJob) actionHtml = '<a class="my-clock-job-btn" href="' + escapeHtml(getClockUrl(job, "clock_in")) + '">Clock Into This Job</a>';
+  if (isActiveClockJob) actionHtml = '<a class="my-clock-job-btn" href="' + escapeHtml(getClockUrl(job, "clock_out")) + '">Clock Out Of This Job</a>';
 
   return '' +
     '<div class="my-job-card">' +
@@ -484,6 +536,18 @@ function startPage() {
     if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
   });
 }
+
+window.addEventListener("storage", function () {
+  if (currentView === "mine" && currentWeekStart) {
+    loadMyBoard().catch(() => {});
+  }
+});
+
+window.addEventListener("pageshow", function () {
+  if (currentView === "mine" && currentWeekStart) {
+    loadMyBoard().catch(() => {});
+  }
+});
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", startPage);
