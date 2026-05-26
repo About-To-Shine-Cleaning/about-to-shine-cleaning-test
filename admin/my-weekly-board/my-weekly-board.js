@@ -5,6 +5,7 @@
 // Full Week: E01/E02/E04 only
 // Adds Full Week clock-status badges from Logs via Code.gs
 // Adds Full Week auto-refresh polling so PC sees mobile clock-ins/outs
+// Adds completed-job button lockout: completed jobs show "✅ Job Completed"
 // Shared clock state key: activeClockState_E##
 // =========================================================
 
@@ -155,6 +156,11 @@ function getActiveClockStateKey() {
   return `activeClockState_${employeeId}`;
 }
 
+function getCompletedJobsKey() {
+  if (!employeeId) return "";
+  return `completedClockJobs_${employeeId}`;
+}
+
 function readActiveClockState() {
   const key = getActiveClockStateKey();
   if (!key) return null;
@@ -168,12 +174,71 @@ function readActiveClockState() {
   }
 }
 
+function readCompletedJobsMap() {
+  const key = getCompletedJobsKey();
+  if (!key) return {};
+
+  try {
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function writeCompletedJobsMap(map) {
+  const key = getCompletedJobsKey();
+  if (!key) return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(map || {}));
+  } catch (error) {}
+}
+
 function normalizeClockMatch(value) {
   return String(value || "")
     .trim()
     .toLowerCase()
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "");
+}
+
+function getJobCompletionKey(job) {
+  if (!job) return "";
+
+  const serviceDate = String(job.serviceDate || "").trim();
+  const clientId = String(job.clientId || job.id || "").trim();
+  const clientName = normalizeClockMatch(job.clientName || job.name || job.jobName || "");
+
+  if (!serviceDate) return "";
+  return serviceDate + "|" + (clientId || clientName);
+}
+
+function markJobCompleted(job) {
+  const key = getJobCompletionKey(job);
+  if (!key) return;
+
+  const map = readCompletedJobsMap();
+  map[key] = {
+    completed: true,
+    completedAt: new Date().toISOString(),
+    clientName: job.clientName || job.name || job.jobName || ""
+  };
+  writeCompletedJobsMap(map);
+}
+
+function isJobCompleted(job) {
+  const status = String(job && (job.clockStatus || job.clockStatusClass || "") || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+
+  if (status === "completed") return true;
+
+  const key = getJobCompletionKey(job);
+  if (!key) return false;
+
+  const map = readCompletedJobsMap();
+  return !!(map[key] && map[key].completed);
 }
 
 function getActiveClockJob() {
@@ -228,7 +293,9 @@ function buildBoardJobPayload(job) {
     clientName: job.clientName || job.name || job.jobName || "",
     address: job.address || "",
     pay: Number(job.pay || job.jobPay || 0),
-    serviceDate: job.serviceDate || ""
+    serviceDate: job.serviceDate || "",
+    clockStatus: job.clockStatus || "",
+    clockStatusLabel: job.clockStatusLabel || ""
   };
 }
 
@@ -314,6 +381,11 @@ function logBoardClockEvent(job, clockAction) {
 async function handleBoardClockAction(job, mode) {
   if (!job) return;
 
+  if (mode === "clock_in" && isJobCompleted(job)) {
+    if (statusBox) statusBox.textContent = "This job is already completed.";
+    return;
+  }
+
   const clockAction = mode === "clock_out" ? "Clock Out" : "Clock In";
 
   if (statusBox) {
@@ -333,8 +405,9 @@ async function handleBoardClockAction(job, mode) {
       writeActiveClockStateFromBoard(job);
       if (statusBox) statusBox.textContent = "Clocked in to " + (job.clientName || job.name || "this job") + ".";
     } else {
+      markJobCompleted(job);
       clearActiveClockStateFromBoard();
-      if (statusBox) statusBox.textContent = "Clocked out of " + (job.clientName || job.name || "this job") + ".";
+      if (statusBox) statusBox.textContent = "Job completed: " + (job.clientName || job.name || "this job") + ".";
     }
 
     if (currentView === "full") {
@@ -567,20 +640,26 @@ function renderMyJob(job, isPast, isToday) {
   const notes = String(job.notes || "").trim();
   const shared = Array.isArray(job.sharedEmployees) ? job.sharedEmployees : [];
   const sharedText = shared.length ? shared.join(", ") : "";
-  const isActiveClockJob = isToday && isSameActiveClockJob(job);
+  const completed = isToday && isJobCompleted(job);
+  const isActiveClockJob = isToday && !completed && isSameActiveClockJob(job);
   const jobPayload = encodeURIComponent(JSON.stringify(buildBoardJobPayload(job)));
 
   let actionHtml = '<span class="my-job-date-lock">Locked Until Service Day</span>';
-  if (isPast) actionHtml = '<span class="my-job-date-lock">Past Day</span>';
-  if (isToday && !isActiveClockJob) {
-    actionHtml = '<button class="my-clock-job-btn" type="button" data-clock-mode="clock_in" data-job-payload="' + jobPayload + '">Clock Into This Job</button>';
+
+  if (isPast) {
+    actionHtml = '<span class="my-job-date-lock">Past Day</span>';
   }
-  if (isActiveClockJob) {
+
+  if (isToday && completed) {
+    actionHtml = '<button class="my-clock-job-btn job-completed-btn" type="button" disabled aria-disabled="true" style="opacity:.9;cursor:not-allowed;background:rgba(96,165,250,.16);border-color:rgba(96,165,250,.55);color:#bfdbfe;">✅ Job Completed</button>';
+  } else if (isActiveClockJob) {
     actionHtml = '<button class="my-clock-job-btn" type="button" data-clock-mode="clock_out" data-job-payload="' + jobPayload + '">Clock Out Of This Job</button>';
+  } else if (isToday) {
+    actionHtml = '<button class="my-clock-job-btn" type="button" data-clock-mode="clock_in" data-job-payload="' + jobPayload + '">Clock Into This Job</button>';
   }
 
   return '' +
-    '<div class="my-job-card">' +
+    '<div class="my-job-card' + (completed ? ' job-completed-card' : '') + '">' +
       '<button class="my-client-btn" type="button" ' + (isPast ? 'disabled aria-disabled="true" ' : '') + 'data-client-name="' + clientName + '" data-client-id="' + escapeHtml(job.clientId || "") + '">' +
         clientName +
       '</button>' +
@@ -650,7 +729,8 @@ async function loadMyBoard() {
   const res = await jsonp("weekly_board_employee_view", {
     employeeId: employeeId,
     emp: employeeId,
-    weekStart: currentWeekStart
+    weekStart: currentWeekStart,
+    _: String(Date.now())
   });
 
   if (!res || !res.ok) {
@@ -776,7 +856,8 @@ function startPage() {
 
 window.addEventListener("storage", function (event) {
   const expectedKey = getActiveClockStateKey();
-  if (!expectedKey || event.key !== expectedKey) return;
+  const completedKey = getCompletedJobsKey();
+  if (!event.key || (event.key !== expectedKey && event.key !== completedKey)) return;
 
   if (!currentWeekStart) return;
 
@@ -808,6 +889,8 @@ document.addEventListener("visibilitychange", function () {
 
   if (currentView === "full") {
     loadFullWeekBoard().catch(() => {});
+  } else {
+    loadMyBoard().catch(() => {});
   }
 });
 
