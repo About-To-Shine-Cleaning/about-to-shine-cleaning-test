@@ -6,6 +6,7 @@
 // Clock button: today only
 // Clock button switches to Clock Out when active job is already clocked in
 // Clock page path: /clock.html
+// Shared clock state key: activeClockState_E##
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -148,6 +149,24 @@ function getMapUrl(address) {
   return "https://www.google.com/maps/search/?api=1&query=" + encoded;
 }
 
+function getActiveClockStateKey() {
+  if (!employeeId) return "";
+  return `activeClockState_${employeeId}`;
+}
+
+function readActiveClockState() {
+  const key = getActiveClockStateKey();
+  if (!key) return null;
+
+  try {
+    const raw = localStorage.getItem(key) || "";
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
 function normalizeClockMatch(value) {
   return String(value || "")
     .trim()
@@ -157,27 +176,12 @@ function normalizeClockMatch(value) {
 }
 
 function getActiveClockJob() {
-  if (!employeeId) return null;
+  const state = readActiveClockState();
 
-  const isClockedIn = sessionStorage.getItem("isClockedIn") === "true";
-  if (!isClockedIn) return null;
+  if (!state || !state.isClockedIn) return null;
+  if (!state.activeJob) return null;
 
-  const sessionKey = `activeClockJob_${employeeId}`;
-  const localKey = `activeClockJobLocal_${employeeId}`;
-
-  let raw = "";
-  try { raw = sessionStorage.getItem(sessionKey) || ""; } catch (error) {}
-  if (!raw) {
-    try { raw = localStorage.getItem(localKey) || ""; } catch (error) {}
-  }
-
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    return null;
-  }
+  return state.activeJob;
 }
 
 function isSameActiveClockJob(job) {
@@ -537,7 +541,10 @@ function startPage() {
   });
 }
 
-window.addEventListener("storage", function () {
+window.addEventListener("storage", function (event) {
+  const expectedKey = getActiveClockStateKey();
+  if (!expectedKey || event.key !== expectedKey) return;
+
   if (currentView === "mine" && currentWeekStart) {
     loadMyBoard().catch(() => {});
   }
