@@ -3,9 +3,7 @@
 // TYPE: .js
 // ATS My Weekly Board - employee schedule + approved Full Week view
 // Full Week: E01/E02/E04 only
-// Clock button: today only
-// Clock button switches to Clock Out when active job is already clocked in
-// Clock page path: /clock.html
+// Adds Full Week clock-status badges from Logs via Code.gs
 // Shared clock state key: activeClockState_E##
 // =========================================================
 
@@ -196,7 +194,11 @@ function isSameActiveClockJob(job) {
   const activeName = normalizeClockMatch(active.clientName || active.name || active.jobName || "");
   const jobName = normalizeClockMatch(job.clientName || job.name || job.jobName || "");
 
-  return !!activeName && !!jobName && (activeName === jobName || activeName.indexOf(jobName) >= 0 || jobName.indexOf(activeName) >= 0);
+  return !!activeName && !!jobName && (
+    activeName === jobName ||
+    activeName.indexOf(jobName) >= 0 ||
+    jobName.indexOf(activeName) >= 0
+  );
 }
 
 function getClockUrl(job, intent) {
@@ -214,6 +216,128 @@ function getClockUrl(job, intent) {
   if (intent) qs.set("intent", intent);
 
   return "/clock.html?" + qs.toString();
+}
+
+function buildBoardJobPayload(job) {
+  return {
+    id: job.clientId || job.id || "",
+    name: job.clientName || job.name || job.jobName || "",
+    clientName: job.clientName || job.name || job.jobName || "",
+    address: job.address || "",
+    pay: Number(job.pay || job.jobPay || 0),
+    serviceDate: job.serviceDate || ""
+  };
+}
+
+function writeActiveClockStateFromBoard(job) {
+  if (!employeeId || !job) return;
+
+  const payload = {
+    isClockedIn: true,
+    onBreak: false,
+    activeJob: buildBoardJobPayload(job),
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem(getActiveClockStateKey(), JSON.stringify(payload));
+  } catch (error) {}
+}
+
+function clearActiveClockStateFromBoard() {
+  if (!employeeId) return;
+
+  const payload = {
+    isClockedIn: false,
+    onBreak: false,
+    activeJob: null,
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    localStorage.setItem(getActiveClockStateKey(), JSON.stringify(payload));
+  } catch (error) {}
+}
+
+function getLocationForBoard(callback) {
+  if (!navigator.geolocation) {
+    callback(null, true);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => callback(pos.coords, false),
+    () => callback(null, true),
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+function logBoardClockEvent(job, clockAction) {
+  return new Promise((resolve, reject) => {
+    const safeJob = buildBoardJobPayload(job);
+
+    if (!safeJob.name && !safeJob.clientName) {
+      reject(new Error("Missing job name."));
+      return;
+    }
+
+    getLocationForBoard((coords, gpsDenied) => {
+      const routeMap = {
+        "Clock In": "clock_in",
+        "Clock Out": "clock_out"
+      };
+
+      const route = routeMap[clockAction] || "clock_in";
+
+      jsonp(route, {
+        clockAction: clockAction,
+        emp: employeeId,
+        employeeId: employeeId,
+        employeeName: employeeName,
+        jobId: safeJob.id || "",
+        jobName: safeJob.name || safeJob.clientName || "",
+        jobPay: safeJob.pay || "",
+        notes: "",
+        latitude: coords?.latitude || "",
+        longitude: coords?.longitude || "",
+        accuracy: coords?.accuracy || "",
+        gpsDenied: gpsDenied ? "YES" : "NO",
+        clientTimestamp: new Date().toISOString()
+      }).then(resolve).catch(reject);
+    });
+  });
+}
+
+async function handleBoardClockAction(job, mode) {
+  if (!job) return;
+
+  const clockAction = mode === "clock_out" ? "Clock Out" : "Clock In";
+
+  if (statusBox) {
+    statusBox.textContent = clockAction === "Clock In"
+      ? "Saving clock in..."
+      : "Saving clock out...";
+  }
+
+  try {
+    const res = await logBoardClockEvent(job, clockAction);
+
+    if (!res || !res.ok) {
+      throw new Error(res && res.error ? res.error : "Clock event did not save.");
+    }
+
+    if (clockAction === "Clock In") {
+      writeActiveClockStateFromBoard(job);
+      if (statusBox) statusBox.textContent = "Clocked in to " + (job.clientName || job.name || "this job") + ".";
+    } else {
+      clearActiveClockStateFromBoard();
+      if (statusBox) statusBox.textContent = "Clocked out of " + (job.clientName || job.name || "this job") + ".";
+    }
+
+    await loadMyBoard();
+  } catch (error) {
+    if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
+  }
 }
 
 function resolveEmployee() {
@@ -316,7 +440,7 @@ function setViewMode(mode) {
 
   if (viewHelp) {
     viewHelp.textContent = currentView === "full"
-      ? "Full Week shows employee + client only."
+      ? "Full Week shows each assignment with live clock status from Logs."
       : "My Jobs shows maps and specs. Clock-in only appears on today's jobs.";
   }
 }
@@ -342,11 +466,11 @@ function renderWeek(rows, weekStart, labelMode) {
   if (statusBox) {
     if (labelMode === "full") {
       statusBox.textContent = safeRows.length
-        ? "Full Week view is read-only and shows employee + client only."
+        ? "Full Week view is read-only. Clock status comes from the shared Logs sheet."
         : "No assignments posted for this week yet.";
     } else {
       statusBox.textContent = safeRows.length
-        ? "Tap a client name to view specs. Today's active job can be opened for Clock In or Clock Out."
+        ? "Tap a client name to view specs. Today's active job can be clocked in or out here."
         : "No assignments posted for this week yet.";
     }
   }
@@ -378,11 +502,53 @@ function renderWeek(rows, weekStart, labelMode) {
   });
 }
 
+function getClockStatusMeta(job) {
+  const raw = String(job.clockStatus || job.clockStatusClass || "not_started")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+
+  const label = job.clockStatusLabel || {
+    "clocked-in": "Clocked In",
+    "on-break": "On Break",
+    "completed": "Completed",
+    "activity": "Activity",
+    "not-started": "Not Started"
+  }[raw] || "Not Started";
+
+  const styleMap = {
+    "clocked-in": "background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.55);color:#6ee7b7;",
+    "on-break": "background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.55);color:#fde68a;",
+    "completed": "background:rgba(96,165,250,.16);border-color:rgba(96,165,250,.55);color:#bfdbfe;",
+    "activity": "background:rgba(168,85,247,.16);border-color:rgba(168,85,247,.55);color:#e9d5ff;",
+    "not-started": "background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.35);color:#cbd5e1;"
+  };
+
+  return {
+    key: raw,
+    label: label,
+    style: styleMap[raw] || styleMap["not-started"]
+  };
+}
+
+function renderClockStatusBadge(job) {
+  const meta = getClockStatusMeta(job || {});
+  const timeText = job.completedAt
+    ? " • " + job.completedAt
+    : (job.clockedAt ? " • " + job.clockedAt : "");
+
+  return '' +
+    '<div class="full-week-clock-status clock-status-' + escapeHtml(meta.key) + '" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;border-radius:999px;border:1px solid;font-size:12px;font-weight:850;letter-spacing:.02em;' + meta.style + '">' +
+      escapeHtml(meta.label + timeText) +
+    '</div>';
+}
+
 function renderFullWeekJob(job) {
   return '' +
     '<div class="my-job-card full-week-job">' +
       '<div class="full-week-employee">' + escapeHtml(job.employeeName || job.employeeId || "Employee") + '</div>' +
       '<div class="full-week-client">' + escapeHtml(job.clientName || "Client") + '</div>' +
+      renderClockStatusBadge(job) +
     '</div>';
 }
 
@@ -394,11 +560,16 @@ function renderMyJob(job, isPast, isToday) {
   const shared = Array.isArray(job.sharedEmployees) ? job.sharedEmployees : [];
   const sharedText = shared.length ? shared.join(", ") : "";
   const isActiveClockJob = isToday && isSameActiveClockJob(job);
+  const jobPayload = encodeURIComponent(JSON.stringify(buildBoardJobPayload(job)));
 
   let actionHtml = '<span class="my-job-date-lock">Locked Until Service Day</span>';
   if (isPast) actionHtml = '<span class="my-job-date-lock">Past Day</span>';
-  if (isToday && !isActiveClockJob) actionHtml = '<a class="my-clock-job-btn" href="' + escapeHtml(getClockUrl(job, "clock_in")) + '">Clock Into This Job</a>';
-  if (isActiveClockJob) actionHtml = '<a class="my-clock-job-btn" href="' + escapeHtml(getClockUrl(job, "clock_out")) + '">Clock Out Of This Job</a>';
+  if (isToday && !isActiveClockJob) {
+    actionHtml = '<button class="my-clock-job-btn" type="button" data-clock-mode="clock_in" data-job-payload="' + jobPayload + '">Clock Into This Job</button>';
+  }
+  if (isActiveClockJob) {
+    actionHtml = '<button class="my-clock-job-btn" type="button" data-clock-mode="clock_out" data-job-payload="' + jobPayload + '">Clock Out Of This Job</button>';
+  }
 
   return '' +
     '<div class="my-job-card">' +
@@ -522,6 +693,22 @@ if (btnFullWeek) {
 
 if (weekBoard) {
   weekBoard.addEventListener("click", event => {
+    const clockBtn = event.target.closest("[data-clock-mode]");
+    if (clockBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      let job = null;
+      try {
+        job = JSON.parse(decodeURIComponent(clockBtn.dataset.jobPayload || ""));
+      } catch (error) {
+        job = null;
+      }
+
+      handleBoardClockAction(job, clockBtn.dataset.clockMode || "clock_in");
+      return;
+    }
+
     const btn = event.target.closest("[data-client-name]");
     if (!btn) return;
     if (btn.closest(".past-day")) return;
@@ -545,13 +732,21 @@ window.addEventListener("storage", function (event) {
   const expectedKey = getActiveClockStateKey();
   if (!expectedKey || event.key !== expectedKey) return;
 
-  if (currentView === "mine" && currentWeekStart) {
+  if (!currentWeekStart) return;
+
+  if (currentView === "full") {
+    loadFullWeekBoard().catch(() => {});
+  } else {
     loadMyBoard().catch(() => {});
   }
 });
 
 window.addEventListener("pageshow", function () {
-  if (currentView === "mine" && currentWeekStart) {
+  if (!currentWeekStart) return;
+
+  if (currentView === "full") {
+    loadFullWeekBoard().catch(() => {});
+  } else {
     loadMyBoard().catch(() => {});
   }
 });
