@@ -950,11 +950,36 @@ function getLocation(callback) {
 // ==============================
 // Log event
 // ==============================
+function getSafeActiveJob() {
+  if (selectedJob && (selectedJob.name || selectedJob.clientName)) {
+    return selectedJob;
+  }
+
+  const state = readActiveClockState();
+
+  if (state && state.activeJob) {
+    selectedJob = normalizeJob(state.activeJob);
+    return selectedJob;
+  }
+
+  return null;
+}
+
 function logEvent(action) {
+  const safeJob = getSafeActiveJob();
+
   const notesValue =
     action === "Clock Out"
       ? (document.getElementById("jobNotes")?.value || "").trim()
       : "";
+
+  if (!safeJob || !(safeJob.name || safeJob.clientName)) {
+    setStatus(
+      "Clock event did not save: missing job name. Reopen from Weekly Board and try again.",
+      "err"
+    );
+    return;
+  }
 
   getLocation((coords, gpsDenied) => {
     if (!gpsDenied && coords && Number(coords.accuracy || 0) > 150) {
@@ -973,17 +998,22 @@ function logEvent(action) {
     const qs = new URLSearchParams({
       action: route,
       clockAction: action,
+
       emp: employeeId,
       employeeId: employeeId,
       employeeName: employeeName,
-      jobId: selectedJob?.id || "",
-      jobName: selectedJob?.name || "",
-      jobPay: selectedJob?.pay || "",
+
+      jobId: safeJob.id || "",
+      jobName: safeJob.name || safeJob.clientName || "",
+      jobPay: safeJob.pay || "",
+
       notes: notesValue,
+
       latitude: coords?.latitude || "",
       longitude: coords?.longitude || "",
       accuracy: coords?.accuracy || "",
       gpsDenied: gpsDenied ? "YES" : "NO",
+
       clientTimestamp: new Date().toISOString()
     });
 
@@ -993,12 +1023,18 @@ function logEvent(action) {
       try { delete window[cb]; } catch (e) {}
 
       if (!res || !res.ok) {
-        setStatus("Clock event did not save: " + (res?.error || "unknown error"), "err");
+        setStatus(
+          "Clock event did not save: " + (res?.error || "unknown error"),
+          "err"
+        );
       }
     };
 
     const s = document.createElement("script");
-    s.src = UNIFIED_URL + "?" + qs.toString() + "&callback=" + cb;
+
+    s.src =
+      UNIFIED_URL + "?" + qs.toString() + "&callback=" + cb;
+
     s.onerror = function () {
       setStatus("Clock event failed to save.", "err");
     };
