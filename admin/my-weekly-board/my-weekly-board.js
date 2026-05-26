@@ -4,6 +4,7 @@
 // ATS My Weekly Board - employee schedule + approved Full Week view
 // Full Week: E01/E02/E04 only
 // Adds Full Week clock-status badges from Logs via Code.gs
+// Adds Full Week auto-refresh polling so PC sees mobile clock-ins/outs
 // Shared clock state key: activeClockState_E##
 // =========================================================
 
@@ -47,6 +48,8 @@ let employeeId = "";
 let employeeName = "";
 let currentWeekStart = "";
 let currentView = "mine";
+let fullWeekRefreshTimer = null;
+let fullWeekRefreshBusy = false;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -334,7 +337,12 @@ async function handleBoardClockAction(job, mode) {
       if (statusBox) statusBox.textContent = "Clocked out of " + (job.clientName || job.name || "this job") + ".";
     }
 
-    await loadMyBoard();
+    if (currentView === "full") {
+      await loadFullWeekBoard();
+      startFullWeekAutoRefresh();
+    } else {
+      await loadMyBoard();
+    }
   } catch (error) {
     if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
   }
@@ -466,7 +474,7 @@ function renderWeek(rows, weekStart, labelMode) {
   if (statusBox) {
     if (labelMode === "full") {
       statusBox.textContent = safeRows.length
-        ? "Full Week view is read-only. Clock status comes from the shared Logs sheet."
+        ? "Full Week view is read-only. Clock status comes from the shared Logs sheet. Auto-refresh is active while Full Week is open."
         : "No assignments posted for this week yet.";
     } else {
       statusBox.textContent = safeRows.length
@@ -636,6 +644,7 @@ async function openClientSpecs(clientName, clientId) {
 }
 
 async function loadMyBoard() {
+  stopFullWeekAutoRefresh();
   setViewMode("mine");
 
   const res = await jsonp("weekly_board_employee_view", {
@@ -651,7 +660,9 @@ async function loadMyBoard() {
   renderWeek(res.rows || [], res.weekStart || currentWeekStart, "mine");
 }
 
-async function loadFullWeekBoard() {
+async function loadFullWeekBoard(options) {
+  options = options || {};
+
   if (!canViewFullWeek()) {
     throw new Error("Full Week view is not available for this profile.");
   }
@@ -659,7 +670,8 @@ async function loadFullWeekBoard() {
   setViewMode("full");
 
   const res = await authedJsonp("weekly_board_full_week", {
-    weekStart: currentWeekStart
+    weekStart: currentWeekStart,
+    _: String(Date.now())
   });
 
   if (!res || !res.ok) {
@@ -667,6 +679,37 @@ async function loadFullWeekBoard() {
   }
 
   renderWeek(res.rows || [], res.weekStart || currentWeekStart, "full");
+
+  if (!options.skipAutoRefreshStart) {
+    startFullWeekAutoRefresh();
+  }
+}
+
+function startFullWeekAutoRefresh() {
+  stopFullWeekAutoRefresh();
+
+  fullWeekRefreshTimer = setInterval(async () => {
+    if (currentView !== "full") return;
+    if (document.hidden) return;
+    if (fullWeekRefreshBusy) return;
+
+    fullWeekRefreshBusy = true;
+
+    try {
+      await loadFullWeekBoard({ skipAutoRefreshStart: true });
+    } catch (error) {
+      console.warn("Full Week auto-refresh failed:", error);
+    } finally {
+      fullWeekRefreshBusy = false;
+    }
+  }, 20000);
+}
+
+function stopFullWeekAutoRefresh() {
+  if (fullWeekRefreshTimer) {
+    clearInterval(fullWeekRefreshTimer);
+    fullWeekRefreshTimer = null;
+  }
 }
 
 async function loadBoard() {
@@ -677,6 +720,8 @@ async function loadBoard() {
 
 if (btnMyJobs) {
   btnMyJobs.addEventListener("click", () => {
+    stopFullWeekAutoRefresh();
+
     loadMyBoard().catch(error => {
       if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
     });
@@ -686,6 +731,7 @@ if (btnMyJobs) {
 if (btnFullWeek) {
   btnFullWeek.addEventListener("click", () => {
     loadFullWeekBoard().catch(error => {
+      stopFullWeekAutoRefresh();
       if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
     });
   });
@@ -748,6 +794,20 @@ window.addEventListener("pageshow", function () {
     loadFullWeekBoard().catch(() => {});
   } else {
     loadMyBoard().catch(() => {});
+  }
+});
+
+window.addEventListener("beforeunload", function () {
+  stopFullWeekAutoRefresh();
+});
+
+document.addEventListener("visibilitychange", function () {
+  if (!currentWeekStart) return;
+
+  if (document.hidden) return;
+
+  if (currentView === "full") {
+    loadFullWeekBoard().catch(() => {});
   }
 });
 
