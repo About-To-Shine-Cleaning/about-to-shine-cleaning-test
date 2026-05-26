@@ -714,6 +714,65 @@ function addWeeklyBoardFallbackJob() {
   return fallback;
 }
 
+function hydrateDirectWeeklyBoardJobImmediately() {
+  if (directJobFromWeeklyBoard.source !== "weekly_board") return false;
+  if (!directJobFromWeeklyBoard.clientName && !directJobFromWeeklyBoard.jobName) return false;
+
+  const name = directJobFromWeeklyBoard.jobName || directJobFromWeeklyBoard.clientName || "Weekly Board Job";
+  const id = directJobFromWeeklyBoard.clientId || slugJobId(name);
+  const clientName = directJobFromWeeklyBoard.clientName || normalizeBaseClientName(name);
+
+  selectedJob = normalizeJob({
+    id,
+    name,
+    clientName,
+    pay: 0,
+    address: directJobFromWeeklyBoard.address || "",
+    serviceDate: directJobFromWeeklyBoard.serviceDate || ""
+  });
+
+  if (jobSearch) {
+    jobSearch.value = selectedJob.name;
+    updateJobSearchClearVisibility();
+  }
+
+  if (jobResults) jobResults.innerHTML = "";
+
+  showSelectedJobAddress(selectedJob.address || "");
+
+  if (jobSelect) {
+    let opt = Array.from(jobSelect.options).find(option => String(option.value || "") === String(selectedJob.id || ""));
+
+    if (!opt) {
+      opt = document.createElement("option");
+      opt.value = selectedJob.id;
+      opt.textContent = selectedJob.name;
+      opt.dataset.jobId = selectedJob.id;
+      opt.dataset.jobName = selectedJob.name;
+      opt.dataset.clientName = selectedJob.clientName;
+      opt.dataset.jobPay = String(selectedJob.pay || 0);
+      opt.dataset.name = selectedJob.name;
+      opt.dataset.pay = String(selectedJob.pay || 0);
+      opt.dataset.address = selectedJob.address || "";
+      opt.dataset.serviceDate = selectedJob.serviceDate || "";
+      opt.dataset.futureLocked = selectedJob.futureLocked ? "true" : "false";
+      jobSelect.appendChild(opt);
+    }
+
+    jobSelect.value = opt.value;
+  }
+
+  if (selectedJob.futureLocked) {
+    const dateText = normalizeDateKey(selectedJob.serviceDate) || selectedJob.serviceDate || "future date";
+    setStatus(`⏳ This job is scheduled for ${dateText}. Clock actions unlock on the actual service day.`, "warn");
+  } else {
+    setStatus(`Selected from Weekly Board: ${selectedJob.name}`, "info");
+  }
+
+  updateButtons();
+  return true;
+}
+
 function applyDirectWeeklyBoardJobIfPresent() {
   if (directJobFromWeeklyBoard.source !== "weekly_board") return false;
 
@@ -859,7 +918,11 @@ window.loadJobs = function (res) {
 };
 
 (function injectJobsScript() {
-  restoreActiveJobState("Restored clocked-in job");
+  if (directJobFromWeeklyBoard.source === "weekly_board") {
+    hydrateDirectWeeklyBoardJobImmediately();
+  } else {
+    restoreActiveJobState("Restored clocked-in job");
+  }
 
   const s = document.createElement("script");
   s.src = `${UNIFIED_URL}?action=clock_jobs_list&callback=loadJobs`;
@@ -1052,7 +1115,7 @@ window.addEventListener("pageshow", function () {
 
 document.addEventListener("DOMContentLoaded", function () {
   if (directJobFromWeeklyBoard.source === "weekly_board") {
-    restoreActiveJobState("Restored clocked-in job");
+    hydrateDirectWeeklyBoardJobImmediately();
     updateButtons();
     return;
   }
