@@ -2,12 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3017:
-// ✅ Fixes Add Assignment when client is typed but not clicked
-// ✅ Blocks fake “Day Saved” when no assignment was added
-// ✅ Saves selected day only
-// ✅ Re-reads board after save and keeps local row visible if backend read lags
-// ✅ Works with Code.gs RowID / WeekStart / ServiceDate schema fix
+// Fixed v3018:
+// ✅ Preserves all v3017 board save behavior
+// ✅ Adds Change Day inline edit panel
+// ✅ Moves an assignment from one service date to another without duplicating rows
+// ✅ Saves both the original day and destination day through weekly_board_save_day
+// ✅ Preserves employeeId, clientId, FULL/HALF/JOB payroll-safe IDs, and board_clients flow
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -42,6 +42,7 @@ let isSavingChange = false;
 let dayDirty = false;
 let btnUpdateDay = null;
 let allowEmptyCurrentDaySave = false;
+let movedDayDates = new Set();
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -231,11 +232,14 @@ function rowPayload(row, index = 0) {
   };
 }
 
-function getCurrentDayRowsPayload() {
+function getRowsPayloadForDate(serviceDate) {
   return assignments
-    .filter(row => row.serviceDate === currentDay && String(row.active || "YES").toUpperCase() !== "NO")
+    .filter(row => row.serviceDate === serviceDate && String(row.active || "YES").toUpperCase() !== "NO")
     .map((row, index) => {
       const payload = rowPayload(row, index);
+      payload.serviceDate = serviceDate;
+      payload.dayName = getDayNameFromYMD(serviceDate);
+      payload.sortOrder = index + 1;
 
       if (payload.employeeId && !payload.employeeName) {
         const emp = getEmployeeById(payload.employeeId);
@@ -253,6 +257,10 @@ function getCurrentDayRowsPayload() {
       return payload;
     })
     .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName);
+}
+
+function getCurrentDayRowsPayload() {
+  return getRowsPayloadForDate(currentDay);
 }
 
 function ensureUpdateDayButton() {
@@ -301,56 +309,76 @@ function clearBusy() {
   updateDayButtonState();
 }
 
+async function saveOneBoardDay(serviceDate, allowEmptyDay) {
+  const rows = getRowsPayloadForDate(serviceDate);
+  const payload = {
+    serviceDate: serviceDate,
+    assignments: rows
+  };
+
+  const res = await jsonp("weekly_board_save_day", {
+    weekStart: currentWeekStart,
+    serviceDate: serviceDate,
+    expectedCount: String(rows.length),
+    allowEmptyDay: rows.length === 0 && allowEmptyDay ? "YES" : "NO",
+    payload: JSON.stringify(payload)
+  });
+
+  if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
+  return { serviceDate, rows, res };
+}
+
 async function saveCurrentDay() {
   if (isSavingChange) return;
   if (!currentDay) return alert("Choose a day first.");
 
-  const dayRowsBeforeSave = getCurrentDayRowsPayload();
+  const datesToSave = Array.from(new Set([currentDay, ...Array.from(movedDayDates || [])]))
+    .filter(Boolean)
+    .sort();
 
-  if (!dayRowsBeforeSave.length && !allowEmptyCurrentDaySave) {
+  const currentRowsBeforeSave = getCurrentDayRowsPayload();
+  const hasMoveSave = datesToSave.length > 1 || movedDayDates.has(currentDay);
+
+  if (!currentRowsBeforeSave.length && !allowEmptyCurrentDaySave && !hasMoveSave) {
     return alert("No assignments were added. Pick a client from the search results, click Add Assignment, then click Update This Day.");
   }
 
   try {
     setBusy("Updating day...");
 
-    const expectedCount = dayRowsBeforeSave.length;
-    const payload = {
-      serviceDate: currentDay,
-      assignments: dayRowsBeforeSave
-    };
+    const savedByDate = new Map();
 
-    const res = await jsonp("weekly_board_save_day", {
-      weekStart: currentWeekStart,
-      serviceDate: currentDay,
-      expectedCount: String(expectedCount),
-      allowEmptyDay: expectedCount === 0 && allowEmptyCurrentDaySave ? "YES" : "NO",
-      payload: JSON.stringify(payload)
-    });
+    for (const serviceDate of datesToSave) {
+      const allowEmpty = serviceDate === currentDay
+        ? (allowEmptyCurrentDaySave || hasMoveSave)
+        : true;
 
-    if (!res || !res.ok) throw new Error(res?.error || "weekly_board_save_day failed");
-
-    console.log("Weekly board day save result:", res);
+      const result = await saveOneBoardDay(serviceDate, allowEmpty);
+      savedByDate.set(serviceDate, result.rows.slice());
+      console.log("Weekly board day save result:", result.res);
+    }
 
     // With Code.gs v3017+, saved rows are written to the real RowID/WeekStart/ServiceDate schema.
     // Re-read the board so the editor screen matches what will survive a refresh.
-    const localRows = dayRowsBeforeSave.slice();
-    assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
-
     try {
       await loadBoard(currentWeekStart);
 
       // Safety net: if the backend read is still delayed/filtered, keep the local saved rows visible.
-      const stillHasCurrentDay = assignments.some(row => row.serviceDate === currentDay && String(row.active || "YES").toUpperCase() !== "NO");
-      if (localRows.length && !stillHasCurrentDay) {
-        assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
-      }
+      savedByDate.forEach((localRows, serviceDate) => {
+        const stillHasDate = assignments.some(row => row.serviceDate === serviceDate && String(row.active || "YES").toUpperCase() !== "NO");
+        if (localRows.length && !stillHasDate) {
+          assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
+        }
+      });
     } catch (reloadErr) {
       console.warn("weekly_board_get reload failed after save; keeping local rows", reloadErr);
-      assignments = assignments.filter(row => row.serviceDate !== currentDay).concat(localRows);
+      savedByDate.forEach((localRows, serviceDate) => {
+        assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
+      });
     }
 
     allowEmptyCurrentDaySave = false;
+    movedDayDates.clear();
     markDayDirty(false);
     buildWeekBoard();
     renderModalAssignments();
@@ -473,12 +501,14 @@ function buildWeekBoard() {
 function openDay(dateStr, day) {
   if (dayDirty && currentDay && currentDay !== dateStr) {
     if (!confirm("You have unsaved changes for this day. Switch days and lose those changes?")) return;
+    movedDayDates.clear();
     markDayDirty(false);
   }
 
   currentDay = dateStr;
   editMode = null;
   allowEmptyCurrentDaySave = false;
+  movedDayDates.clear();
   clearClientSelection();
   ensureUpdateDayButton();
   markDayDirty(false);
@@ -490,6 +520,7 @@ function openDay(dateStr, day) {
 function closeModal() {
   if (dayDirty && !confirm("You have unsaved changes. Close without updating this day?")) return;
   editMode = null;
+  movedDayDates.clear();
   markDayDirty(false);
   modal?.classList.remove("open");
 }
@@ -563,6 +594,29 @@ function renderJobEditPanel(row, realIndex) {
   `;
 }
 
+function renderDayEditPanel(row, realIndex) {
+  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " • " + row.employeeName : ""}`.trim();
+  const currentDate = row.serviceDate || currentDay;
+
+  return `
+    <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
+      <strong>Choose new day</strong>
+      <div style="margin-top:10px;font-size:14px;line-height:1.5;opacity:.92;">
+        <div><strong>Employee:</strong> ${escapeHtml(employeeLabel || "Unassigned")}</div>
+        <div><strong>Client/Job:</strong> ${escapeHtml(row.clientName || "")}</div>
+      </div>
+      <input type="date" data-day-picker-index="${realIndex}" value="${escapeHtml(currentDate)}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
+      <div style="margin-top:8px;font-size:13px;opacity:.72;">
+        This moves the assignment locally. Click Update This Day to save the old day and the new day.
+      </div>
+      <div class="assignment-actions">
+        <button class="button button-secondary" type="button" data-apply-day-index="${realIndex}">Apply Day</button>
+        <button class="button button-secondary" type="button" data-cancel-edit="1">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderModalAssignments() {
   if (!assignmentList) return;
 
@@ -576,6 +630,7 @@ function renderModalAssignments() {
   assignmentList.innerHTML = rows.map(x => {
     const isEmployeeEdit = editMode && editMode.type === "employee" && editMode.index === x.realIndex;
     const isJobEdit = editMode && editMode.type === "job" && editMode.index === x.realIndex;
+    const isDayEdit = editMode && editMode.type === "day" && editMode.index === x.realIndex;
 
     return `
       <div class="assignment">
@@ -586,11 +641,13 @@ function renderModalAssignments() {
         <div class="assignment-actions">
           <button class="button button-secondary" type="button" data-open-employee-edit="${x.realIndex}">Change Employee</button>
           <button class="button button-secondary" type="button" data-open-job-edit="${x.realIndex}">Change Job</button>
+          <button class="button button-secondary" type="button" data-open-day-edit="${x.realIndex}">Change Day</button>
           <button class="button button-secondary" type="button" data-remove-index="${x.realIndex}">Remove</button>
         </div>
 
         ${isEmployeeEdit ? renderEmployeeEditPanel(x.row, x.realIndex) : ""}
         ${isJobEdit ? renderJobEditPanel(x.row, x.realIndex) : ""}
+        ${isDayEdit ? renderDayEditPanel(x.row, x.realIndex) : ""}
       </div>
     `;
   }).join("");
@@ -615,6 +672,15 @@ function wireModalAssignmentButtons() {
     });
   });
 
+  assignmentList.querySelectorAll("[data-open-day-edit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      editMode = { type: "day", index: Number(btn.dataset.openDayEdit) };
+      renderModalAssignments();
+      const input = assignmentList.querySelector(`[data-day-picker-index="${editMode.index}"]`);
+      if (input) input.focus();
+    });
+  });
+
   assignmentList.querySelectorAll("[data-cancel-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
       editMode = null;
@@ -628,6 +694,15 @@ function wireModalAssignmentButtons() {
       const picker = assignmentList.querySelector(`[data-employee-picker-index="${index}"]`);
       const newEmployeeId = picker?.value || "";
       applyEmployeeChange(index, newEmployeeId);
+    });
+  });
+
+  assignmentList.querySelectorAll("[data-apply-day-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.applyDayIndex);
+      const picker = assignmentList.querySelector(`[data-day-picker-index="${index}"]`);
+      const newDate = picker?.value || "";
+      applyDayChange(index, newDate);
     });
   });
 
@@ -722,6 +797,59 @@ function applyJobChange(index, client) {
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
+}
+
+function applyDayChange(index, newDate) {
+  if (isSavingChange) return;
+
+  const row = assignments[index];
+  if (!row) return alert("Assignment not found.");
+
+  const targetDate = String(newDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return alert("Choose a valid new date.");
+
+  const oldDate = row.serviceDate || currentDay;
+  if (!oldDate) return alert("Original assignment day was not found.");
+
+  if (targetDate === oldDate) {
+    editMode = null;
+    renderModalAssignments();
+    return;
+  }
+
+  // Future safety placeholder:
+  // When clock status is available on editor rows, block moving assignments that are already clocked in or completed.
+  // Example future check: if (row.clockStatus === "CLOCKED_IN" || row.clockStatus === "COMPLETED") return alert("This job cannot be moved after clock activity starts.");
+
+  const duplicateExists = assignments.some((existing, existingIndex) => {
+    if (existingIndex === index) return false;
+    if (String(existing.active || "YES").toUpperCase() === "NO") return false;
+    return existing.serviceDate === targetDate
+      && String(existing.employeeId || "").trim().toUpperCase() === String(row.employeeId || "").trim().toUpperCase()
+      && String(existing.clientId || "").trim() === String(row.clientId || "").trim()
+      && clientKey(existing.clientName) === clientKey(row.clientName);
+  });
+
+  if (duplicateExists) {
+    return alert("That employee/client assignment already exists on the selected day. No duplicate was created.");
+  }
+
+  row.rowId = "";
+  row.weekStart = currentWeekStart;
+  row.serviceDate = targetDate;
+  row.dayName = getDayNameFromYMD(targetDate);
+  row.active = row.active || "YES";
+  row.sortOrder = getRowsPayloadForDate(targetDate).length + 1;
+
+  movedDayDates.add(oldDate);
+  movedDayDates.add(targetDate);
+  allowEmptyCurrentDaySave = true;
+
+  markDayDirty(true);
+  editMode = null;
+  renderModalAssignments();
+  renderAssignments(oldDate);
+  renderAssignments(targetDate);
 }
 
 function handleClientSearch() {
