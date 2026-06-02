@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>About To Shine Tap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+  <p>Opening your ATS board...</p>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const emp = (params.get("emp") || "").trim().toUpperCase();
+
+      if (!emp) {
+        window.location.replace("/admin/");
+        return;
+      }
+
+      window.location.replace(
+        "/admin/my-weekly-board/?emp=" + encodeURIComponent(emp)
+      );
+    })();
+  </script>
+</body>
+</html>
