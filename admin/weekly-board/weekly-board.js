@@ -973,13 +973,21 @@ function handleClientSearch() {
   if (!q) return;
 
   const seen = {};
+
   const matches = clients
     .filter(client => {
       const displayName = getClientDisplayName(client, addOnMode);
       const key = clientKey(displayName);
-      if (!displayName || seen[key]) return false;
-      if (addOnMode) seen[key] = true;
-      return displayName.toLowerCase().includes(q);
+
+      if (!displayName) return false;
+      if (!displayName.toLowerCase().includes(q)) return false;
+
+      if (addOnMode) {
+        if (seen[key]) return false;
+        seen[key] = true;
+      }
+
+      return true;
     })
     .slice(0, 10);
 
