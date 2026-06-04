@@ -236,39 +236,29 @@ function getEmployeeById(employeeId) {
   return employees.find(x => String(x.employeeId || "").trim().toUpperCase() === String(employeeId || "").trim().toUpperCase());
 }
 
+function getClientDisplayName(client, addOnMode) {
+  if (!client) return "";
+  return addOnMode
+    ? String(client.baseClientName || client.clientName || client.name || "").trim()
+    : String(client.clientName || client.name || "").trim();
+}
+
 function findClientFromInput() {
   const typed = String(clientSearch?.value || "").trim();
   if (!typed) return null;
 
   const addOnMode = !!isAddOnAssignment?.checked;
 
-  if (selectedClient) {
-    const selectedName = addOnMode
-      ? (selectedClient.baseClientName || selectedClient.clientName)
-      : selectedClient.clientName;
-
-    if (clientKey(selectedName) === clientKey(typed)) {
-      return selectedClient;
-    }
+  if (selectedClient && clientKey(getClientDisplayName(selectedClient, addOnMode)) === clientKey(typed)) {
+    return selectedClient;
   }
 
-  let match = clients.find(c => {
-    const name = addOnMode
-      ? (c.baseClientName || c.clientName)
-      : c.clientName;
+  const exact = clients.find(c => clientKey(getClientDisplayName(c, addOnMode)) === clientKey(typed));
+  if (exact) return exact;
 
-    return clientKey(name) === clientKey(typed);
-  });
-
-  if (match) return match;
-
-  const contains = clients.filter(c => {
-    const name = addOnMode
-      ? (c.baseClientName || c.clientName)
-      : c.clientName;
-
-    return String(name || "").toLowerCase().includes(typed.toLowerCase());
-  });
+  const contains = clients.filter(c =>
+    getClientDisplayName(c, addOnMode).toLowerCase().includes(typed.toLowerCase())
+  );
 
   if (contains.length === 1) return contains[0];
 
@@ -980,30 +970,26 @@ function handleClientSearch() {
 
   selectedClient = null;
   clientSuggestions.innerHTML = "";
-
   if (!q) return;
 
-  const matches = clients.filter(client => {
-    const searchName = addOnMode
-      ? (client.baseClientName || client.clientName)
-      : client.clientName;
-
-    return String(searchName || "")
-      .toLowerCase()
-      .includes(q);
-  }).slice(0, 10);
+  const seen = {};
+  const matches = clients
+    .filter(client => {
+      const displayName = getClientDisplayName(client, addOnMode);
+      const key = clientKey(displayName);
+      if (!displayName || seen[key]) return false;
+      if (addOnMode) seen[key] = true;
+      return displayName.toLowerCase().includes(q);
+    })
+    .slice(0, 10);
 
   if (!matches.length) {
-    clientSuggestions.innerHTML =
-      `<div style="opacity:.7;margin-top:8px;">No matching clients.</div>`;
+    clientSuggestions.innerHTML = `<div style="opacity:.7;margin-top:8px;">No matching clients.</div>`;
     return;
   }
 
   matches.forEach(client => {
-
-    const displayName = addOnMode
-      ? (client.baseClientName || client.clientName)
-      : client.clientName;
+    const displayName = getClientDisplayName(client, addOnMode);
 
     const div = document.createElement("button");
     div.type = "button";
@@ -1011,7 +997,6 @@ function handleClientSearch() {
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-
     div.innerHTML = `<strong>${escapeHtml(displayName)}</strong>`;
 
     div.addEventListener("click", () => {
@@ -1053,7 +1038,9 @@ function addAssignment() {
     employeeId: employee.employeeId,
     employeeName: employee.employeeName,
     clientId: client.clientId || "",
-    clientName: client.clientName || client.name || "",
+    clientName: assignmentType === "ADD_ON"
+  ? getClientDisplayName(client, true)
+  : (client.clientName || client.name || ""),
     address: client.address || "",
     notes: "",
     assignmentType: assignmentType,
