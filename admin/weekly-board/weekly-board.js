@@ -2,12 +2,16 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3018:
+// Fixed v3019 Add-On pre-split patch:
 // ✅ Preserves all v3017 board save behavior
 // ✅ Adds Change Day inline edit panel
 // ✅ Moves an assignment from one service date to another without duplicating rows
 // ✅ Saves both the original day and destination day through weekly_board_save_day
 // ✅ Preserves employeeId, clientId, FULL/HALF/JOB payroll-safe IDs, and board_clients flow
+// ✅ Adds Assignment Type: FULL / HALF / ADD_ON
+// ✅ Shows Add-On Type + Add-On Notes only for Add-On assignments
+// ✅ Saves Add-On fields through existing weekly_board_save_day payload
+// ✅ Never handles or displays cleaner pay in the board editor
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -27,6 +31,10 @@ const clientSuggestions = document.getElementById("clientSuggestions");
 const assignmentList = document.getElementById("assignmentList");
 const closeModalBtn = document.getElementById("closeModal");
 const btnAddAssignment = document.getElementById("btnAddAssignment");
+const assignmentTypeSelect = document.getElementById("assignmentTypeSelect");
+const addOnFields = document.getElementById("addOnFields");
+const addOnTypeSelect = document.getElementById("addOnTypeSelect");
+const addOnNotes = document.getElementById("addOnNotes");
 
 const DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -100,6 +108,59 @@ function clientKey(value) {
     .toLowerCase()
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeAssignmentType(value) {
+  const raw = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+  if (raw === "ADDON" || raw === "ADD_ON" || raw === "ADD_ON_JOB") return "ADD_ON";
+  if (raw === "HALF" || raw === ".5" || raw === "0.5" || raw === "HALF_CLEAN") return "HALF";
+  return "FULL";
+}
+
+function assignmentTypeLabel(value) {
+  const type = normalizeAssignmentType(value);
+  if (type === "ADD_ON") return "Add-On";
+  if (type === "HALF") return "Half Clean";
+  return "Full Clean";
+}
+
+function getCurrentAssignmentType() {
+  return normalizeAssignmentType(assignmentTypeSelect?.value || "FULL");
+}
+
+function syncAddOnFields() {
+  const type = getCurrentAssignmentType();
+  const isAddOn = type === "ADD_ON";
+
+  if (addOnFields) addOnFields.classList.toggle("open", isAddOn);
+  if (addOnTypeSelect) addOnTypeSelect.disabled = !isAddOn;
+  if (addOnNotes) addOnNotes.disabled = !isAddOn;
+
+  if (!isAddOn) {
+    if (addOnTypeSelect) addOnTypeSelect.value = "Windows";
+    if (addOnNotes) addOnNotes.value = "";
+  }
+}
+
+function resetAssignmentEntryFields() {
+  if (assignmentTypeSelect) assignmentTypeSelect.value = "FULL";
+  if (addOnTypeSelect) addOnTypeSelect.value = "Windows";
+  if (addOnNotes) addOnNotes.value = "";
+  syncAddOnFields();
+}
+
+function addOnTypeLabel(value) {
+  return String(value || "").trim() || "Other";
+}
+
+function rowAssignmentMeta(row) {
+  const type = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
+  if (type === "ADD_ON") {
+    const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
+    return `Add-On • ${addOnType}`;
+  }
+  return assignmentTypeLabel(type);
 }
 
 function setMessage(msg, isError) {
@@ -227,6 +288,12 @@ function rowPayload(row, index = 0) {
     clientName: row.clientName || "",
     address: row.address || "",
     notes: row.notes || "",
+    assignmentType: normalizeAssignmentType(row.assignmentType || row.AssignmentType || row.type || ""),
+    addOnType: row.addOnType || row.AddOnType || "",
+    addOnNotes: row.addOnNotes || row.AddOnNotes || "",
+    payrollEnteredPay: row.payrollEnteredPay || row.PayrollEnteredPay || "",
+    payrollEnteredBy: row.payrollEnteredBy || row.PayrollEnteredBy || "",
+    payrollEnteredAt: row.payrollEnteredAt || row.PayrollEnteredAt || "",
     sortOrder: row.sortOrder || index + 1,
     active: row.active || "YES"
   };
@@ -252,6 +319,15 @@ function getRowsPayloadForDate(serviceDate) {
           if (!payload.clientId) payload.clientId = match.clientId || "";
           if (!payload.address) payload.address = match.address || "";
         }
+      }
+
+      payload.assignmentType = normalizeAssignmentType(payload.assignmentType);
+
+      if (payload.assignmentType !== "ADD_ON") {
+        payload.addOnType = "";
+        payload.addOnNotes = "";
+      } else {
+        payload.addOnType = addOnTypeLabel(payload.addOnType);
       }
 
       return payload;
@@ -358,12 +434,9 @@ async function saveCurrentDay() {
       console.log("Weekly board day save result:", result.res);
     }
 
-    // With Code.gs v3017+, saved rows are written to the real RowID/WeekStart/ServiceDate schema.
-    // Re-read the board so the editor screen matches what will survive a refresh.
     try {
       await loadBoard(currentWeekStart);
 
-      // Safety net: if the backend read is still delayed/filtered, keep the local saved rows visible.
       savedByDate.forEach((localRows, serviceDate) => {
         const stillHasDate = assignments.some(row => row.serviceDate === serviceDate && String(row.active || "YES").toUpperCase() !== "NO");
         if (localRows.length && !stillHasDate) {
@@ -421,6 +494,9 @@ async function init() {
 
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
+    assignmentTypeSelect?.addEventListener("change", syncAddOnFields);
+    syncAddOnFields();
+
     clientSearch?.addEventListener("input", handleClientSearch);
     clientSearch?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -510,6 +586,7 @@ function openDay(dateStr, day) {
   allowEmptyCurrentDaySave = false;
   movedDayDates.clear();
   clearClientSelection();
+  resetAssignmentEntryFields();
   ensureUpdateDayButton();
   markDayDirty(false);
   if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
@@ -553,7 +630,13 @@ function renderAssignments(dateStr) {
       <div class="assignment">
         <strong>${escapeHtml(group.employeeName)}</strong>
         ${group.items.map(item => `
-          <div class="assignment-client"><span>• ${escapeHtml(item.clientName)}</span></div>
+          <div class="assignment-client">
+            <span>• ${escapeHtml(item.clientName)}</span>
+            <span class="assignment-meta">${escapeHtml(rowAssignmentMeta(item))}</span>
+            ${normalizeAssignmentType(item.assignmentType || item.AssignmentType || "") === "ADD_ON" && (item.addOnNotes || item.AddOnNotes)
+              ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
+              : ""}
+          </div>
         `).join("")}
       </div>
     `;
@@ -604,6 +687,7 @@ function renderDayEditPanel(row, realIndex) {
       <div style="margin-top:10px;font-size:14px;line-height:1.5;opacity:.92;">
         <div><strong>Employee:</strong> ${escapeHtml(employeeLabel || "Unassigned")}</div>
         <div><strong>Client/Job:</strong> ${escapeHtml(row.clientName || "")}</div>
+        <div><strong>Type:</strong> ${escapeHtml(rowAssignmentMeta(row))}</div>
       </div>
       <input type="date" data-day-picker-index="${realIndex}" value="${escapeHtml(currentDate)}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
       <div style="margin-top:8px;font-size:13px;opacity:.72;">
@@ -636,6 +720,10 @@ function renderModalAssignments() {
       <div class="assignment">
         <strong>${escapeHtml(x.row.employeeName)}</strong>
         <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
+        <div class="assignment-meta">${escapeHtml(rowAssignmentMeta(x.row))}</div>
+        ${normalizeAssignmentType(x.row.assignmentType || x.row.AssignmentType || "") === "ADD_ON" && (x.row.addOnNotes || x.row.AddOnNotes)
+          ? `<div class="assignment-notes">${escapeHtml(x.row.addOnNotes || x.row.AddOnNotes)}</div>`
+          : ""}
         ${x.row.address ? `<div class="assignment-address">${escapeHtml(x.row.address)}</div>` : ""}
 
         <div class="assignment-actions">
@@ -768,6 +856,11 @@ function applyEmployeeChange(index, employeeId) {
   row.weekStart = currentWeekStart;
   row.serviceDate = currentDay;
   row.dayName = getDayNameFromYMD(currentDay);
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  if (row.assignmentType !== "ADD_ON") {
+    row.addOnType = "";
+    row.addOnNotes = "";
+  }
   row.active = row.active || "YES";
 
   markDayDirty(true);
@@ -789,6 +882,11 @@ function applyJobChange(index, client) {
   row.weekStart = currentWeekStart;
   row.serviceDate = currentDay;
   row.dayName = getDayNameFromYMD(currentDay);
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  if (row.assignmentType !== "ADD_ON") {
+    row.addOnType = "";
+    row.addOnNotes = "";
+  }
   row.active = row.active || "YES";
 
   if (!row.clientName) return alert("Selected client is missing a client name.");
@@ -817,17 +915,14 @@ function applyDayChange(index, newDate) {
     return;
   }
 
-  // Future safety placeholder:
-  // When clock status is available on editor rows, block moving assignments that are already clocked in or completed.
-  // Example future check: if (row.clockStatus === "CLOCKED_IN" || row.clockStatus === "COMPLETED") return alert("This job cannot be moved after clock activity starts.");
-
   const duplicateExists = assignments.some((existing, existingIndex) => {
     if (existingIndex === index) return false;
     if (String(existing.active || "YES").toUpperCase() === "NO") return false;
     return existing.serviceDate === targetDate
       && String(existing.employeeId || "").trim().toUpperCase() === String(row.employeeId || "").trim().toUpperCase()
       && String(existing.clientId || "").trim() === String(row.clientId || "").trim()
-      && clientKey(existing.clientName) === clientKey(row.clientName);
+      && clientKey(existing.clientName) === clientKey(row.clientName)
+      && normalizeAssignmentType(existing.assignmentType || existing.AssignmentType || "") === normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
   });
 
   if (duplicateExists) {
@@ -838,6 +933,11 @@ function applyDayChange(index, newDate) {
   row.weekStart = currentWeekStart;
   row.serviceDate = targetDate;
   row.dayName = getDayNameFromYMD(targetDate);
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  if (row.assignmentType !== "ADD_ON") {
+    row.addOnType = "";
+    row.addOnNotes = "";
+  }
   row.active = row.active || "YES";
   row.sortOrder = getRowsPayloadForDate(targetDate).length + 1;
 
@@ -901,6 +1001,10 @@ function addAssignment() {
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Select an employee.");
 
+  const assignmentType = getCurrentAssignmentType();
+  const addOnType = assignmentType === "ADD_ON" ? addOnTypeLabel(addOnTypeSelect?.value || "Other") : "";
+  const addOnNoteText = assignmentType === "ADD_ON" ? String(addOnNotes?.value || "").trim() : "";
+
   const newRow = {
     rowId: "",
     weekStart: currentWeekStart,
@@ -912,6 +1016,12 @@ function addAssignment() {
     clientName: client.clientName || client.name || "",
     address: client.address || "",
     notes: "",
+    assignmentType: assignmentType,
+    addOnType: addOnType,
+    addOnNotes: addOnNoteText,
+    payrollEnteredPay: "",
+    payrollEnteredBy: "",
+    payrollEnteredAt: "",
     sortOrder: getActiveRowsForCurrentDay().length + 1,
     active: "YES"
   };
@@ -922,6 +1032,7 @@ function addAssignment() {
   allowEmptyCurrentDaySave = false;
   markDayDirty(true);
   clearClientSelection();
+  resetAssignmentEntryFields();
   renderModalAssignments();
   renderAssignments(currentDay);
 }
