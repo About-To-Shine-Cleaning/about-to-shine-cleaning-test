@@ -15,7 +15,11 @@
     /* =========================================================
        FILE: /admin/payroll/index.html
        ATS Payroll — v2 Client/Admin Style UI
-       Styling/layout refresh only. Keeps existing IDs and JS routes.
+       Add-On pre-split ready:
+       ✅ Keeps existing IDs and JS routes
+       ✅ Adds styling hooks for Add-On payroll lines
+       ✅ Adds styling hooks for Needs Pay state
+       ✅ No cleaner-facing pay display
     ========================================================= */
 
     :root{
@@ -541,6 +545,98 @@
     .job-pay{font-size:14px;font-weight:950;color:#fff;text-align:right}
     .empty-card{padding:15px;color:var(--pr-muted)}
 
+    .job-line.addon-line{
+      grid-template-columns:110px minmax(0,1fr) minmax(190px,260px);
+      align-items:start;
+      border-bottom-color:rgba(255,230,0,.18);
+      background:rgba(255,230,0,.035);
+      margin:0 -8px;
+      padding:12px 8px;
+      border-radius:14px;
+    }
+
+    .addon-badge,
+    .needs-pay-badge,
+    .pay-entered-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:24px;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:950;
+      line-height:1;
+      white-space:nowrap;
+    }
+
+    .addon-badge{
+      margin-top:6px;
+      color:var(--pr-yellow);
+      border:1px solid rgba(255,230,0,.35);
+      background:rgba(255,230,0,.10);
+    }
+
+    .needs-pay-badge{
+      color:#ffd8dd;
+      border:1px solid rgba(255,77,94,.42);
+      background:rgba(255,77,94,.12);
+    }
+
+    .pay-entered-badge{
+      color:#dfffe5;
+      border:1px solid rgba(101,255,125,.38);
+      background:rgba(101,255,125,.10);
+    }
+
+    .addon-notes{
+      display:block;
+      margin-top:6px;
+      color:rgba(247,247,251,.70);
+      font-size:12px;
+      line-height:1.45;
+      white-space:normal;
+      overflow-wrap:anywhere;
+    }
+
+    .addon-pay-box{
+      display:grid;
+      gap:7px;
+      justify-items:end;
+      min-width:0;
+    }
+
+    .addon-pay-row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-end;
+      width:100%;
+    }
+
+    .addon-pay-input{
+      width:120px;
+      max-width:100%;
+      min-height:38px;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(0,0,0,.28);
+      color:var(--pr-text);
+      outline:none;
+      font-weight:900;
+      text-align:right;
+    }
+
+    .addon-save-btn{
+      width:auto;
+      min-height:38px;
+      padding:9px 11px;
+      border-radius:12px;
+      font-size:12px;
+      box-shadow:none;
+    }
+
     .finalization-list{
       display:grid;
       gap:14px;
@@ -794,6 +890,9 @@
       #payoutTotals,#paymentsTotals{margin-top:14px;display:inline-flex}
       .payroll-card-main,.final-top{align-items:flex-start}
       .job-line{grid-template-columns:82px 1fr auto}
+      .job-line.addon-line{grid-template-columns:1fr}
+      .addon-pay-box{justify-items:start}
+      .addon-pay-row{justify-content:flex-start}
       .final-body{grid-template-columns:1fr}
       .add-job-grid{grid-template-columns:1fr}
       .payroll-admin-card{padding:18px}
@@ -811,7 +910,11 @@
       .final-top{display:block}
       .final-status{display:inline-flex;margin-top:12px}
       .job-line{grid-template-columns:1fr;gap:4px}
+      .job-line.addon-line{grid-template-columns:1fr}
       .job-pay{text-align:left;color:var(--pr-yellow)}
+      .addon-pay-row{display:grid;grid-template-columns:1fr;align-items:stretch}
+      .addon-pay-input{width:100%}
+      .addon-save-btn{width:100%}
     }
   </style>
 </head>
@@ -956,6 +1059,6 @@
     </div>
   </main>
 
-  <script src="./payroll.js?v=116"></script>
+  <script src="./payroll.js?v=117"></script>
 </body>
 </html>
