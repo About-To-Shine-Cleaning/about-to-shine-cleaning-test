@@ -1,9 +1,13 @@
 /* =========================================================
    FILE: /admin/payroll/payroll.js
    ATS Payroll (Admin UI) — v2 Preserve Functions
-   - Same working backend/routes/functions
+   Add-On pre-split patch:
+   - Same working backend/routes/functions preserved
    - Keeps Add Job to Employee, Past Payroll, Unlock, QB popup, and finalize routes working
-   - Render structure preserved for the new v2 styling
+   - Adds Add-On rows inside each employee payroll card
+   - Shows Needs Pay when Add-On pay is blank/zero
+   - Lets payroll/admin enter Add-On pay
+   - Includes entered Add-On pay in displayed payroll gross total
 ========================================================= */
 
 (() => {
@@ -58,6 +62,7 @@
   let selectedAddJob = null;
   let employeeRouteLoaded = false;
   let jobsRouteLoaded = false;
+  let addonPaySaving = false;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -156,18 +161,79 @@
     return "$" + cleanMoneyNumber(v).toFixed(2);
   }
 
+  function normalizeAssignmentType(value) {
+    const raw = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+    if (raw === "ADDON" || raw === "ADD_ON" || raw === "ADD_ON_JOB") return "ADD_ON";
+    if (raw === "HALF" || raw === ".5" || raw === "0.5" || raw === "HALF_CLEAN") return "HALF";
+    if (raw === "FULL" || raw === "FULL_CLEAN") return "FULL";
+
+    return "";
+  }
+
+  function isAddOnJob(job) {
+    return normalizeAssignmentType(
+      job?.assignmentType ||
+      job?.AssignmentType ||
+      job?.type ||
+      job?.jobType ||
+      job?.JobType ||
+      ""
+    ) === "ADD_ON";
+  }
+
+  function getAddOnType(job) {
+    return String(job?.addOnType || job?.AddOnType || job?.addonType || job?.AddonType || "Other").trim() || "Other";
+  }
+
+  function getAddOnNotes(job) {
+    return String(job?.addOnNotes || job?.AddOnNotes || job?.addonNotes || job?.AddonNotes || job?.notes || "").trim();
+  }
+
+  function getAddOnRowId(job) {
+    return String(
+      job?.rowId ||
+      job?.RowID ||
+      job?.weeklyAssignmentRowId ||
+      job?.assignmentRowId ||
+      job?.assignmentId ||
+      job?.id ||
+      ""
+    ).trim();
+  }
+
+  function getAddOnEnteredPay(job) {
+    return cleanMoneyNumber(
+      job?.payrollEnteredPay ??
+      job?.PayrollEnteredPay ??
+      job?.addonPay ??
+      job?.addOnPay ??
+      job?.jobPay ??
+      job?.pay ??
+      job?.amount ??
+      0
+    );
+  }
+
+  function jobPayForDisplay(job) {
+    if (isAddOnJob(job)) return getAddOnEnteredPay(job);
+    return cleanMoneyNumber(job?.jobPay ?? job?.pay ?? job?.amount ?? 0);
+  }
+
   function dedupePayrollJobsForDisplay(jobs) {
     const seen = {};
 
     return (Array.isArray(jobs) ? jobs : []).filter(j => {
-      const date = String(j.date || "").trim();
+      const date = String(j.date || j.serviceDate || "").trim();
       const rawName = String(j.clientName || j.jobName || j.job || j.client || "")
         .trim()
         .toLowerCase()
         .replace(/\s+/g, " ");
-      const rawId = String(j.jobId || "").trim().toLowerCase();
-      const pay = cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0).toFixed(2);
-      const key = [date, rawId || rawName, pay].join("|");
+      const rawId = String(j.jobId || j.rowId || "").trim().toLowerCase();
+      const assignmentType = normalizeAssignmentType(j.assignmentType || j.AssignmentType || "");
+      const addOnType = String(j.addOnType || j.AddOnType || "").trim().toLowerCase();
+      const pay = jobPayForDisplay(j).toFixed(2);
+      const key = [date, rawId || rawName, assignmentType, addOnType, pay].join("|");
       if (seen[key]) return false;
       seen[key] = true;
       return true;
@@ -178,7 +244,8 @@
     return (Array.isArray(employees) ? employees : []).map(emp => {
       const copy = { ...emp };
       copy.jobs = dedupePayrollJobsForDisplay(copy.jobs || []);
-      copy.totalPay = copy.jobs.reduce((sum, j) => sum + cleanMoneyNumber(j.jobPay ?? j.pay ?? j.amount ?? 0), 0);
+      copy.totalPay = copy.jobs.reduce((sum, j) => sum + jobPayForDisplay(j), 0);
+      copy.needsPayCount = copy.jobs.filter(j => isAddOnJob(j) && getAddOnEnteredPay(j) <= 0).length;
       return copy;
     });
   }
@@ -263,6 +330,13 @@
     qs.set("periodId", periodId || "");
     Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
     return jsonp(secureUrl("payroll_add_job", qs.toString()));
+  }
+
+  async function payrollSaveAddonPay(periodId, payload) {
+    const qs = new URLSearchParams();
+    qs.set("periodId", periodId || "");
+    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
+    return jsonp(secureUrl("payroll_addon_pay", qs.toString()));
   }
 
   async function payrollFinalizeQB(periodId, rows) {
@@ -500,11 +574,119 @@
     });
   }
 
+  function renderNormalJobLine(j) {
+    const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
+    const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
+
+    return `
+      <div class="job-line">
+        <div class="job-date">${escapeHtml(formatDisplayDate(j.date || j.serviceDate || ""))}</div>
+        <div class="job-name">${escapeHtml(rawJob)}</div>
+        <div class="job-pay">${money(rawPay)}</div>
+      </div>
+    `;
+  }
+
+  function renderAddOnJobLine(j, emp) {
+    const rowId = getAddOnRowId(j);
+    const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
+    const addOnType = getAddOnType(j);
+    const addOnNotes = getAddOnNotes(j);
+    const enteredPay = getAddOnEnteredPay(j);
+    const needsPay = enteredPay <= 0;
+    const employeeId = emp.employeeId || j.employeeId || "";
+    const safeKey = encodeURIComponent(rowId || `${employeeId}|${j.date || j.serviceDate || ""}|${rawJob}|${addOnType}`);
+
+    return `
+      <div class="job-line addon-line">
+        <div class="job-date">${escapeHtml(formatDisplayDate(j.date || j.serviceDate || ""))}</div>
+        <div class="job-name">
+          ${escapeHtml(rawJob)}
+          <span class="addon-badge">Add-On • ${escapeHtml(addOnType)}</span>
+          ${addOnNotes ? `<span class="addon-notes">${escapeHtml(addOnNotes)}</span>` : ""}
+        </div>
+        <div class="addon-pay-box">
+          ${needsPay ? `<span class="needs-pay-badge">Needs Pay</span>` : `<span class="pay-entered-badge">${money(enteredPay)} Entered</span>`}
+          <div class="addon-pay-row">
+            <input
+              class="addon-pay-input"
+              data-addon-key="${escapeHtml(safeKey)}"
+              data-row-id="${escapeHtml(rowId)}"
+              data-employee-id="${escapeHtml(employeeId)}"
+              data-service-date="${escapeHtml(j.date || j.serviceDate || "")}"
+              data-client-name="${escapeHtml(rawJob)}"
+              data-addon-type="${escapeHtml(addOnType)}"
+              inputmode="decimal"
+              placeholder="Pay"
+              value="${enteredPay > 0 ? escapeHtml(enteredPay.toFixed(2)) : ""}"
+            />
+            <button
+              class="btn secondary addon-save-btn"
+              type="button"
+              data-save-addon-pay="${escapeHtml(safeKey)}"
+            >Save</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function wireAddonPayButtons() {
+    if (!payoutBody) return;
+
+    payoutBody.querySelectorAll("[data-save-addon-pay]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (addonPaySaving) return;
+
+        const key = btn.dataset.saveAddonPay || "";
+        const input = payoutBody.querySelector(`.addon-pay-input[data-addon-key="${CSS.escape(key)}"]`);
+        if (!input) return setStatus("Add-On pay input not found.", "err");
+
+        const pay = cleanMoneyNumber(input.value || "");
+        if (!pay || pay <= 0) return setStatus("Enter Add-On pay before saving.", "err");
+
+        const payload = {
+          rowId: input.dataset.rowId || "",
+          employeeId: input.dataset.employeeId || "",
+          serviceDate: input.dataset.serviceDate || "",
+          clientName: input.dataset.clientName || "",
+          addOnType: input.dataset.addonType || "",
+          payrollEnteredPay: pay.toFixed(2)
+        };
+
+        if (!payload.rowId && (!payload.employeeId || !payload.serviceDate || !payload.clientName)) {
+          return setStatus("Missing Add-On row details. Save failed.", "err");
+        }
+
+        try {
+          addonPaySaving = true;
+          btn.disabled = true;
+          btn.textContent = "Saving...";
+          setStatus("Saving Add-On pay…");
+
+          const res = await payrollSaveAddonPay(currentPeriodId, payload);
+          if (!res || !res.ok) throw new Error(res?.error || "payroll_addon_pay failed");
+
+          await sleep(300);
+          await loadPeriod(currentPeriodId);
+          setStatus("Add-On pay saved and payroll gross updated ✅", "ok");
+        } catch (err) {
+          setStatus(String(err?.message || err), "err");
+        } finally {
+          addonPaySaving = false;
+          btn.disabled = false;
+          btn.textContent = "Save";
+        }
+      });
+    });
+  }
+
   function renderPayouts(payouts) {
     if (!payoutCard || !payoutBody || !payoutHint || !payoutTotals) return;
 
     const employees = normalizePayrollEmployeesForDisplay(payouts?.employees || []);
     const grandTotal = employees.reduce((sum, emp) => sum + cleanMoneyNumber(emp.totalPay || 0), 0);
+    const needsPayTotal = employees.reduce((sum, emp) => sum + cleanMoneyNumber(emp.needsPayCount || 0), 0);
 
     if (!employees.length) {
       payoutBody.innerHTML = `<div class="empty-card">No job lines found for this period.</div>`;
@@ -516,8 +698,9 @@
 
     payoutBody.innerHTML = employees.map(emp => {
       const jobs = Array.isArray(emp.jobs) ? emp.jobs : [];
-      const employeeTotal = Number(emp.totalPay || jobs.reduce((sum, j) => sum + Number(j.jobPay ?? j.pay ?? j.amount ?? 0), 0));
+      const employeeTotal = Number(emp.totalPay || jobs.reduce((sum, j) => sum + jobPayForDisplay(j), 0));
       const hasManyJobs = jobs.length > 2;
+      const needsPayCount = jobs.filter(j => isAddOnJob(j) && getAddOnEnteredPay(j) <= 0).length;
 
       return `
         <details class="payroll-employee-card" ${hasManyJobs ? "" : "open"}>
@@ -527,7 +710,10 @@
                 <div class="payroll-avatar">${escapeHtml(employeeInitials(emp.employeeName || emp.employeeId))}</div>
                 <div>
                   <div class="payroll-name">${escapeHtml(emp.employeeName || emp.employeeId || "—")}</div>
-                  <div class="payroll-sub">${jobs.length} job${jobs.length === 1 ? "" : "s"}${hasManyJobs ? " • click to expand" : ""}</div>
+                  <div class="payroll-sub">
+                    ${jobs.length} job${jobs.length === 1 ? "" : "s"}${hasManyJobs ? " • click to expand" : ""}
+                    ${needsPayCount ? ` • ${needsPayCount} Add-On Needs Pay` : ""}
+                  </div>
                 </div>
               </div>
               <div class="payroll-total">
@@ -538,17 +724,7 @@
             </div>
           </summary>
           <div class="payroll-card-body">
-            ${jobs.length ? jobs.map(j => {
-              const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
-              const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
-              return `
-                <div class="job-line">
-                  <div class="job-date">${escapeHtml(formatDisplayDate(j.date || ""))}</div>
-                  <div class="job-name">${escapeHtml(rawJob)}</div>
-                  <div class="job-pay">${money(rawPay)}</div>
-                </div>
-              `;
-            }).join("") : `<div class="empty-card">No job lines found.</div>`}
+            ${jobs.length ? jobs.map(j => isAddOnJob(j) ? renderAddOnJobLine(j, emp) : renderNormalJobLine(j)).join("") : `<div class="empty-card">No job lines found.</div>`}
           </div>
         </details>
       `;
@@ -557,8 +733,10 @@
     payoutHint.textContent = currentPeriodStart && currentPeriodEnd
       ? `Payroll review for ${formatDisplayRange(currentPeriodStart, currentPeriodEnd)}`
       : (currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—");
-    payoutTotals.textContent = `Grand Total: ${money(grandTotal)}`;
+
+    payoutTotals.textContent = `Grand Total: ${money(grandTotal)}${needsPayTotal ? ` • Add-Ons Need Pay: ${needsPayTotal}` : ""}`;
     payoutCard.classList.remove("hidden");
+    wireAddonPayButtons();
   }
 
   async function loadPeriod(periodId) {
