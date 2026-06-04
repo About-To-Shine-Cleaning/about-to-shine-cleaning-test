@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3008"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3009"></script>
 
 <style>
 html,
@@ -140,12 +140,23 @@ body.ats-admin .ats-main{
   color:rgba(255,255,255,.92);
 }
 
-.assignment-address{
+.assignment-address,
+.assignment-meta,
+.assignment-notes{
   display:block;
   margin-top:8px;
   font-size:14px;
   line-height:1.55;
   color:rgba(255,255,255,.70);
+}
+
+.assignment-meta{
+  color:rgba(255,230,0,.86);
+  font-weight:850;
+}
+
+.assignment-notes{
+  color:rgba(255,255,255,.76);
 }
 
 .modal-backdrop{
@@ -207,13 +218,39 @@ body.ats-admin .ats-main{
 
 .modal input,
 .modal select,
+.modal textarea,
 .modal button{
   max-width:100% !important;
 }
 
 .modal input,
-.modal select{
+.modal select,
+.modal textarea{
   width:100%;
+}
+
+.modal textarea{
+  min-height:92px;
+  resize:vertical;
+}
+
+.addon-fields{
+  display:none;
+  grid-column:1 / -1;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  padding:14px;
+  border:1px solid rgba(255,230,0,.22);
+  border-radius:18px;
+  background:rgba(255,230,0,.045);
+}
+
+.addon-fields.open{
+  display:grid;
+}
+
+.addon-notes-wrap{
+  grid-column:1 / -1;
 }
 
 #clientSuggestions{
@@ -299,7 +336,8 @@ body.ats-admin .ats-main{
     padding:16px !important;
   }
 
-  .modal-grid{
+  .modal-grid,
+  .addon-fields.open{
     grid-template-columns:1fr !important;
   }
 
@@ -358,9 +396,34 @@ body.ats-admin .ats-main{
       </div>
 
       <div>
+        <label for="assignmentTypeSelect">Assignment Type</label>
+        <select id="assignmentTypeSelect">
+          <option value="FULL">Full Clean</option>
+          <option value="HALF">Half Clean</option>
+          <option value="ADD_ON">Add-On</option>
+        </select>
+      </div>
+
+      <div>
         <label for="clientSearch">Client</label>
         <input type="text" id="clientSearch" placeholder="Start typing client name..." autocomplete="off" />
         <div id="clientSuggestions"></div>
+      </div>
+
+      <div class="addon-fields" id="addOnFields">
+        <div>
+          <label for="addOnTypeSelect">Add-On Type</label>
+          <select id="addOnTypeSelect">
+            <option value="Windows">Windows</option>
+            <option value="Carpet Shampooing">Carpet Shampooing</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="addon-notes-wrap">
+          <label for="addOnNotes">Add-On Notes</label>
+          <textarea id="addOnNotes" placeholder="Optional notes for payroll/admin..."></textarea>
+        </div>
       </div>
     </div>
 
