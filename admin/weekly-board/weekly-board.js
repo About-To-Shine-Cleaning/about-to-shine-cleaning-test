@@ -240,14 +240,36 @@ function findClientFromInput() {
   const typed = String(clientSearch?.value || "").trim();
   if (!typed) return null;
 
-  if (selectedClient && clientKey(selectedClient.clientName) === clientKey(typed)) {
-    return selectedClient;
+  const addOnMode = !!isAddOnAssignment?.checked;
+
+  if (selectedClient) {
+    const selectedName = addOnMode
+      ? (selectedClient.baseClientName || selectedClient.clientName)
+      : selectedClient.clientName;
+
+    if (clientKey(selectedName) === clientKey(typed)) {
+      return selectedClient;
+    }
   }
 
-  let match = clients.find(c => clientKey(c.clientName) === clientKey(typed));
+  let match = clients.find(c => {
+    const name = addOnMode
+      ? (c.baseClientName || c.clientName)
+      : c.clientName;
+
+    return clientKey(name) === clientKey(typed);
+  });
+
   if (match) return match;
 
-  const contains = clients.filter(c => String(c.clientName || "").toLowerCase().includes(typed.toLowerCase()));
+  const contains = clients.filter(c => {
+    const name = addOnMode
+      ? (c.baseClientName || c.clientName)
+      : c.clientName;
+
+    return String(name || "").toLowerCase().includes(typed.toLowerCase());
+  });
+
   if (contains.length === 1) return contains[0];
 
   return null;
@@ -954,31 +976,47 @@ function handleClientSearch() {
   if (!clientSuggestions || !clientSearch) return;
 
   const q = clientSearch.value.trim().toLowerCase();
+  const addOnMode = !!isAddOnAssignment?.checked;
+
   selectedClient = null;
   clientSuggestions.innerHTML = "";
+
   if (!q) return;
 
-  const matches = clients
-    .filter(x => String(x.clientName || "").toLowerCase().includes(q))
-    .slice(0, 8);
+  const matches = clients.filter(client => {
+    const searchName = addOnMode
+      ? (client.baseClientName || client.clientName)
+      : client.clientName;
+
+    return String(searchName || "")
+      .toLowerCase()
+      .includes(q);
+  }).slice(0, 10);
 
   if (!matches.length) {
-    clientSuggestions.innerHTML = `<div style="opacity:.7;margin-top:8px;">No matching clients.</div>`;
+    clientSuggestions.innerHTML =
+      `<div style="opacity:.7;margin-top:8px;">No matching clients.</div>`;
     return;
   }
 
   matches.forEach(client => {
+
+    const displayName = addOnMode
+      ? (client.baseClientName || client.clientName)
+      : client.clientName;
+
     const div = document.createElement("button");
     div.type = "button";
     div.className = "assignment";
     div.style.cursor = "pointer";
     div.style.width = "100%";
     div.style.textAlign = "left";
-    div.innerHTML = `<strong>${escapeHtml(client.clientName)}</strong>`;
+
+    div.innerHTML = `<strong>${escapeHtml(displayName)}</strong>`;
 
     div.addEventListener("click", () => {
       selectedClient = client;
-      clientSearch.value = client.clientName;
+      clientSearch.value = displayName;
       clientSuggestions.innerHTML = "";
     });
 
