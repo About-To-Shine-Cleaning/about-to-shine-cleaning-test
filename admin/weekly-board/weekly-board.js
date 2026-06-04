@@ -2,16 +2,12 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3019 Add-On pre-split patch:
-// ✅ Preserves all v3017 board save behavior
-// ✅ Adds Change Day inline edit panel
-// ✅ Moves an assignment from one service date to another without duplicating rows
-// ✅ Saves both the original day and destination day through weekly_board_save_day
-// ✅ Preserves employeeId, clientId, FULL/HALF/JOB payroll-safe IDs, and board_clients flow
-// ✅ Adds Assignment Type: FULL / HALF / ADD_ON
-// ✅ Shows Add-On Type + Add-On Notes only for Add-On assignments
-// ✅ Saves Add-On fields through existing weekly_board_save_day payload
-// ✅ Never handles or displays cleaner pay in the board editor
+// Fixed v3020 Add-On display cleanup:
+// ✅ Preserves current board save behavior
+// ✅ Keeps Change Day
+// ✅ Normal jobs no longer display "Full Clean" / "Half Clean"
+// ✅ Only Add-On jobs display Add-On label
+// ✅ Supports Add-On checkbox + typed Add-On Job Name
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -31,9 +27,10 @@ const clientSuggestions = document.getElementById("clientSuggestions");
 const assignmentList = document.getElementById("assignmentList");
 const closeModalBtn = document.getElementById("closeModal");
 const btnAddAssignment = document.getElementById("btnAddAssignment");
-const assignmentTypeSelect = document.getElementById("assignmentTypeSelect");
+
+const isAddOnAssignment = document.getElementById("isAddOnAssignment");
 const addOnFields = document.getElementById("addOnFields");
-const addOnTypeSelect = document.getElementById("addOnTypeSelect");
+const addOnTypeInput = document.getElementById("addOnTypeInput");
 const addOnNotes = document.getElementById("addOnNotes");
 
 const DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -112,55 +109,48 @@ function clientKey(value) {
 
 function normalizeAssignmentType(value) {
   const raw = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
-
   if (raw === "ADDON" || raw === "ADD_ON" || raw === "ADD_ON_JOB") return "ADD_ON";
   if (raw === "HALF" || raw === ".5" || raw === "0.5" || raw === "HALF_CLEAN") return "HALF";
-  return "FULL";
+  if (raw === "FULL" || raw === "FULL_CLEAN") return "FULL";
+  return "";
 }
 
-function assignmentTypeLabel(value) {
-  const type = normalizeAssignmentType(value);
-  if (type === "ADD_ON") return "Add-On";
-  if (type === "HALF") return "Half Clean";
-  return "Full Clean";
+function isAddOnRow(row) {
+  return normalizeAssignmentType(row?.assignmentType || row?.AssignmentType || row?.type || "") === "ADD_ON";
 }
 
 function getCurrentAssignmentType() {
-  return normalizeAssignmentType(assignmentTypeSelect?.value || "FULL");
+  return isAddOnAssignment?.checked ? "ADD_ON" : "";
 }
 
 function syncAddOnFields() {
-  const type = getCurrentAssignmentType();
-  const isAddOn = type === "ADD_ON";
+  const isAddOn = !!isAddOnAssignment?.checked;
 
   if (addOnFields) addOnFields.classList.toggle("open", isAddOn);
-  if (addOnTypeSelect) addOnTypeSelect.disabled = !isAddOn;
+  if (addOnTypeInput) addOnTypeInput.disabled = !isAddOn;
   if (addOnNotes) addOnNotes.disabled = !isAddOn;
 
   if (!isAddOn) {
-    if (addOnTypeSelect) addOnTypeSelect.value = "Windows";
+    if (addOnTypeInput) addOnTypeInput.value = "";
     if (addOnNotes) addOnNotes.value = "";
   }
 }
 
 function resetAssignmentEntryFields() {
-  if (assignmentTypeSelect) assignmentTypeSelect.value = "FULL";
-  if (addOnTypeSelect) addOnTypeSelect.value = "Windows";
+  if (isAddOnAssignment) isAddOnAssignment.checked = false;
+  if (addOnTypeInput) addOnTypeInput.value = "";
   if (addOnNotes) addOnNotes.value = "";
   syncAddOnFields();
 }
 
 function addOnTypeLabel(value) {
-  return String(value || "").trim() || "Other";
+  return String(value || "").trim() || "Add-On";
 }
 
 function rowAssignmentMeta(row) {
-  const type = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
-  if (type === "ADD_ON") {
-    const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
-    return `Add-On • ${addOnType}`;
-  }
-  return assignmentTypeLabel(type);
+  if (!isAddOnRow(row)) return "";
+  const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
+  return `Add-On • ${addOnType}`;
 }
 
 function setMessage(msg, isError) {
@@ -277,6 +267,8 @@ function getActiveRowsForCurrentDay() {
 
 function rowPayload(row, index = 0) {
   const serviceDate = row.serviceDate || currentDay;
+  const assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || row.type || "");
+
   return {
     rowId: row.rowId || "",
     weekStart: row.weekStart || currentWeekStart,
@@ -288,7 +280,7 @@ function rowPayload(row, index = 0) {
     clientName: row.clientName || "",
     address: row.address || "",
     notes: row.notes || "",
-    assignmentType: normalizeAssignmentType(row.assignmentType || row.AssignmentType || row.type || ""),
+    assignmentType: assignmentType,
     addOnType: row.addOnType || row.AddOnType || "",
     addOnNotes: row.addOnNotes || row.AddOnNotes || "",
     payrollEnteredPay: row.payrollEnteredPay || row.PayrollEnteredPay || "",
@@ -494,7 +486,7 @@ async function init() {
 
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
-    assignmentTypeSelect?.addEventListener("change", syncAddOnFields);
+    isAddOnAssignment?.addEventListener("change", syncAddOnFields);
     syncAddOnFields();
 
     clientSearch?.addEventListener("input", handleClientSearch);
@@ -629,15 +621,18 @@ function renderAssignments(dateStr) {
     return `
       <div class="assignment">
         <strong>${escapeHtml(group.employeeName)}</strong>
-        ${group.items.map(item => `
-          <div class="assignment-client">
-            <span>• ${escapeHtml(item.clientName)}</span>
-            <span class="assignment-meta">${escapeHtml(rowAssignmentMeta(item))}</span>
-            ${normalizeAssignmentType(item.assignmentType || item.AssignmentType || "") === "ADD_ON" && (item.addOnNotes || item.AddOnNotes)
-              ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
-              : ""}
-          </div>
-        `).join("")}
+        ${group.items.map(item => {
+          const meta = rowAssignmentMeta(item);
+          return `
+            <div class="assignment-client">
+              <span>• ${escapeHtml(item.clientName)}</span>
+              ${meta ? `<span class="assignment-meta">${escapeHtml(meta)}</span>` : ""}
+              ${isAddOnRow(item) && (item.addOnNotes || item.AddOnNotes)
+                ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
+                : ""}
+            </div>
+          `;
+        }).join("")}
       </div>
     `;
   }).join("");
@@ -680,6 +675,7 @@ function renderJobEditPanel(row, realIndex) {
 function renderDayEditPanel(row, realIndex) {
   const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " • " + row.employeeName : ""}`.trim();
   const currentDate = row.serviceDate || currentDay;
+  const meta = rowAssignmentMeta(row);
 
   return `
     <div class="assignment" style="margin-top:14px;background:rgba(255,255,255,.06);">
@@ -687,7 +683,7 @@ function renderDayEditPanel(row, realIndex) {
       <div style="margin-top:10px;font-size:14px;line-height:1.5;opacity:.92;">
         <div><strong>Employee:</strong> ${escapeHtml(employeeLabel || "Unassigned")}</div>
         <div><strong>Client/Job:</strong> ${escapeHtml(row.clientName || "")}</div>
-        <div><strong>Type:</strong> ${escapeHtml(rowAssignmentMeta(row))}</div>
+        ${meta ? `<div><strong>Type:</strong> ${escapeHtml(meta)}</div>` : ""}
       </div>
       <input type="date" data-day-picker-index="${realIndex}" value="${escapeHtml(currentDate)}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
       <div style="margin-top:8px;font-size:13px;opacity:.72;">
@@ -715,13 +711,14 @@ function renderModalAssignments() {
     const isEmployeeEdit = editMode && editMode.type === "employee" && editMode.index === x.realIndex;
     const isJobEdit = editMode && editMode.type === "job" && editMode.index === x.realIndex;
     const isDayEdit = editMode && editMode.type === "day" && editMode.index === x.realIndex;
+    const meta = rowAssignmentMeta(x.row);
 
     return `
       <div class="assignment">
         <strong>${escapeHtml(x.row.employeeName)}</strong>
         <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
-        <div class="assignment-meta">${escapeHtml(rowAssignmentMeta(x.row))}</div>
-        ${normalizeAssignmentType(x.row.assignmentType || x.row.AssignmentType || "") === "ADD_ON" && (x.row.addOnNotes || x.row.AddOnNotes)
+        ${meta ? `<div class="assignment-meta">${escapeHtml(meta)}</div>` : ""}
+        ${isAddOnRow(x.row) && (x.row.addOnNotes || x.row.AddOnNotes)
           ? `<div class="assignment-notes">${escapeHtml(x.row.addOnNotes || x.row.AddOnNotes)}</div>`
           : ""}
         ${x.row.address ? `<div class="assignment-address">${escapeHtml(x.row.address)}</div>` : ""}
@@ -856,7 +853,7 @@ function applyEmployeeChange(index, employeeId) {
   row.weekStart = currentWeekStart;
   row.serviceDate = currentDay;
   row.dayName = getDayNameFromYMD(currentDay);
-  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
   if (row.assignmentType !== "ADD_ON") {
     row.addOnType = "";
     row.addOnNotes = "";
@@ -882,7 +879,7 @@ function applyJobChange(index, client) {
   row.weekStart = currentWeekStart;
   row.serviceDate = currentDay;
   row.dayName = getDayNameFromYMD(currentDay);
-  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
   if (row.assignmentType !== "ADD_ON") {
     row.addOnType = "";
     row.addOnNotes = "";
@@ -922,7 +919,8 @@ function applyDayChange(index, newDate) {
       && String(existing.employeeId || "").trim().toUpperCase() === String(row.employeeId || "").trim().toUpperCase()
       && String(existing.clientId || "").trim() === String(row.clientId || "").trim()
       && clientKey(existing.clientName) === clientKey(row.clientName)
-      && normalizeAssignmentType(existing.assignmentType || existing.AssignmentType || "") === normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
+      && normalizeAssignmentType(existing.assignmentType || existing.AssignmentType || "") === normalizeAssignmentType(row.assignmentType || row.AssignmentType || "")
+      && String(existing.addOnType || existing.AddOnType || "").trim().toLowerCase() === String(row.addOnType || row.AddOnType || "").trim().toLowerCase();
   });
 
   if (duplicateExists) {
@@ -933,7 +931,7 @@ function applyDayChange(index, newDate) {
   row.weekStart = currentWeekStart;
   row.serviceDate = targetDate;
   row.dayName = getDayNameFromYMD(targetDate);
-  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "FULL");
+  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
   if (row.assignmentType !== "ADD_ON") {
     row.addOnType = "";
     row.addOnNotes = "";
@@ -1002,8 +1000,12 @@ function addAssignment() {
   if (!employee) return alert("Select an employee.");
 
   const assignmentType = getCurrentAssignmentType();
-  const addOnType = assignmentType === "ADD_ON" ? addOnTypeLabel(addOnTypeSelect?.value || "Other") : "";
+  const addOnType = assignmentType === "ADD_ON" ? addOnTypeLabel(addOnTypeInput?.value || "") : "";
   const addOnNoteText = assignmentType === "ADD_ON" ? String(addOnNotes?.value || "").trim() : "";
+
+  if (assignmentType === "ADD_ON" && !addOnType.trim()) {
+    return alert("Type the Add-On job name first, like Windows, Oven, Basement, Carpet Shampooing, etc.");
+  }
 
   const newRow = {
     rowId: "",
