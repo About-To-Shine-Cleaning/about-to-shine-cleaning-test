@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3009"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3010"></script>
 
 <style>
 html,
@@ -234,10 +234,35 @@ body.ats-admin .ats-main{
   resize:vertical;
 }
 
+.addon-toggle-row{
+  grid-column:1 / -1;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  padding:12px 14px;
+  border:1px solid rgba(255,230,0,.22);
+  border-radius:18px;
+  background:rgba(255,230,0,.045);
+}
+
+.addon-toggle-row label{
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+.addon-toggle-row input{
+  width:auto;
+  accent-color:#ffe600;
+}
+
 .addon-fields{
   display:none;
   grid-column:1 / -1;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr;
   gap:16px;
   padding:14px;
   border:1px solid rgba(255,230,0,.22);
@@ -247,10 +272,6 @@ body.ats-admin .ats-main{
 
 .addon-fields.open{
   display:grid;
-}
-
-.addon-notes-wrap{
-  grid-column:1 / -1;
 }
 
 #clientSuggestions{
@@ -396,31 +417,28 @@ body.ats-admin .ats-main{
       </div>
 
       <div>
-        <label for="assignmentTypeSelect">Assignment Type</label>
-        <select id="assignmentTypeSelect">
-          <option value="FULL">Full Clean</option>
-          <option value="HALF">Half Clean</option>
-          <option value="ADD_ON">Add-On</option>
-        </select>
+        <label for="clientSearch">Client / Job</label>
+        <input type="text" id="clientSearch" placeholder="Start typing client name or job..." autocomplete="off" />
+        <div id="clientSuggestions"></div>
       </div>
 
-      <div>
-        <label for="clientSearch">Client</label>
-        <input type="text" id="clientSearch" placeholder="Start typing client name..." autocomplete="off" />
-        <div id="clientSuggestions"></div>
+      <div class="addon-toggle-row">
+        <label for="isAddOnAssignment">
+          <input type="checkbox" id="isAddOnAssignment" />
+          Add-On Job
+        </label>
+        <span style="font-size:13px;color:rgba(255,255,255,.68);font-weight:800;">
+          Use this for windows, oven, basement, carpet shampooing, extra work, etc.
+        </span>
       </div>
 
       <div class="addon-fields" id="addOnFields">
         <div>
-          <label for="addOnTypeSelect">Add-On Type</label>
-          <select id="addOnTypeSelect">
-            <option value="Windows">Windows</option>
-            <option value="Carpet Shampooing">Carpet Shampooing</option>
-            <option value="Other">Other</option>
-          </select>
+          <label for="addOnTypeInput">Add-On Job Name</label>
+          <input type="text" id="addOnTypeInput" placeholder="Windows, oven, basement, carpet shampooing..." autocomplete="off" />
         </div>
 
-        <div class="addon-notes-wrap">
+        <div>
           <label for="addOnNotes">Add-On Notes</label>
           <textarea id="addOnNotes" placeholder="Optional notes for payroll/admin..."></textarea>
         </div>
