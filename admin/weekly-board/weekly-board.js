@@ -2,12 +2,14 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3020 Add-On display cleanup:
+// Fixed v3021 Add-On Misc option:
 // ✅ Preserves current board save behavior
 // ✅ Keeps Change Day
 // ✅ Normal jobs no longer display "Full Clean" / "Half Clean"
 // ✅ Only Add-On jobs display Add-On label
 // ✅ Supports Add-On checkbox + typed Add-On Job Name
+// ✅ Adds Misc only to Add-On client picker
+// ✅ Requires notes when Misc is selected
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -123,6 +125,23 @@ function getCurrentAssignmentType() {
   return isAddOnAssignment?.checked ? "ADD_ON" : "";
 }
 
+function getMiscAddOnClient() {
+  return {
+    clientId: "ADDON_MISC",
+    clientName: "Misc",
+    baseClientName: "Misc",
+    name: "Misc",
+    address: "",
+    isMiscAddOn: true
+  };
+}
+
+function isMiscAddOnClient(client) {
+  if (!client) return false;
+  if (client.isMiscAddOn) return true;
+  return clientKey(client.baseClientName || client.clientName || client.name || "") === "misc";
+}
+
 function syncAddOnFields() {
   const isAddOn = !!isAddOnAssignment?.checked;
 
@@ -134,6 +153,8 @@ function syncAddOnFields() {
     if (addOnTypeInput) addOnTypeInput.value = "";
     if (addOnNotes) addOnNotes.value = "";
   }
+
+  clearClientSelection();
 }
 
 function resetAssignmentEntryFields() {
@@ -248,6 +269,10 @@ function findClientFromInput() {
   if (!typed) return null;
 
   const addOnMode = !!isAddOnAssignment?.checked;
+
+  if (addOnMode && clientKey(typed) === "misc") {
+    return getMiscAddOnClient();
+  }
 
   if (selectedClient && clientKey(getClientDisplayName(selectedClient, addOnMode)) === clientKey(typed)) {
     return selectedClient;
@@ -970,11 +995,17 @@ function handleClientSearch() {
 
   selectedClient = null;
   clientSuggestions.innerHTML = "";
+
   if (!q) return;
 
   const seen = {};
+  let searchPool = [...clients];
 
-  const matches = clients
+  if (addOnMode) {
+    searchPool.push(getMiscAddOnClient());
+  }
+
+  const matches = searchPool
     .filter(client => {
       const displayName = getClientDisplayName(client, addOnMode);
       const key = clientKey(displayName);
@@ -1038,6 +1069,10 @@ function addAssignment() {
     return alert("Type the Add-On job name first, like Windows, Oven, Basement, Carpet Shampooing, etc.");
   }
 
+  if (assignmentType === "ADD_ON" && isMiscAddOnClient(client) && !addOnNoteText) {
+    return alert("Notes are required when Misc is selected.");
+  }
+
   const newRow = {
     rowId: "",
     weekStart: currentWeekStart,
@@ -1047,8 +1082,8 @@ function addAssignment() {
     employeeName: employee.employeeName,
     clientId: client.clientId || "",
     clientName: assignmentType === "ADD_ON"
-  ? getClientDisplayName(client, true)
-  : (client.clientName || client.name || ""),
+      ? getClientDisplayName(client, true)
+      : (client.clientName || client.name || ""),
     address: client.address || "",
     notes: "",
     assignmentType: assignmentType,
