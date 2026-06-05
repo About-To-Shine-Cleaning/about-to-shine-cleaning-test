@@ -2,7 +2,8 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// Fixed v3021 Add-On Misc option:
+// v3023 Add-On duplicate-cleaning safeguard:
+// ✅ Preserves current week navigation
 // ✅ Preserves current board save behavior
 // ✅ Keeps Change Day
 // ✅ Normal jobs no longer display "Full Clean" / "Half Clean"
@@ -10,6 +11,7 @@
 // ✅ Supports Add-On checkbox + typed Add-On Job Name
 // ✅ Adds Misc only to Add-On client picker
 // ✅ Requires notes when Misc is selected
+// ✅ Prevents Add-On from accidentally keeping/creating same employee/client regular cleaning row
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -146,6 +148,57 @@ function isMiscAddOnClient(client) {
   return clientKey(client.baseClientName || client.clientName || client.name || "") === "misc";
 }
 
+function getBaseClientKeyFromRow(row) {
+  return clientKey(
+    row?.baseClientName ||
+    row?.clientName ||
+    row?.name ||
+    ""
+  );
+}
+
+function getBaseClientKeyFromClient(client) {
+  return clientKey(
+    client?.baseClientName ||
+    client?.clientName ||
+    client?.name ||
+    ""
+  );
+}
+
+function removeSameEmployeeBaseCleaningRowForAddOn(employeeId, serviceDate, client) {
+  const targetEmployee = String(employeeId || "").trim().toUpperCase();
+  const targetClientKey = getBaseClientKeyFromClient(client);
+
+  if (!targetEmployee || !serviceDate || !targetClientKey) return 0;
+
+  let removed = 0;
+
+  assignments = assignments.filter(row => {
+    const rowEmployee = String(row.employeeId || "").trim().toUpperCase();
+    const rowDate = String(row.serviceDate || "").trim();
+    const rowClientKey = getBaseClientKeyFromRow(row);
+    const rowActive = String(row.active || "YES").toUpperCase() !== "NO";
+    const rowIsAddOn = isAddOnRow(row);
+
+    const shouldRemove =
+      rowActive &&
+      !rowIsAddOn &&
+      rowDate === serviceDate &&
+      rowEmployee === targetEmployee &&
+      rowClientKey === targetClientKey;
+
+    if (shouldRemove) removed++;
+    return !shouldRemove;
+  });
+
+  if (removed > 0) {
+    allowEmptyCurrentDaySave = true;
+  }
+
+  return removed;
+}
+
 function syncAddOnFields() {
   const isAddOn = !!isAddOnAssignment?.checked;
 
@@ -246,6 +299,7 @@ function formatDate(date) {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
 function addDaysToYMD(ymd, days) {
   const d = new Date(ymd + "T12:00:00");
   d.setDate(d.getDate() + Number(days || 0));
@@ -643,6 +697,7 @@ function buildWeekBoard() {
   end.setDate(end.getDate() + 6);
 
   if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
+
   DAYS.forEach((day, index) => {
     const current = new Date(start);
     current.setDate(current.getDate() + index);
@@ -1135,6 +1190,10 @@ function addAssignment() {
 
   if (assignmentType === "ADD_ON" && isMiscAddOnClient(client) && !addOnNoteText) {
     return alert("Notes are required when Misc is selected.");
+  }
+
+  if (assignmentType === "ADD_ON") {
+    removeSameEmployeeBaseCleaningRowForAddOn(employee.employeeId, currentDay, client);
   }
 
   const newRow = {
