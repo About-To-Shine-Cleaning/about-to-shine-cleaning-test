@@ -2,11 +2,7 @@
 // FILE: /admin/my-weekly-board/my-weekly-board.js
 // TYPE: .js
 // ATS My Weekly Board - employee schedule + approved Full Week view
-// Full Week: E01/E02/E04 only
-// Adds Full Week clock-status badges from Logs via Code.gs
-// Adds Full Week auto-refresh polling so PC sees mobile clock-ins/outs
-// Adds completed-job button lockout: completed jobs show "✅ Job Completed"
-// Shared clock state key: activeClockState_E##
+// v6011 Week Navigation Patch
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -44,6 +40,9 @@ const viewToolbar = document.getElementById("viewToolbar");
 const btnMyJobs = document.getElementById("btnMyJobs");
 const btnFullWeek = document.getElementById("btnFullWeek");
 const viewHelp = document.getElementById("viewHelp");
+const btnPrevWeek = document.getElementById("btnPrevWeek");
+const btnCurrentWeek = document.getElementById("btnCurrentWeek");
+const btnNextWeek = document.getElementById("btnNextWeek");
 
 let employeeId = "";
 let employeeName = "";
@@ -106,6 +105,29 @@ function formatYMD(date) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return y + "-" + m + "-" + day;
+}
+
+function addDaysToYMD(ymd, days) {
+  const d = new Date(String(ymd || "") + "T12:00:00");
+  d.setDate(d.getDate() + Number(days || 0));
+  return formatYMD(d);
+}
+
+function getCurrentWeekStartYMD() {
+  return formatYMD(getSaturdayForDate(new Date()));
+}
+
+async function switchWeek(newWeekStart) {
+  stopFullWeekAutoRefresh();
+  currentWeekStart = newWeekStart;
+
+  if (statusBox) statusBox.textContent = "Loading assignments...";
+
+  if (currentView === "full" && canViewFullWeek()) {
+    await loadFullWeekBoard();
+  } else {
+    await loadMyBoard();
+  }
 }
 
 function todayYMD() {
@@ -794,8 +816,32 @@ function stopFullWeekAutoRefresh() {
 
 async function loadBoard() {
   resolveEmployee();
-  currentWeekStart = formatYMD(getSaturdayForDate(new Date()));
+  currentWeekStart = getCurrentWeekStartYMD();
   await loadMyBoard();
+}
+
+if (btnPrevWeek) {
+  btnPrevWeek.addEventListener("click", () => {
+    switchWeek(addDaysToYMD(currentWeekStart, -7)).catch(error => {
+      if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
+    });
+  });
+}
+
+if (btnCurrentWeek) {
+  btnCurrentWeek.addEventListener("click", () => {
+    switchWeek(getCurrentWeekStartYMD()).catch(error => {
+      if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
+    });
+  });
+}
+
+if (btnNextWeek) {
+  btnNextWeek.addEventListener("click", () => {
+    switchWeek(addDaysToYMD(currentWeekStart, 7)).catch(error => {
+      if (statusBox) statusBox.textContent = String(error && error.message ? error.message : error);
+    });
+  });
 }
 
 if (btnMyJobs) {
@@ -884,7 +930,6 @@ window.addEventListener("beforeunload", function () {
 
 document.addEventListener("visibilitychange", function () {
   if (!currentWeekStart) return;
-
   if (document.hidden) return;
 
   if (currentView === "full") {
