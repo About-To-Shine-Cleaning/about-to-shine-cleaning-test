@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3010"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3022"></script>
 
 <style>
 html,
@@ -66,6 +66,20 @@ body.ats-admin .ats-main{
   margin:0;
   font-size:clamp(28px,4vw,44px);
   line-height:1.05;
+}
+
+.week-source-label{
+  margin-top:10px;
+  font-size:13px;
+  font-weight:850;
+  color:rgba(255,230,0,.82);
+}
+
+.week-nav-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 .week-board{
@@ -343,6 +357,16 @@ body.ats-admin .ats-main{
 }
 
 @media(max-width:760px){
+  .week-nav-actions{
+    width:100%;
+    justify-content:stretch;
+  }
+
+  .week-nav-actions .button{
+    flex:1 1 100%;
+    width:100%;
+  }
+
   .modal-backdrop.open{
     align-items:stretch !important;
     justify-content:center !important;
@@ -395,6 +419,13 @@ body.ats-admin .ats-main{
         <div>
           <div class="ats-eyebrow">Weekly Assignment Board</div>
           <h1 id="weekLabel">Loading week...</h1>
+          <div id="weekSourceLabel" class="week-source-label"></div>
+        </div>
+
+        <div class="week-nav-actions">
+          <button class="button button-secondary" id="btnPrevWeek" type="button">Previous Week</button>
+          <button class="button" id="btnCurrentWeek" type="button">Current Week</button>
+          <button class="button button-secondary" id="btnNextWeek" type="button">Next Week</button>
         </div>
       </div>
 
