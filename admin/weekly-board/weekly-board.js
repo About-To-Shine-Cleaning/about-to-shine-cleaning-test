@@ -29,6 +29,10 @@ const clientSuggestions = document.getElementById("clientSuggestions");
 const assignmentList = document.getElementById("assignmentList");
 const closeModalBtn = document.getElementById("closeModal");
 const btnAddAssignment = document.getElementById("btnAddAssignment");
+const btnPrevWeek = document.getElementById("btnPrevWeek");
+const btnCurrentWeek = document.getElementById("btnCurrentWeek");
+const btnNextWeek = document.getElementById("btnNextWeek");
+const weekSourceLabel = document.getElementById("weekSourceLabel");
 
 const isAddOnAssignment = document.getElementById("isAddOnAssignment");
 const addOnFields = document.getElementById("addOnFields");
@@ -241,6 +245,53 @@ function formatDate(date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+function addDaysToYMD(ymd, days) {
+  const d = new Date(ymd + "T12:00:00");
+  d.setDate(d.getDate() + Number(days || 0));
+  return formatDate(d);
+}
+
+function getCurrentWeekStartYMD() {
+  return formatDate(getWeekStart());
+}
+
+function resetWeekEditState() {
+  currentDay = null;
+  editMode = null;
+  dayDirty = false;
+  allowEmptyCurrentDaySave = false;
+  movedDayDates.clear();
+  modal?.classList.remove("open");
+  updateDayButtonState();
+}
+
+function setWeekSourceLabel(source, count) {
+  if (!weekSourceLabel) return;
+
+  const src = String(source || "").toUpperCase();
+  if (src === "SAVED") {
+    weekSourceLabel.textContent = `Saved assignments loaded • ${count || 0} row(s)`;
+  } else {
+    weekSourceLabel.textContent = "No saved assignments for this week yet.";
+  }
+}
+
+async function switchWeek(newWeekStart) {
+  if (isSavingChange) return;
+
+  if (dayDirty) {
+    const ok = confirm("You have unsaved changes. Switch weeks and lose those changes?");
+    if (!ok) return;
+  }
+
+  resetWeekEditState();
+  currentWeekStart = newWeekStart;
+
+  setMessage("Loading week...", false);
+
+  await loadBoard(currentWeekStart);
+  buildWeekBoard();
 }
 
 function prettyDate(ymd) {
@@ -509,8 +560,7 @@ async function init() {
       return;
     }
 
-    const start = getWeekStart();
-    currentWeekStart = formatDate(start);
+    currentWeekStart = getCurrentWeekStartYMD();
 
     await Promise.all([
       loadEmployees(),
@@ -520,6 +570,18 @@ async function init() {
 
     buildWeekBoard();
     ensureUpdateDayButton();
+
+    btnPrevWeek?.addEventListener("click", () => {
+      switchWeek(addDaysToYMD(currentWeekStart, -7));
+    });
+
+    btnCurrentWeek?.addEventListener("click", () => {
+      switchWeek(getCurrentWeekStartYMD());
+    });
+
+    btnNextWeek?.addEventListener("click", () => {
+      switchWeek(addDaysToYMD(currentWeekStart, 7));
+    });
 
     closeModalBtn?.addEventListener("click", closeModal);
     btnAddAssignment?.addEventListener("click", addAssignment);
@@ -566,7 +628,10 @@ async function loadClients() {
 async function loadBoard(weekStart) {
   const data = await jsonp("weekly_board_get", { weekStart });
   if (!data || !data.ok) throw new Error(data?.error || "weekly_board_get failed");
+
   assignments = Array.isArray(data.rows) ? data.rows : [];
+
+  setWeekSourceLabel(data.source || (assignments.length ? "SAVED" : "EMPTY"), assignments.length);
 }
 
 function buildWeekBoard() {
@@ -577,8 +642,7 @@ function buildWeekBoard() {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
 
-  if (weekLabel) weekLabel.textContent = `${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
-
+  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
   DAYS.forEach((day, index) => {
     const current = new Date(start);
     current.setDate(current.getDate() + index);
