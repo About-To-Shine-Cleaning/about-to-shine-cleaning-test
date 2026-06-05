@@ -4,34 +4,15 @@
 <meta charset="utf-8"/>
 <title>My Weekly Board | ATS Admin</title>
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1"
-/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-<link
-  rel="stylesheet"
-  href="/admin/admin-layout.css?v=6008"
-/>
+<link rel="stylesheet" href="/admin/admin-layout.css?v=6008"/>
+<link rel="icon" type="image/png" href="/assets/images/logo-v2.png"/>
 
-<link
-  rel="icon"
-  type="image/png"
-  href="/assets/images/logo-v2.png"
-/>
-
-<script
-  defer
-  src="/admin/admin-nav.js?v=6008"
-></script>
-
-<script
-  defer
-  src="./my-weekly-board.js?v=6010"
-></script>
+<script defer src="/admin/admin-nav.js?v=6008"></script>
+<script defer src="./my-weekly-board.js?v=6011"></script>
 
 <style>
-
 html,
 body{
   width:100%;
@@ -41,16 +22,8 @@ body{
 
 body.ats-admin{
   background:
-    radial-gradient(
-      circle at top left,
-      rgba(138,92,255,.18),
-      transparent 35%
-    ),
-    linear-gradient(
-      180deg,
-      #0c1020,
-      #070b16
-    );
+    radial-gradient(circle at top left, rgba(138,92,255,.18), transparent 35%),
+    linear-gradient(180deg, #0c1020, #070b16);
 }
 
 .my-board-container{
@@ -85,6 +58,13 @@ body.ats-admin{
   margin-top:14px;
   line-height:1.45;
   opacity:.9;
+}
+
+.week-nav-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 .view-toolbar{
@@ -133,22 +113,13 @@ body.ats-admin{
 
 .my-board-week{
   display:grid;
-  grid-template-columns:
-    repeat(
-      7,
-      minmax(0,1fr)
-    );
+  grid-template-columns:repeat(7,minmax(0,1fr));
   gap:12px;
   margin-top:22px;
 }
 
 .my-day-card{
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255,255,255,.06),
-      rgba(255,255,255,.03)
-    );
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
   border:1px solid rgba(255,255,255,.10);
   border-radius:20px;
   padding:14px;
@@ -274,12 +245,7 @@ body.ats-admin{
 .spec-card{
   display:none;
   margin-top:20px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255,255,255,.06),
-      rgba(255,255,255,.03)
-    );
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
   border:1px solid rgba(255,255,255,.10);
   border-radius:20px;
   padding:20px;
@@ -344,8 +310,17 @@ body.ats-admin{
   .board-toggle-btn{
     flex:1 1 auto;
   }
-}
 
+  .week-nav-actions{
+    width:100%;
+    justify-content:stretch;
+  }
+
+  .week-nav-actions .button{
+    flex:1 1 100%;
+    width:100%;
+  }
+}
 </style>
 </head>
 
@@ -387,6 +362,12 @@ body.ats-admin{
           <div class="my-board-meta" id="statusBox">
             Loading assignments...
           </div>
+        </div>
+
+        <div class="week-nav-actions">
+          <button class="button button-secondary" id="btnPrevWeek" type="button">Previous Week</button>
+          <button class="button" id="btnCurrentWeek" type="button">Current Week</button>
+          <button class="button button-secondary" id="btnNextWeek" type="button">Next Week</button>
         </div>
       </div>
 
