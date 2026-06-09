@@ -2,7 +2,7 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// v3023 Add-On duplicate-cleaning safeguard:
+// v3024 Ghost Scheduler v1 frontend:
 // ✅ Preserves current week navigation
 // ✅ Preserves current board save behavior
 // ✅ Keeps Change Day
@@ -12,6 +12,8 @@
 // ✅ Adds Misc only to Add-On client picker
 // ✅ Requires notes when Misc is selected
 // ✅ Prevents Add-On from accidentally keeping/creating same employee/client regular cleaning row
+// ✅ Adds Ghost Scheduler v1 side panel using weekly_board_ghost
+// ✅ Ghost suggestions become normal local assignments, saved by Update This Day
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -56,6 +58,8 @@ let dayDirty = false;
 let btnUpdateDay = null;
 let allowEmptyCurrentDaySave = false;
 let movedDayDates = new Set();
+let ghostScheduler = { ghosts: [], scheduled: [], dueClients: [], ghostCount: 0, scheduledCount: 0, dueCount: 0 };
+let ghostPanelEl = null;
 
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY_STORAGE);
@@ -105,6 +109,392 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function ensureGhostStyles() {
+  if (document.getElementById("atsGhostSchedulerStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "atsGhostSchedulerStyles";
+  style.textContent = `
+    .ats-board-with-ghost{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 340px;
+      gap:18px;
+      align-items:start;
+    }
+    .ats-ghost-panel{
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(12,7,28,.72);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,.25);
+      position:sticky;
+      top:14px;
+    }
+    .ats-ghost-title{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      margin-bottom:10px;
+    }
+    .ats-ghost-title h3{
+      margin:0;
+      font-size:18px;
+      line-height:1.15;
+    }
+    .ats-ghost-subtitle{
+      font-size:12px;
+      opacity:.76;
+      margin-top:4px;
+      line-height:1.35;
+    }
+    .ats-ghost-count{
+      background:rgba(255,215,0,.16);
+      border:1px solid rgba(255,215,0,.42);
+      color:#ffe889;
+      border-radius:999px;
+      padding:5px 9px;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .ats-ghost-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height:calc(100dvh - 210px);
+      overflow:auto;
+      padding-right:2px;
+    }
+    .ats-ghost-card{
+      border:1px solid rgba(255,255,255,.13);
+      background:rgba(255,255,255,.055);
+      border-radius:14px;
+      padding:11px;
+    }
+    .ats-ghost-name{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:900;
+      line-height:1.25;
+    }
+    .ats-frequency-pill,
+    .ats-addon-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:24px;
+      min-height:22px;
+      padding:2px 7px;
+      border-radius:999px;
+      font-size:11px;
+      line-height:1;
+      font-weight:900;
+      letter-spacing:.02em;
+      border:1px solid rgba(255,215,0,.48);
+      background:rgba(255,215,0,.14);
+      color:#ffe889;
+      flex:0 0 auto;
+    }
+    .ats-addon-pill{
+      min-width:auto;
+      border-color:rgba(123,220,255,.55);
+      background:rgba(123,220,255,.13);
+      color:#bfefff;
+    }
+    .ats-ghost-meta{
+      margin-top:7px;
+      font-size:12px;
+      opacity:.78;
+      line-height:1.35;
+    }
+    .ats-ghost-controls{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      margin-top:10px;
+    }
+    .ats-ghost-controls select{
+      width:100%;
+      padding:9px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.22);
+      background:rgba(255,255,255,.95);
+      color:#181026;
+      font-size:13px;
+    }
+    .ats-ghost-controls button{
+      grid-column:1/-1;
+      width:100%;
+    }
+    .ats-ghost-empty{
+      opacity:.75;
+      font-size:13px;
+      line-height:1.45;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:14px;
+      padding:12px;
+    }
+    @media (max-width: 980px){
+      .ats-board-with-ghost{display:block;}
+      .ats-ghost-panel{position:relative;top:auto;margin:0 0 16px 0;}
+      .ats-ghost-list{max-height:none;}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function normalizeFrequencyBadge(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw || raw === "N" || raw === "NO" || raw === "NONE") return "";
+  if (raw === "W" || raw === "WEEKLY") return "W";
+  if (raw === "A" || raw.includes("BIWEEKLY A") || raw.includes("BI-WEEKLY A")) return "A";
+  if (raw === "B" || raw.includes("BIWEEKLY B") || raw.includes("BI-WEEKLY B")) return "B";
+  if (raw === "M1") return "1";
+  if (raw === "M2") return "2";
+  if (raw === "M3") return "3";
+  if (raw === "M4") return "4";
+  if (["1", "2", "3", "4"].includes(raw)) return raw;
+  if (raw === "TBDM" || raw === "TBD MONTHLY" || raw === "TBD-M") return "TBDM";
+  return raw;
+}
+
+function frequencyPillHtml(label, isAddOn = false) {
+  const text = isAddOn ? "ADD-ON" : normalizeFrequencyBadge(label);
+  if (!text) return "";
+  return `<span class="${isAddOn ? "ats-addon-pill" : "ats-frequency-pill"}">${escapeHtml(text)}</span>`;
+}
+
+function baseClientIdFromJobId(id) {
+  return String(id || "")
+    .replace(/_(FULL|HALF|JOB)$/i, "")
+    .replace(/_\.5$/i, "")
+    .trim();
+}
+
+function getRowFrequencyBadge(row) {
+  if (isAddOnRow(row)) return "ADD-ON";
+
+  const rowBaseId = baseClientIdFromJobId(row?.clientId || "").toLowerCase();
+  const rowNameKey = clientKey(row?.clientName || "");
+
+  const match = clients.find(c => {
+    const cBaseId = String(c.baseClientId || baseClientIdFromJobId(c.clientId || "") || "").trim().toLowerCase();
+    const cNameKey = clientKey(c.baseClientName || c.clientName || c.name || "");
+    return (rowBaseId && cBaseId && rowBaseId === cBaseId) || (rowNameKey && cNameKey && rowNameKey === cNameKey);
+  });
+
+  return normalizeFrequencyBadge(match?.frequency || row?.frequency || "");
+}
+
+function makePillForRow(row) {
+  if (isAddOnRow(row)) return frequencyPillHtml("ADD-ON", true);
+  return frequencyPillHtml(getRowFrequencyBadge(row), false);
+}
+
+function ensureGhostPanel() {
+  ensureGhostStyles();
+  if (ghostPanelEl) return ghostPanelEl;
+
+  ghostPanelEl = document.getElementById("ghostSchedulerPanel");
+  if (!ghostPanelEl) {
+    ghostPanelEl = document.createElement("aside");
+    ghostPanelEl.id = "ghostSchedulerPanel";
+    ghostPanelEl.className = "ats-ghost-panel";
+  }
+
+  if (boardEl && boardEl.parentElement && !document.getElementById("atsBoardGhostWrap")) {
+    const wrap = document.createElement("div");
+    wrap.id = "atsBoardGhostWrap";
+    wrap.className = "ats-board-with-ghost";
+    boardEl.parentElement.insertBefore(wrap, boardEl);
+    wrap.appendChild(boardEl);
+    wrap.appendChild(ghostPanelEl);
+  } else if (boardEl && boardEl.parentElement && !ghostPanelEl.parentElement) {
+    boardEl.parentElement.appendChild(ghostPanelEl);
+  }
+
+  return ghostPanelEl;
+}
+
+function dateOptionsHtml(selectedDate) {
+  return DAYS.map((day, index) => {
+    const date = addDaysToYMD(currentWeekStart, index);
+    const label = `${day} • ${date}`;
+    return `<option value="${escapeHtml(date)}" ${date === selectedDate ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  }).join("");
+}
+
+function employeeOptionsHtml(selectedEmployeeName) {
+  const targetName = String(selectedEmployeeName || "").trim().toLowerCase();
+  return employees.map(emp => {
+    const selected = targetName && String(emp.employeeName || "").trim().toLowerCase() === targetName ? "selected" : "";
+    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>`;
+  }).join("");
+}
+
+function findBoardClientForGhost(ghost) {
+  ghost = ghost || {};
+  const ghostId = String(ghost.clientId || "").trim().toLowerCase();
+  const ghostName = clientKey(ghost.clientName || "");
+
+  const matches = clients.filter(c => {
+    const cBaseId = String(c.baseClientId || baseClientIdFromJobId(c.clientId || "") || "").trim().toLowerCase();
+    const cName = clientKey(c.baseClientName || c.clientName || c.name || "");
+    return (ghostId && cBaseId && ghostId === cBaseId) || (ghostName && cName && ghostName === cName);
+  });
+
+  if (!matches.length) {
+    return {
+      clientId: ghost.clientId || "",
+      clientName: ghost.clientName || "",
+      baseClientName: ghost.clientName || "",
+      address: ghost.address || "",
+      frequency: ghost.frequency || ""
+    };
+  }
+
+  return matches.find(c => String(c.jobType || "").toUpperCase() === "JOB") ||
+    matches.find(c => String(c.jobType || "").toUpperCase() === "FULL") ||
+    matches[0];
+}
+
+function renderGhostSchedulerPanel() {
+  const panel = ensureGhostPanel();
+  if (!panel) return;
+
+  const ghosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
+  const count = Number(ghostScheduler.ghostCount ?? ghosts.length ?? 0);
+  const scheduledCount = Number(ghostScheduler.scheduledCount || 0);
+
+  panel.innerHTML = `
+    <div class="ats-ghost-title">
+      <div>
+        <h3>Ghost Scheduler</h3>
+        <div class="ats-ghost-subtitle">Due this week but not saved to the board yet.</div>
+      </div>
+      <div class="ats-ghost-count">${escapeHtml(count)} open</div>
+    </div>
+    <div class="ats-ghost-subtitle" style="margin-bottom:10px;">
+      ${escapeHtml(scheduledCount)} already scheduled • Suggestions only until assigned and saved.
+    </div>
+    <div class="ats-ghost-list">
+      ${ghosts.length ? ghosts.map((ghost, index) => {
+        const suggestedDate = ghost.suggestedServiceDate || currentWeekStart;
+        const pill = frequencyPillHtml(ghost.frequencyBadge || ghost.frequency || "");
+        const preferred = ghost.preferredDay && ghost.suggestedServiceDate
+          ? `${ghost.preferredDay} • ${ghost.suggestedServiceDate}`
+          : "Needs day picked";
+        const availabilityNote = ghost.needsAvailability ? `<div class="ats-ghost-meta">Monthly availability needed later.</div>` : "";
+        return `
+          <div class="ats-ghost-card" data-ghost-card="${index}">
+            <div class="ats-ghost-name">${pill}${escapeHtml(ghost.clientName || "Unnamed client")}</div>
+            <div class="ats-ghost-meta">Suggested: ${escapeHtml(preferred)}</div>
+            ${ghost.cleaner ? `<div class="ats-ghost-meta">Usual cleaner: ${escapeHtml(ghost.cleaner)}</div>` : ""}
+            ${availabilityNote}
+            <div class="ats-ghost-controls">
+              <select data-ghost-employee="${index}">${employeeOptionsHtml(ghost.cleaner)}</select>
+              <select data-ghost-date="${index}">${dateOptionsHtml(suggestedDate)}</select>
+              <button class="button button-secondary" type="button" data-ghost-assign="${index}">Assign to Board</button>
+            </div>
+          </div>
+        `;
+      }).join("") : `<div class="ats-ghost-empty">No missing due clients for this week. Anything already saved to Weekly Assignments will not show here.</div>`}
+    </div>
+  `;
+
+  panel.querySelectorAll("[data-ghost-assign]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.ghostAssign);
+      const empSel = panel.querySelector(`[data-ghost-employee="${index}"]`);
+      const dateSel = panel.querySelector(`[data-ghost-date="${index}"]`);
+      assignGhostToBoard(index, empSel?.value || "", dateSel?.value || "");
+    });
+  });
+}
+
+function removeGhostFromPanelByClient(ghost) {
+  const targetId = String(ghost?.clientId || "").trim().toLowerCase();
+  const targetName = clientKey(ghost?.clientName || "");
+
+  ghostScheduler.ghosts = (ghostScheduler.ghosts || []).filter(item => {
+    const itemId = String(item.clientId || "").trim().toLowerCase();
+    const itemName = clientKey(item.clientName || "");
+    if (targetId && itemId && targetId === itemId) return false;
+    if (targetName && itemName && targetName === itemName) return false;
+    return true;
+  });
+
+  ghostScheduler.ghostCount = ghostScheduler.ghosts.length;
+}
+
+function assignGhostToBoard(index, employeeId, serviceDate) {
+  if (isSavingChange) return;
+
+  const ghost = (ghostScheduler.ghosts || [])[index];
+  if (!ghost) return alert("Ghost suggestion not found. Reload the week and try again.");
+
+  const employee = getEmployeeById(employeeId);
+  if (!employee) return alert("Choose an employee first.");
+
+  const targetDate = String(serviceDate || ghost.suggestedServiceDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return alert("Choose a valid day for this ghost job.");
+
+  const boardClient = findBoardClientForGhost(ghost);
+  const newClientId = boardClient.clientId || ghost.clientId || "";
+  const newClientName = boardClient.clientName || boardClient.name || ghost.clientName || "";
+
+  const duplicateExists = assignments.some(row => {
+    if (String(row.active || "YES").toUpperCase() === "NO") return false;
+    return String(row.serviceDate || "") === targetDate
+      && String(row.employeeId || "").trim().toUpperCase() === String(employee.employeeId || "").trim().toUpperCase()
+      && clientKey(row.clientName || "") === clientKey(newClientName || ghost.clientName || "")
+      && normalizeAssignmentType(row.assignmentType || row.AssignmentType || "") !== "ADD_ON";
+  });
+
+  if (duplicateExists) {
+    return alert("That employee/client assignment already exists on the selected day.");
+  }
+
+  const newRow = {
+    rowId: "",
+    weekStart: currentWeekStart,
+    serviceDate: targetDate,
+    dayName: getDayNameFromYMD(targetDate),
+    employeeId: employee.employeeId,
+    employeeName: employee.employeeName,
+    clientId: newClientId,
+    clientName: newClientName,
+    address: boardClient.address || ghost.address || "",
+    notes: ghost.notes || "",
+    assignmentType: "",
+    addOnType: "",
+    addOnNotes: "",
+    payrollEnteredPay: "",
+    payrollEnteredBy: "",
+    payrollEnteredAt: "",
+    frequency: ghost.frequency || ghost.frequencyBadge || "",
+    sortOrder: getRowsPayloadForDate(targetDate).length + 1,
+    active: "YES"
+  };
+
+  assignments.push(newRow);
+  removeGhostFromPanelByClient(ghost);
+
+  currentDay = targetDate;
+  editMode = null;
+  allowEmptyCurrentDaySave = false;
+  movedDayDates.clear();
+  markDayDirty(true);
+
+  buildWeekBoard();
+  if (modalTitle) modalTitle.textContent = `${getDayNameFromYMD(targetDate)} • ${targetDate}`;
+  ensureUpdateDayButton();
+  renderModalAssignments();
+  modal?.classList.add("open");
 }
 
 function clientKey(value) {
@@ -686,6 +1076,27 @@ async function loadBoard(weekStart) {
   assignments = Array.isArray(data.rows) ? data.rows : [];
 
   setWeekSourceLabel(data.source || (assignments.length ? "SAVED" : "EMPTY"), assignments.length);
+
+  try {
+    const ghostData = await jsonp("weekly_board_ghost", { weekStart });
+    if (ghostData && ghostData.ok) {
+      ghostScheduler = {
+        ghosts: Array.isArray(ghostData.ghosts) ? ghostData.ghosts : [],
+        scheduled: Array.isArray(ghostData.scheduled) ? ghostData.scheduled : [],
+        dueClients: Array.isArray(ghostData.dueClients) ? ghostData.dueClients : [],
+        ghostCount: Number(ghostData.ghostCount || 0),
+        scheduledCount: Number(ghostData.scheduledCount || 0),
+        dueCount: Number(ghostData.dueCount || 0),
+        rotationWeek: ghostData.rotationWeek || ""
+      };
+    } else {
+      console.warn("weekly_board_ghost failed", ghostData);
+      ghostScheduler = { ghosts: [], scheduled: [], dueClients: [], ghostCount: 0, scheduledCount: 0, dueCount: 0 };
+    }
+  } catch (ghostErr) {
+    console.warn("weekly_board_ghost unavailable", ghostErr);
+    ghostScheduler = { ghosts: [], scheduled: [], dueClients: [], ghostCount: 0, scheduledCount: 0, dueCount: 0 };
+  }
 }
 
 function buildWeekBoard() {
@@ -720,6 +1131,8 @@ function buildWeekBoard() {
     boardEl.appendChild(card);
     renderAssignments(dateStr);
   });
+
+  renderGhostSchedulerPanel();
 }
 
 function openDay(dateStr, day) {
@@ -779,9 +1192,10 @@ function renderAssignments(dateStr) {
         <strong>${escapeHtml(group.employeeName)}</strong>
         ${group.items.map(item => {
           const meta = rowAssignmentMeta(item);
+          const pill = makePillForRow(item);
           return `
             <div class="assignment-client">
-              <span>• ${escapeHtml(item.clientName)}</span>
+              <span>• ${pill}${pill ? " " : ""}${escapeHtml(item.clientName)}</span>
               ${meta ? `<span class="assignment-meta">${escapeHtml(meta)}</span>` : ""}
               ${isAddOnRow(item) && (item.addOnNotes || item.AddOnNotes)
                 ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
@@ -868,11 +1282,12 @@ function renderModalAssignments() {
     const isJobEdit = editMode && editMode.type === "job" && editMode.index === x.realIndex;
     const isDayEdit = editMode && editMode.type === "day" && editMode.index === x.realIndex;
     const meta = rowAssignmentMeta(x.row);
+    const pill = makePillForRow(x.row);
 
     return `
       <div class="assignment">
         <strong>${escapeHtml(x.row.employeeName)}</strong>
-        <div style="margin-top:8px;font-size:20px;font-weight:800;">${escapeHtml(x.row.clientName)}</div>
+        <div style="margin-top:8px;font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${pill}${escapeHtml(x.row.clientName)}</div>
         ${meta ? `<div class="assignment-meta">${escapeHtml(meta)}</div>` : ""}
         ${isAddOnRow(x.row) && (x.row.addOnNotes || x.row.AddOnNotes)
           ? `<div class="assignment-notes">${escapeHtml(x.row.addOnNotes || x.row.AddOnNotes)}</div>`
