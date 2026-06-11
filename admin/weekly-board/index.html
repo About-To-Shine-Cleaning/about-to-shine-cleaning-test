@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3024"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3026"></script>
 
 <style>
 html,
@@ -30,75 +30,126 @@ body.ats-admin .ats-main{
   width:100% !important;
   overflow-x:hidden !important;
   background:transparent !important;
+  padding:18px 0 34px !important;
+}
+
+body.ats-admin .ats-header-inner{
+  max-width:none !important;
+  width:100% !important;
+  padding-left:clamp(14px,2vw,26px) !important;
+  padding-right:clamp(14px,2vw,26px) !important;
 }
 
 .weekly-editor-container{
   width:100%;
-  max-width:1500px;
-  margin:0 auto;
-  padding:18px;
+  max-width:none;
+  margin:0;
+  padding:clamp(10px,1.4vw,22px);
   box-sizing:border-box;
 }
 
 .weekly-editor-shell{
   width:100%;
-  overflow:hidden;
-  padding:20px;
+  max-width:none;
+  overflow:visible;
+  padding:clamp(14px,1.5vw,22px);
+  border-radius:24px;
 }
 
 .weekly-editor-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(290px,380px);
+  gap:18px;
+  align-items:start;
+  padding-bottom:14px;
+  border-bottom:1px solid rgba(255,255,255,.10);
 }
 
 .ats-eyebrow{
-  color:rgba(255,255,255,.62);
+  color:rgba(255,255,255,.64);
   font-size:13px;
-  font-weight:800;
+  font-weight:900;
   letter-spacing:.02em;
   margin-bottom:8px;
 }
 
 #weekLabel{
   margin:0;
-  font-size:clamp(28px,4vw,44px);
-  line-height:1.05;
+  font-size:clamp(28px,3.4vw,48px);
+  line-height:1.02;
+  letter-spacing:-.035em;
 }
 
 .week-source-label{
   margin-top:10px;
   font-size:13px;
-  font-weight:850;
-  color:rgba(255,230,0,.82);
+  font-weight:900;
+  color:rgba(255,230,0,.86);
 }
 
 .week-nav-actions{
-  display:flex;
+  display:grid;
+  grid-template-columns:1fr;
   gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+  justify-content:stretch;
+}
+
+.week-nav-actions .button{
+  width:100%;
+  min-height:48px;
+}
+
+.mobile-editor-tabs{
+  display:none;
+  gap:8px;
+  margin:14px 0 0;
+  padding:6px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(0,0,0,.22);
+}
+
+.mobile-editor-tab{
+  width:100%;
+  min-height:44px;
+  border-radius:12px;
+  font-size:13px;
+}
+
+.weekly-editor-shell.show-board .mobile-editor-tab[data-editor-tab="board"],
+.weekly-editor-shell.show-ghost .mobile-editor-tab[data-editor-tab="ghost"]{
+  border-color:rgba(255,230,0,.75) !important;
+  background:#000 !important;
+  color:#ffe600 !important;
+}
+
+#atsBoardGhostWrap{
+  display:grid !important;
+  grid-template-columns:minmax(0,4fr) minmax(290px,1fr) !important;
+  gap:16px !important;
+  align-items:start !important;
+  margin-top:16px !important;
 }
 
 .week-board{
   display:grid !important;
-  grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(7,minmax(124px,1fr)) !important;
   gap:12px !important;
-  margin-top:24px !important;
+  margin-top:0 !important;
   width:100% !important;
   max-width:100% !important;
+  align-items:stretch !important;
 }
 
 .day-card{
-  min-height:260px;
+  min-height:420px;
   min-width:0 !important;
   max-width:100% !important;
   padding:14px;
   display:flex;
   flex-direction:column;
-  overflow:hidden;
+  overflow:visible;
+  border-radius:18px !important;
 }
 
 .day-header{
@@ -108,11 +159,13 @@ body.ats-admin .ats-main{
   gap:10px;
   margin-bottom:14px;
   flex:0 0 auto;
+  padding-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
 }
 
 .day-name{
   font-size:15px;
-  font-weight:900;
+  font-weight:950;
 }
 
 .day-date{
@@ -121,12 +174,22 @@ body.ats-admin .ats-main{
   margin-top:4px;
 }
 
+.day-header .button,
+.button-small{
+  width:auto !important;
+  min-height:36px !important;
+  padding:8px 12px !important;
+  border-radius:10px !important;
+  font-size:12px !important;
+  white-space:nowrap;
+}
+
 .assignment{
   background:rgba(0,0,0,.22);
   border:1px solid rgba(255,255,255,.10);
-  border-radius:16px;
-  padding:16px;
-  margin-bottom:14px;
+  border-radius:15px;
+  padding:13px;
+  margin-bottom:12px;
   max-width:100%;
   overflow-wrap:anywhere;
   transition:border-color .18s ease, background .18s ease;
@@ -140,17 +203,17 @@ body.ats-admin .ats-main{
 .assignment strong{
   display:block;
   margin-bottom:8px;
-  font-size:18px;
-  line-height:1.25;
-  font-weight:900;
+  font-size:16px;
+  line-height:1.2;
+  font-weight:950;
   color:#fff;
   letter-spacing:.01em;
 }
 
 .assignment-client{
-  line-height:1.6;
+  line-height:1.52;
   overflow-wrap:anywhere;
-  font-size:15px;
+  font-size:14px;
   color:rgba(255,255,255,.92);
 }
 
@@ -159,8 +222,8 @@ body.ats-admin .ats-main{
 .assignment-notes{
   display:block;
   margin-top:8px;
-  font-size:14px;
-  line-height:1.55;
+  font-size:13px;
+  line-height:1.45;
   color:rgba(255,255,255,.70);
 }
 
@@ -171,6 +234,17 @@ body.ats-admin .ats-main{
 
 .assignment-notes{
   color:rgba(255,255,255,.76);
+}
+
+#ghostSchedulerPanel{
+  min-width:0 !important;
+  width:100% !important;
+}
+
+.ats-save-all-bar{
+  position:sticky;
+  top:76px;
+  z-index:25;
 }
 
 .modal-backdrop{
@@ -332,39 +406,106 @@ body.ats-admin .ats-main{
   width:auto !important;
 }
 
-@media(max-width:1200px){
+@media(max-width:1450px){
   .week-board{
-    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    grid-template-columns:repeat(7,minmax(112px,1fr)) !important;
+    gap:10px !important;
+  }
+
+  .assignment{
+    padding:11px;
+  }
+
+  .assignment strong{
+    font-size:15px;
+  }
+
+  .assignment-client{
+    font-size:13px;
   }
 }
 
-@media(max-width:800px){
+@media(max-width:1100px){
+  .weekly-editor-top{
+    grid-template-columns:1fr;
+  }
+
+  .week-nav-actions{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+
+@media(max-width:980px){
   .weekly-editor-container{
-    padding:12px;
+    padding:10px;
   }
 
   .weekly-editor-shell{
-    padding:16px;
+    padding:14px;
+    border-radius:18px;
+  }
+
+  .mobile-editor-tabs{
+    display:flex;
+  }
+
+  #atsBoardGhostWrap{
+    display:block !important;
+    margin-top:14px !important;
   }
 
   .week-board{
     grid-template-columns:1fr !important;
+    gap:12px !important;
   }
 
   .day-card{
     min-height:0;
   }
+
+  .weekly-editor-shell.show-board #weekBoard{
+    display:grid !important;
+  }
+
+  .weekly-editor-shell.show-board #ghostSchedulerPanel{
+    display:none !important;
+  }
+
+  .weekly-editor-shell.show-ghost #weekBoard{
+    display:none !important;
+  }
+
+  .weekly-editor-shell.show-ghost #ghostSchedulerPanel{
+    display:block !important;
+  }
+
+  .ats-save-all-bar{
+    top:auto;
+    position:sticky;
+    bottom:10px;
+    z-index:40;
+  }
 }
 
 @media(max-width:760px){
+  body.ats-admin .ats-main{
+    padding-bottom:92px !important;
+  }
+
+  #weekLabel{
+    font-size:clamp(25px,8vw,34px);
+  }
+
   .week-nav-actions{
     width:100%;
-    justify-content:stretch;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
   }
 
   .week-nav-actions .button{
-    flex:1 1 100%;
-    width:100%;
+    min-height:42px;
+    padding:10px 8px;
+    font-size:12px;
   }
 
   .modal-backdrop.open{
@@ -414,7 +555,7 @@ body.ats-admin .ats-main{
 
 <main class="ats-main">
   <div class="weekly-editor-container">
-    <section class="ats-card weekly-editor-shell">
+    <section class="ats-card weekly-editor-shell show-board" id="weeklyEditorShell">
       <div class="weekly-editor-top">
         <div>
           <div class="ats-eyebrow">Weekly Assignment Board</div>
@@ -427,6 +568,11 @@ body.ats-admin .ats-main{
           <button class="button" id="btnCurrentWeek" type="button">Current Week</button>
           <button class="button button-secondary" id="btnNextWeek" type="button">Next Week</button>
         </div>
+      </div>
+
+      <div class="mobile-editor-tabs" aria-label="Weekly Board mobile view switcher">
+        <button class="button mobile-editor-tab" type="button" data-editor-tab="board">Board</button>
+        <button class="button button-secondary mobile-editor-tab" type="button" data-editor-tab="ghost">Ghost Scheduler</button>
       </div>
 
       <div class="week-board" id="weekBoard"></div>
@@ -480,6 +626,33 @@ body.ats-admin .ats-main{
     <div class="assignment-list" id="assignmentList"></div>
   </div>
 </div>
+
+<script>
+(function(){
+  function setWeeklyEditorTab(tab){
+    var shell = document.getElementById("weeklyEditorShell");
+    if (!shell) return;
+
+    var next = tab === "ghost" ? "ghost" : "board";
+    shell.classList.toggle("show-board", next === "board");
+    shell.classList.toggle("show-ghost", next === "ghost");
+
+    document.querySelectorAll("[data-editor-tab]").forEach(function(btn){
+      var isActive = btn.getAttribute("data-editor-tab") === next;
+      btn.classList.toggle("button-secondary", !isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  }
+
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-editor-tab]");
+    if (!btn) return;
+    setWeeklyEditorTab(btn.getAttribute("data-editor-tab"));
+  });
+
+  window.atsSetWeeklyEditorTab = setWeeklyEditorTab;
+})();
+</script>
 
 </body>
 </html>
