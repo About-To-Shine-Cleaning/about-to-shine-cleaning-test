@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3026"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3029"></script>
 
 <style>
 html,
@@ -97,30 +97,6 @@ body.ats-admin .ats-header-inner{
 .week-nav-actions .button{
   width:100%;
   min-height:48px;
-}
-
-.mobile-editor-tabs{
-  display:none;
-  gap:8px;
-  margin:14px 0 0;
-  padding:6px;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:16px;
-  background:rgba(0,0,0,.22);
-}
-
-.mobile-editor-tab{
-  width:100%;
-  min-height:44px;
-  border-radius:12px;
-  font-size:13px;
-}
-
-.weekly-editor-shell.show-board .mobile-editor-tab[data-editor-tab="board"],
-.weekly-editor-shell.show-ghost .mobile-editor-tab[data-editor-tab="ghost"]{
-  border-color:rgba(255,230,0,.75) !important;
-  background:#000 !important;
-  color:#ffe600 !important;
 }
 
 #atsBoardGhostWrap{
@@ -445,10 +421,6 @@ body.ats-admin .ats-header-inner{
     border-radius:18px;
   }
 
-  .mobile-editor-tabs{
-    display:flex;
-  }
-
   #atsBoardGhostWrap{
     display:block !important;
     margin-top:14px !important;
@@ -461,22 +433,6 @@ body.ats-admin .ats-header-inner{
 
   .day-card{
     min-height:0;
-  }
-
-  .weekly-editor-shell.show-board #weekBoard{
-    display:grid !important;
-  }
-
-  .weekly-editor-shell.show-board #ghostSchedulerPanel{
-    display:none !important;
-  }
-
-  .weekly-editor-shell.show-ghost #weekBoard{
-    display:none !important;
-  }
-
-  .weekly-editor-shell.show-ghost #ghostSchedulerPanel{
-    display:block !important;
   }
 
   .ats-save-all-bar{
@@ -555,7 +511,7 @@ body.ats-admin .ats-header-inner{
 
 <main class="ats-main">
   <div class="weekly-editor-container">
-    <section class="ats-card weekly-editor-shell show-board" id="weeklyEditorShell">
+    <section class="ats-card weekly-editor-shell" id="weeklyEditorShell">
       <div class="weekly-editor-top">
         <div>
           <div class="ats-eyebrow">Weekly Assignment Board</div>
@@ -568,11 +524,6 @@ body.ats-admin .ats-header-inner{
           <button class="button" id="btnCurrentWeek" type="button">Current Week</button>
           <button class="button button-secondary" id="btnNextWeek" type="button">Next Week</button>
         </div>
-      </div>
-
-      <div class="mobile-editor-tabs" aria-label="Weekly Board mobile view switcher">
-        <button class="button mobile-editor-tab" type="button" data-editor-tab="board">Board</button>
-        <button class="button button-secondary mobile-editor-tab" type="button" data-editor-tab="ghost">Ghost Scheduler</button>
       </div>
 
       <div class="week-board" id="weekBoard"></div>
@@ -626,33 +577,6 @@ body.ats-admin .ats-header-inner{
     <div class="assignment-list" id="assignmentList"></div>
   </div>
 </div>
-
-<script>
-(function(){
-  function setWeeklyEditorTab(tab){
-    var shell = document.getElementById("weeklyEditorShell");
-    if (!shell) return;
-
-    var next = tab === "ghost" ? "ghost" : "board";
-    shell.classList.toggle("show-board", next === "board");
-    shell.classList.toggle("show-ghost", next === "ghost");
-
-    document.querySelectorAll("[data-editor-tab]").forEach(function(btn){
-      var isActive = btn.getAttribute("data-editor-tab") === next;
-      btn.classList.toggle("button-secondary", !isActive);
-      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
-  }
-
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-editor-tab]");
-    if (!btn) return;
-    setWeeklyEditorTab(btn.getAttribute("data-editor-tab"));
-  });
-
-  window.atsSetWeeklyEditorTab = setWeeklyEditorTab;
-})();
-</script>
 
 </body>
 </html>
