@@ -2,7 +2,7 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// v3024 Ghost Scheduler v1 frontend:
+// v3025 Ghost Scheduler + Save All:
 // ✅ Preserves current week navigation
 // ✅ Preserves current board save behavior
 // ✅ Keeps Change Day
@@ -12,8 +12,9 @@
 // ✅ Adds Misc only to Add-On client picker
 // ✅ Requires notes when Misc is selected
 // ✅ Prevents Add-On from accidentally keeping/creating same employee/client regular cleaning row
-// ✅ Adds Ghost Scheduler v1 side panel using weekly_board_ghost
-// ✅ Ghost suggestions become normal local assignments, saved by Update This Day
+// ✅ Adds Ghost Scheduler side panel using weekly_board_ghost
+// ✅ Adds Save All Changes button for one-click multi-day saving
+// ✅ Ghost assignments stay local until Save All Changes or Update This Day
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -56,8 +57,11 @@ let editMode = null;
 let isSavingChange = false;
 let dayDirty = false;
 let btnUpdateDay = null;
+let btnSaveAllChanges = null;
+let saveAllBarEl = null;
 let allowEmptyCurrentDaySave = false;
 let movedDayDates = new Set();
+let dirtyDates = new Set();
 let ghostScheduler = { ghosts: [], scheduled: [], dueClients: [], ghostCount: 0, scheduledCount: 0, dueCount: 0 };
 let ghostPanelEl = null;
 
@@ -110,6 +114,7 @@ function escapeHtml(s) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 
 function ensureGhostStyles() {
   if (document.getElementById("atsGhostSchedulerStyles")) return;
@@ -164,7 +169,7 @@ function ensureGhostStyles() {
       display:flex;
       flex-direction:column;
       gap:10px;
-      max-height:calc(100dvh - 210px);
+      max-height:calc(100dvh - 230px);
       overflow:auto;
       padding-right:2px;
     }
@@ -238,10 +243,37 @@ function ensureGhostStyles() {
       border-radius:14px;
       padding:12px;
     }
+    .ats-save-all-bar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin:12px 0 16px 0;
+      padding:12px 14px;
+      border:1px solid rgba(255,215,0,.26);
+      background:rgba(255,215,0,.08);
+      border-radius:16px;
+    }
+    .ats-save-all-text{
+      font-size:13px;
+      line-height:1.35;
+      opacity:.88;
+    }
+    .ats-save-all-count{
+      font-weight:900;
+      color:#ffe889;
+    }
+    .ats-save-all-bar.is-clean{
+      opacity:.68;
+      border-color:rgba(255,255,255,.14);
+      background:rgba(255,255,255,.045);
+    }
     @media (max-width: 980px){
       .ats-board-with-ghost{display:block;}
       .ats-ghost-panel{position:relative;top:auto;margin:0 0 16px 0;}
       .ats-ghost-list{max-height:none;}
+      .ats-save-all-bar{align-items:stretch;flex-direction:column;}
+      .ats-save-all-bar .button{width:100%;}
     }
   `;
   document.head.appendChild(style);
@@ -369,6 +401,8 @@ function renderGhostSchedulerPanel() {
   const ghosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
   const count = Number(ghostScheduler.ghostCount ?? ghosts.length ?? 0);
   const scheduledCount = Number(ghostScheduler.scheduledCount || 0);
+  const dueCount = Number(ghostScheduler.dueCount || count + scheduledCount || 0);
+  const rotationWeek = ghostScheduler.rotationWeek || "";
 
   panel.innerHTML = `
     <div class="ats-ghost-title">
@@ -379,7 +413,8 @@ function renderGhostSchedulerPanel() {
       <div class="ats-ghost-count">${escapeHtml(count)} open</div>
     </div>
     <div class="ats-ghost-subtitle" style="margin-bottom:10px;">
-      ${escapeHtml(scheduledCount)} already scheduled • Suggestions only until assigned and saved.
+      ${escapeHtml(dueCount)} due • ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` • M${escapeHtml(rotationWeek)}` : ""}<br>
+      Assign as many as needed, then click Save All Changes.
     </div>
     <div class="ats-ghost-list">
       ${ghosts.length ? ghosts.map((ghost, index) => {
@@ -483,19 +518,18 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
 
   assignments.push(newRow);
   removeGhostFromPanelByClient(ghost);
+  markDateDirty(targetDate, true);
 
-  currentDay = targetDate;
-  editMode = null;
-  allowEmptyCurrentDaySave = false;
-  movedDayDates.clear();
-  markDayDirty(true);
+  if (currentDay === targetDate) {
+    dayDirty = true;
+    updateDayButtonState();
+    renderModalAssignments();
+  }
 
   buildWeekBoard();
-  if (modalTitle) modalTitle.textContent = `${getDayNameFromYMD(targetDate)} • ${targetDate}`;
-  ensureUpdateDayButton();
-  renderModalAssignments();
-  modal?.classList.add("open");
+  updateSaveAllButtonState();
 }
+
 
 function clientKey(value) {
   return String(value || "")
@@ -706,8 +740,10 @@ function resetWeekEditState() {
   dayDirty = false;
   allowEmptyCurrentDaySave = false;
   movedDayDates.clear();
+  dirtyDates.clear();
   modal?.classList.remove("open");
   updateDayButtonState();
+  updateSaveAllButtonState();
 }
 
 function setWeekSourceLabel(source, count) {
@@ -724,7 +760,7 @@ function setWeekSourceLabel(source, count) {
 async function switchWeek(newWeekStart) {
   if (isSavingChange) return;
 
-  if (dayDirty) {
+  if (dayDirty || dirtyDates.size) {
     const ok = confirm("You have unsaved changes. Switch weeks and lose those changes?");
     if (!ok) return;
   }
@@ -863,6 +899,126 @@ function getCurrentDayRowsPayload() {
   return getRowsPayloadForDate(currentDay);
 }
 
+
+function ensureSaveAllButton() {
+  if (btnSaveAllChanges) return btnSaveAllChanges;
+
+  saveAllBarEl = document.createElement("div");
+  saveAllBarEl.id = "atsSaveAllBar";
+  saveAllBarEl.className = "ats-save-all-bar is-clean";
+  saveAllBarEl.innerHTML = `
+    <div class="ats-save-all-text">
+      <div><strong>Scheduling changes</strong></div>
+      <div><span class="ats-save-all-count" id="atsSaveAllCount">0</span> changed day(s) ready to save.</div>
+    </div>
+    <button class="button" id="btnSaveAllChanges" type="button" disabled>Save All Changes</button>
+  `;
+
+  btnSaveAllChanges = saveAllBarEl.querySelector("#btnSaveAllChanges");
+  btnSaveAllChanges?.addEventListener("click", saveAllChangedDays);
+
+  const target = document.getElementById("atsBoardGhostWrap") || boardEl;
+  if (weekSourceLabel && weekSourceLabel.parentNode) {
+    weekSourceLabel.parentNode.insertBefore(saveAllBarEl, weekSourceLabel.nextSibling);
+  } else if (target && target.parentNode) {
+    target.parentNode.insertBefore(saveAllBarEl, target);
+  } else if (document.body) {
+    document.body.appendChild(saveAllBarEl);
+  }
+
+  updateSaveAllButtonState();
+  return btnSaveAllChanges;
+}
+
+function getDirtyDatesArray() {
+  return Array.from(dirtyDates || [])
+    .filter(Boolean)
+    .sort();
+}
+
+function markDateDirty(serviceDate, isDirty = true) {
+  const date = String(serviceDate || "").trim();
+  if (!date) return;
+
+  if (isDirty) dirtyDates.add(date);
+  else dirtyDates.delete(date);
+
+  updateSaveAllButtonState();
+}
+
+function updateSaveAllButtonState() {
+  const dates = getDirtyDatesArray();
+  const count = dates.length;
+
+  if (btnSaveAllChanges) {
+    btnSaveAllChanges.disabled = isSavingChange || count === 0;
+    btnSaveAllChanges.textContent = count
+      ? `Save All Changes (${count})`
+      : "Save All Changes";
+  }
+
+  if (saveAllBarEl) {
+    saveAllBarEl.classList.toggle("is-clean", count === 0);
+    const countEl = saveAllBarEl.querySelector("#atsSaveAllCount");
+    if (countEl) countEl.textContent = String(count);
+  }
+}
+
+async function saveAllChangedDays() {
+  if (isSavingChange) return;
+
+  const datesToSave = getDirtyDatesArray();
+  if (!datesToSave.length) return alert("No unsaved scheduling changes.");
+
+  if (!confirm(`Save changes for ${datesToSave.length} day(s)?`)) return;
+
+  try {
+    setBusy("Saving all changes...");
+
+    const savedByDate = new Map();
+
+    for (const serviceDate of datesToSave) {
+      const result = await saveOneBoardDay(serviceDate, true);
+      savedByDate.set(serviceDate, result.rows.slice());
+      console.log("Weekly board Save All result:", result.res);
+    }
+
+    try {
+      await loadBoard(currentWeekStart);
+
+      savedByDate.forEach((localRows, serviceDate) => {
+        const stillHasDate = assignments.some(row => row.serviceDate === serviceDate && String(row.active || "YES").toUpperCase() !== "NO");
+        if (localRows.length && !stillHasDate) {
+          assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
+        }
+      });
+    } catch (reloadErr) {
+      console.warn("weekly_board_get reload failed after Save All; keeping local rows", reloadErr);
+      savedByDate.forEach((localRows, serviceDate) => {
+        assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
+      });
+    }
+
+    datesToSave.forEach(date => dirtyDates.delete(date));
+    movedDayDates.clear();
+    allowEmptyCurrentDaySave = false;
+    dayDirty = false;
+
+    updateDayButtonState();
+    updateSaveAllButtonState();
+    buildWeekBoard();
+    if (currentDay) renderModalAssignments();
+
+    alert("All scheduling changes saved.");
+  } catch (err) {
+    console.error(err);
+    alert(String(err?.message || err));
+  } finally {
+    clearBusy();
+  }
+}
+
+
 function ensureUpdateDayButton() {
   if (btnUpdateDay) return btnUpdateDay;
 
@@ -884,7 +1040,9 @@ function ensureUpdateDayButton() {
 
 function markDayDirty(isDirty = true) {
   dayDirty = !!isDirty;
+  if (currentDay) markDateDirty(currentDay, isDirty);
   updateDayButtonState();
+  updateSaveAllButtonState();
 }
 
 function updateDayButtonState() {
@@ -897,16 +1055,19 @@ function updateDayButtonState() {
 function setBusy(message) {
   isSavingChange = true;
   if (btnAddAssignment) btnAddAssignment.disabled = true;
+  if (btnSaveAllChanges) btnSaveAllChanges.disabled = true;
   if (btnUpdateDay) {
     btnUpdateDay.disabled = true;
     btnUpdateDay.textContent = message || "Working...";
   }
+  updateSaveAllButtonState();
 }
 
 function clearBusy() {
   isSavingChange = false;
   if (btnAddAssignment) btnAddAssignment.disabled = false;
   updateDayButtonState();
+  updateSaveAllButtonState();
 }
 
 async function saveOneBoardDay(serviceDate, allowEmptyDay) {
@@ -975,8 +1136,11 @@ async function saveCurrentDay() {
     }
 
     allowEmptyCurrentDaySave = false;
+    datesToSave.forEach(date => dirtyDates.delete(date));
     movedDayDates.clear();
-    markDayDirty(false);
+    dayDirty = false;
+    updateDayButtonState();
+    updateSaveAllButtonState();
     buildWeekBoard();
     renderModalAssignments();
   } catch (err) {
@@ -1013,6 +1177,7 @@ async function init() {
     ]);
 
     buildWeekBoard();
+    ensureSaveAllButton();
     ensureUpdateDayButton();
 
     btnPrevWeek?.addEventListener("click", () => {
@@ -1133,10 +1298,12 @@ function buildWeekBoard() {
   });
 
   renderGhostSchedulerPanel();
+  ensureSaveAllButton();
+  updateSaveAllButtonState();
 }
 
 function openDay(dateStr, day) {
-  if (dayDirty && currentDay && currentDay !== dateStr) {
+  if ((dayDirty || dirtyDates.size) && currentDay && currentDay !== dateStr) {
     if (!confirm("You have unsaved changes for this day. Switch days and lose those changes?")) return;
     movedDayDates.clear();
     markDayDirty(false);
@@ -1156,7 +1323,7 @@ function openDay(dateStr, day) {
 }
 
 function closeModal() {
-  if (dayDirty && !confirm("You have unsaved changes. Close without updating this day?")) return;
+  if (dayDirty && !confirm("You have unsaved changes for this day. Close without updating this day?")) return;
   editMode = null;
   movedDayDates.clear();
   markDayDirty(false);
@@ -1192,10 +1359,9 @@ function renderAssignments(dateStr) {
         <strong>${escapeHtml(group.employeeName)}</strong>
         ${group.items.map(item => {
           const meta = rowAssignmentMeta(item);
-          const pill = makePillForRow(item);
           return `
             <div class="assignment-client">
-              <span>• ${pill}${pill ? " " : ""}${escapeHtml(item.clientName)}</span>
+              <span>• ${makePillForRow(item)} ${escapeHtml(item.clientName)}</span>
               ${meta ? `<span class="assignment-meta">${escapeHtml(meta)}</span>` : ""}
               ${isAddOnRow(item) && (item.addOnNotes || item.AddOnNotes)
                 ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
@@ -1282,12 +1448,11 @@ function renderModalAssignments() {
     const isJobEdit = editMode && editMode.type === "job" && editMode.index === x.realIndex;
     const isDayEdit = editMode && editMode.type === "day" && editMode.index === x.realIndex;
     const meta = rowAssignmentMeta(x.row);
-    const pill = makePillForRow(x.row);
 
     return `
       <div class="assignment">
         <strong>${escapeHtml(x.row.employeeName)}</strong>
-        <div style="margin-top:8px;font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${pill}${escapeHtml(x.row.clientName)}</div>
+        <div style="margin-top:8px;font-size:20px;font-weight:800;">${makePillForRow(x.row)} ${escapeHtml(x.row.clientName)}</div>
         ${meta ? `<div class="assignment-meta">${escapeHtml(meta)}</div>` : ""}
         ${isAddOnRow(x.row) && (x.row.addOnNotes || x.row.AddOnNotes)
           ? `<div class="assignment-notes">${escapeHtml(x.row.addOnNotes || x.row.AddOnNotes)}</div>`
@@ -1512,6 +1677,8 @@ function applyDayChange(index, newDate) {
 
   movedDayDates.add(oldDate);
   movedDayDates.add(targetDate);
+  markDateDirty(oldDate, true);
+  markDateDirty(targetDate, true);
   allowEmptyCurrentDaySave = true;
 
   markDayDirty(true);
