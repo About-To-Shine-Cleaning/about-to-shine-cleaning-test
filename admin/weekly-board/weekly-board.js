@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
 
 <script defer src="/admin/admin-nav.js?v=6001"></script>
-<script defer src="/admin/weekly-board/weekly-board.js?v=3026"></script>
+<script defer src="/admin/weekly-board/weekly-board.js?v=3027"></script>
 
 <style>
 html,body{width:100%;max-width:100%;overflow-x:hidden!important}
@@ -29,6 +29,33 @@ body.ats-admin .ats-header-inner{max-width:none!important;width:100%!important;p
 
 .week-nav-actions{display:grid;grid-template-columns:1fr;gap:10px;justify-content:stretch}
 .week-nav-actions .button{width:100%;min-height:48px}
+
+.mobile-editor-tabs{
+  display:none;
+  gap:8px;
+  margin:14px 0 0;
+  padding:6px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(0,0,0,.22);
+}
+
+/* hide accidental duplicate mobile tab rows */
+.mobile-editor-tabs ~ .mobile-editor-tabs{display:none!important}
+
+.mobile-editor-tab{
+  width:100%;
+  min-height:44px;
+  border-radius:12px;
+  font-size:13px;
+}
+
+.weekly-editor-shell.show-board .mobile-editor-tab[data-editor-tab="board"],
+.weekly-editor-shell.show-ghost .mobile-editor-tab[data-editor-tab="ghost"]{
+  border-color:rgba(255,230,0,.75)!important;
+  background:#000!important;
+  color:#ffe600!important;
+}
 
 #atsBoardGhostWrap{display:grid!important;grid-template-columns:minmax(0,4fr) minmax(290px,1fr)!important;gap:16px!important;align-items:start!important;margin-top:16px!important}
 
@@ -90,9 +117,14 @@ body.ats-admin .ats-header-inner{max-width:none!important;width:100%!important;p
 @media(max-width:980px){
   .weekly-editor-container{padding:10px}
   .weekly-editor-shell{padding:14px;border-radius:18px}
+  .mobile-editor-tabs{display:flex}
   #atsBoardGhostWrap{display:block!important;margin-top:14px!important}
   .week-board{grid-template-columns:1fr!important;gap:12px!important}
   .day-card{min-height:0}
+  .weekly-editor-shell.show-board #weekBoard{display:grid!important}
+  .weekly-editor-shell.show-board #ghostSchedulerPanel{display:none!important}
+  .weekly-editor-shell.show-ghost #weekBoard{display:none!important}
+  .weekly-editor-shell.show-ghost #ghostSchedulerPanel{display:block!important}
   .ats-save-all-bar{top:auto;position:sticky;bottom:10px;z-index:40}
 }
 
@@ -126,7 +158,7 @@ body.ats-admin .ats-header-inner{max-width:none!important;width:100%!important;p
 
 <main class="ats-main">
   <div class="weekly-editor-container">
-    <section class="ats-card weekly-editor-shell" id="weeklyEditorShell">
+    <section class="ats-card weekly-editor-shell show-board" id="weeklyEditorShell">
       <div class="weekly-editor-top">
         <div>
           <div class="ats-eyebrow">Weekly Assignment Board</div>
@@ -139,6 +171,11 @@ body.ats-admin .ats-header-inner{max-width:none!important;width:100%!important;p
           <button class="button" id="btnCurrentWeek" type="button">Current Week</button>
           <button class="button button-secondary" id="btnNextWeek" type="button">Next Week</button>
         </div>
+      </div>
+
+      <div class="mobile-editor-tabs" aria-label="Weekly Board mobile view switcher">
+        <button class="button mobile-editor-tab" type="button" data-editor-tab="board" aria-pressed="true">Board</button>
+        <button class="button button-secondary mobile-editor-tab" type="button" data-editor-tab="ghost" aria-pressed="false">Ghost Scheduler</button>
       </div>
 
       <div class="week-board" id="weekBoard"></div>
@@ -192,6 +229,33 @@ body.ats-admin .ats-header-inner{max-width:none!important;width:100%!important;p
     <div class="assignment-list" id="assignmentList"></div>
   </div>
 </div>
+
+<script>
+(function(){
+  function setWeeklyEditorTab(tab){
+    var shell = document.getElementById("weeklyEditorShell");
+    if (!shell) return;
+
+    var next = tab === "ghost" ? "ghost" : "board";
+    shell.classList.toggle("show-board", next === "board");
+    shell.classList.toggle("show-ghost", next === "ghost");
+
+    document.querySelectorAll("[data-editor-tab]").forEach(function(btn){
+      var isActive = btn.getAttribute("data-editor-tab") === next;
+      btn.classList.toggle("button-secondary", !isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  }
+
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-editor-tab]");
+    if (!btn) return;
+    setWeeklyEditorTab(btn.getAttribute("data-editor-tab"));
+  });
+
+  window.atsSetWeeklyEditorTab = setWeeklyEditorTab;
+})();
+</script>
 
 </body>
 </html>
