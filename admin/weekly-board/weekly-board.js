@@ -2,7 +2,7 @@
 // FILE: /admin/weekly-board/weekly-board.js
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
-// v3025 Ghost Scheduler + Save All:
+// v3029 Ghost Scheduler + Save All + Mobile Tab Duplicate Fix
 // ✅ Preserves current week navigation
 // ✅ Preserves current board save behavior
 // ✅ Keeps Change Day
@@ -15,6 +15,7 @@
 // ✅ Adds Ghost Scheduler side panel using weekly_board_ghost
 // ✅ Adds Save All Changes button for one-click multi-day saving
 // ✅ Ghost assignments stay local until Save All Changes or Update This Day
+// ✅ Fixes duplicate mobile Board / Ghost Scheduler tabs
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -115,6 +116,11 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+function removeDuplicateHtmlMobileTabs() {
+  document.querySelectorAll(".mobile-editor-tabs").forEach(el => {
+    el.remove();
+  });
+}
 
 function ensureGhostStyles() {
   if (document.getElementById("atsGhostSchedulerStyles")) return;
@@ -122,6 +128,9 @@ function ensureGhostStyles() {
   const style = document.createElement("style");
   style.id = "atsGhostSchedulerStyles";
   style.textContent = `
+    .mobile-editor-tabs{
+      display:none !important;
+    }
     .ats-mobile-board-tabs{
       display:none;
     }
@@ -411,6 +420,8 @@ function makePillForRow(row) {
 
 function ensureGhostPanel() {
   ensureGhostStyles();
+  removeDuplicateHtmlMobileTabs();
+
   if (ghostPanelEl) return ghostPanelEl;
 
   ghostPanelEl = document.getElementById("ghostSchedulerPanel");
@@ -420,8 +431,11 @@ function ensureGhostPanel() {
     ghostPanelEl.className = "ats-ghost-panel";
   }
 
-  if (boardEl && boardEl.parentElement && !document.getElementById("atsBoardGhostWrap")) {
-    const tabs = document.createElement("div");
+  let tabs = document.getElementById("atsMobileBoardTabs");
+  let wrap = document.getElementById("atsBoardGhostWrap");
+
+  if (boardEl && boardEl.parentElement && !wrap) {
+    tabs = document.createElement("div");
     tabs.id = "atsMobileBoardTabs";
     tabs.className = "ats-mobile-board-tabs";
     tabs.innerHTML = `
@@ -429,7 +443,7 @@ function ensureGhostPanel() {
       <button class="ats-mobile-board-tab" type="button" data-board-tab="ghost">Ghost Scheduler</button>
     `;
 
-    const wrap = document.createElement("div");
+    wrap = document.createElement("div");
     wrap.id = "atsBoardGhostWrap";
     wrap.className = "ats-board-with-ghost mobile-show-board";
 
@@ -449,6 +463,10 @@ function ensureGhostPanel() {
   } else if (boardEl && boardEl.parentElement && !ghostPanelEl.parentElement) {
     boardEl.parentElement.appendChild(ghostPanelEl);
   }
+
+  document.querySelectorAll("#atsMobileBoardTabs").forEach((el, index) => {
+    if (index > 0) el.remove();
+  });
 
   return ghostPanelEl;
 }
@@ -640,7 +658,6 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
     });
   }
 }
-
 
 function clientKey(value) {
   return String(value || "")
@@ -1010,7 +1027,6 @@ function getCurrentDayRowsPayload() {
   return getRowsPayloadForDate(currentDay);
 }
 
-
 function ensureSaveAllButton() {
   if (btnSaveAllChanges) return btnSaveAllChanges;
 
@@ -1128,7 +1144,6 @@ async function saveAllChangedDays() {
     clearBusy();
   }
 }
-
 
 function ensureUpdateDayButton() {
   if (btnUpdateDay) return btnUpdateDay;
