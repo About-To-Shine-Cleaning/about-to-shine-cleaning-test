@@ -122,20 +122,26 @@ function ensureGhostStyles() {
   const style = document.createElement("style");
   style.id = "atsGhostSchedulerStyles";
   style.textContent = `
+    .ats-mobile-board-tabs{
+      display:none;
+    }
     .ats-board-with-ghost{
       display:grid;
-      grid-template-columns:minmax(0,1fr) 340px;
-      gap:18px;
+      grid-template-columns:minmax(0,4fr) minmax(300px,1fr);
+      gap:16px;
       align-items:start;
+      width:100%;
+      margin-top:16px;
     }
     .ats-ghost-panel{
       border:1px solid rgba(255,255,255,.16);
-      background:rgba(12,7,28,.72);
+      background:rgba(12,7,28,.74);
       border-radius:18px;
       padding:14px;
       box-shadow:0 16px 40px rgba(0,0,0,.25);
       position:sticky;
-      top:14px;
+      top:86px;
+      min-width:0;
     }
     .ats-ghost-title{
       display:flex;
@@ -162,14 +168,14 @@ function ensureGhostStyles() {
       border-radius:999px;
       padding:5px 9px;
       font-size:12px;
-      font-weight:800;
+      font-weight:900;
       white-space:nowrap;
     }
     .ats-ghost-list{
       display:flex;
       flex-direction:column;
       gap:10px;
-      max-height:calc(100dvh - 230px);
+      max-height:calc(100dvh - 250px);
       overflow:auto;
       padding-right:2px;
     }
@@ -183,7 +189,7 @@ function ensureGhostStyles() {
       display:flex;
       align-items:center;
       gap:8px;
-      font-weight:900;
+      font-weight:950;
       line-height:1.25;
     }
     .ats-frequency-pill,
@@ -197,7 +203,7 @@ function ensureGhostStyles() {
       border-radius:999px;
       font-size:11px;
       line-height:1;
-      font-weight:900;
+      font-weight:950;
       letter-spacing:.02em;
       border:1px solid rgba(255,215,0,.48);
       background:rgba(255,215,0,.14);
@@ -224,6 +230,7 @@ function ensureGhostStyles() {
     }
     .ats-ghost-controls select{
       width:100%;
+      min-width:0;
       padding:9px;
       border-radius:10px;
       border:1px solid rgba(255,255,255,.22);
@@ -248,32 +255,107 @@ function ensureGhostStyles() {
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin:12px 0 16px 0;
+      margin:12px 0 0 0;
       padding:12px 14px;
-      border:1px solid rgba(255,215,0,.26);
+      border:1px solid rgba(255,215,0,.28);
       background:rgba(255,215,0,.08);
       border-radius:16px;
     }
     .ats-save-all-text{
       font-size:13px;
       line-height:1.35;
-      opacity:.88;
+      opacity:.9;
     }
     .ats-save-all-count{
-      font-weight:900;
+      font-weight:950;
       color:#ffe889;
     }
     .ats-save-all-bar.is-clean{
-      opacity:.68;
+      opacity:.72;
       border-color:rgba(255,255,255,.14);
       background:rgba(255,255,255,.045);
     }
+    .ats-save-all-bar .button{
+      width:min(360px,42%);
+      min-width:240px;
+    }
+    @media (max-width: 1280px){
+      .ats-board-with-ghost{
+        grid-template-columns:minmax(0,3.5fr) minmax(280px,1fr);
+        gap:12px;
+      }
+      .ats-ghost-panel{
+        padding:12px;
+      }
+    }
     @media (max-width: 980px){
-      .ats-board-with-ghost{display:block;}
-      .ats-ghost-panel{position:relative;top:auto;margin:0 0 16px 0;}
-      .ats-ghost-list{max-height:none;}
-      .ats-save-all-bar{align-items:stretch;flex-direction:column;}
-      .ats-save-all-bar .button{width:100%;}
+      .ats-mobile-board-tabs{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        margin:14px 0 12px;
+        padding:6px;
+        border:1px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.055);
+        border-radius:16px;
+      }
+      .ats-mobile-board-tab{
+        width:100%;
+        min-height:44px;
+        border-radius:12px;
+        border:1px solid rgba(255,255,255,.14);
+        background:rgba(0,0,0,.26);
+        color:rgba(255,255,255,.86);
+        font-weight:950;
+        cursor:pointer;
+      }
+      .ats-mobile-board-tab.is-active{
+        background:#000;
+        color:#ffe600;
+        border-color:rgba(255,230,0,.68);
+      }
+      .ats-board-with-ghost{
+        display:block;
+        margin-top:12px;
+      }
+      .ats-board-with-ghost.mobile-show-board .ats-ghost-panel{
+        display:none;
+      }
+      .ats-board-with-ghost.mobile-show-ghost #weekBoard{
+        display:none !important;
+      }
+      .ats-board-with-ghost.mobile-show-ghost .ats-ghost-panel{
+        display:block;
+      }
+      .ats-ghost-panel{
+        position:relative;
+        top:auto;
+        margin:0;
+      }
+      .ats-ghost-list{
+        max-height:none;
+      }
+      .ats-save-all-bar{
+        align-items:stretch;
+        flex-direction:column;
+        margin-top:12px;
+      }
+      .ats-save-all-bar .button{
+        width:100%;
+        min-width:0;
+      }
+    }
+    @media (max-width: 760px){
+      .ats-save-all-bar{
+        position:sticky;
+        top:76px;
+        z-index:20;
+        box-shadow:0 14px 34px rgba(0,0,0,.36);
+        backdrop-filter:blur(10px);
+      }
+      .ats-ghost-controls{
+        grid-template-columns:1fr;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -339,12 +421,31 @@ function ensureGhostPanel() {
   }
 
   if (boardEl && boardEl.parentElement && !document.getElementById("atsBoardGhostWrap")) {
+    const tabs = document.createElement("div");
+    tabs.id = "atsMobileBoardTabs";
+    tabs.className = "ats-mobile-board-tabs";
+    tabs.innerHTML = `
+      <button class="ats-mobile-board-tab is-active" type="button" data-board-tab="board">Board</button>
+      <button class="ats-mobile-board-tab" type="button" data-board-tab="ghost">Ghost Scheduler</button>
+    `;
+
     const wrap = document.createElement("div");
     wrap.id = "atsBoardGhostWrap";
-    wrap.className = "ats-board-with-ghost";
+    wrap.className = "ats-board-with-ghost mobile-show-board";
+
+    boardEl.parentElement.insertBefore(tabs, boardEl);
     boardEl.parentElement.insertBefore(wrap, boardEl);
     wrap.appendChild(boardEl);
     wrap.appendChild(ghostPanelEl);
+
+    tabs.querySelectorAll("[data-board-tab]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = String(btn.dataset.boardTab || "board");
+        wrap.classList.toggle("mobile-show-ghost", tab === "ghost");
+        wrap.classList.toggle("mobile-show-board", tab !== "ghost");
+        tabs.querySelectorAll("[data-board-tab]").forEach(x => x.classList.toggle("is-active", x === btn));
+      });
+    });
   } else if (boardEl && boardEl.parentElement && !ghostPanelEl.parentElement) {
     boardEl.parentElement.appendChild(ghostPanelEl);
   }
@@ -528,6 +629,16 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
 
   buildWeekBoard();
   updateSaveAllButtonState();
+
+  const wrap = document.getElementById("atsBoardGhostWrap");
+  const tabs = document.getElementById("atsMobileBoardTabs");
+  if (wrap && tabs && window.matchMedia && window.matchMedia("(max-width: 980px)").matches) {
+    wrap.classList.remove("mobile-show-ghost");
+    wrap.classList.add("mobile-show-board");
+    tabs.querySelectorAll("[data-board-tab]").forEach(btn => {
+      btn.classList.toggle("is-active", String(btn.dataset.boardTab || "") === "board");
+    });
+  }
 }
 
 
