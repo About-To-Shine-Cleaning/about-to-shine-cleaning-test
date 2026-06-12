@@ -3,11 +3,12 @@
    ATS Payroll (Admin UI) — v2 Preserve Functions + Payroll Corrections
    Add-On pre-split patch:
    - Same working backend/routes/functions preserved
-   - Keeps Add Job to Employee, Past Payroll, Unlock, QB popup, and finalize routes working
+   - Keeps Payroll Corrections, Past Payroll, Unlock, QB popup, and finalize routes working
    - Adds Add-On rows inside each employee payroll card
    - Shows Needs Pay when Add-On pay is blank/zero
    - Lets payroll/admin enter Add-On pay
    - Includes entered Add-On pay in displayed payroll gross total
+   - FIX: Payroll Correction clock fields now use addJobClockIn / addJobClockOut
 ========================================================= */
 
 (() => {
@@ -42,8 +43,10 @@
   const addJobSuggestions = document.getElementById("addJobSuggestions");
   const addJobSelected = document.getElementById("addJobSelected");
   const addJobNotes = document.getElementById("addJobNotes");
-  const correctionClockIn = document.getElementById("correctionClockIn");
-  const correctionClockOut = document.getElementById("correctionClockOut");
+
+  const addJobClockIn = document.getElementById("addJobClockIn");
+  const addJobClockOut = document.getElementById("addJobClockOut");
+
   const btnAddJobToEmployee = document.getElementById("btnAddJobToEmployee");
 
   const payoutCard = document.getElementById("payoutCard");
@@ -103,12 +106,17 @@
   }
 
   function getTokenFromSession() {
-    try { return (sessionStorage.getItem(TOKEN_STORAGE) || "").trim(); }
-    catch (e) { return ""; }
+    try {
+      return (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
+    } catch (e) {
+      return "";
+    }
   }
 
   function saveTokenToSession(token) {
-    try { sessionStorage.setItem(TOKEN_STORAGE, token); } catch (e) {}
+    try {
+      sessionStorage.setItem(TOKEN_STORAGE, token);
+    } catch (e) {}
   }
 
   function captureTokenFromUrl() {
@@ -292,8 +300,9 @@
       script.async = true;
 
       window[cb] = (data) => {
-        try { resolve(data); }
-        finally {
+        try {
+          resolve(data);
+        } finally {
           try { delete window[cb]; } catch (e) {}
           try { script.remove(); } catch (e) {}
         }
@@ -326,13 +335,6 @@
   async function payrollPeriods() { return jsonp(secureUrl("payroll_periods")); }
   async function payrollEmployeesList() { return jsonp(secureUrl("payroll_employees")); }
   async function clockJobsList() { return jsonp(secureUrl("clock_jobs_list")); }
-
-  async function payrollAddJob(periodId, payload) {
-    const qs = new URLSearchParams();
-    qs.set("periodId", periodId || "");
-    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
-    return jsonp(secureUrl("payroll_add_job", qs.toString()));
-  }
 
   async function payrollCorrection(periodId, payload) {
     const qs = new URLSearchParams();
@@ -911,11 +913,12 @@
 
   async function addJobToEmployee() {
     if (!currentPeriodId) return setStatus("No payroll period loaded.", "err");
+
     const serviceDate = addJobDate?.value || "";
     const employeeId = addJobEmployee?.value || "";
     const notes = addJobNotes?.value || "";
-    const clockIn = correctionClockIn?.value || "";
-    const clockOut = correctionClockOut?.value || "";
+    const clockIn = addJobClockIn?.value || "";
+    const clockOut = addJobClockOut?.value || "";
 
     if (!serviceDate) return setStatus("Choose a date for the correction.", "err");
     if (!employeeId) return setStatus("Choose an employee.", "err");
@@ -932,7 +935,11 @@
     };
 
     try {
-      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = true; btnAddJobToEmployee.textContent = "Applying..."; }
+      if (btnAddJobToEmployee) {
+        btnAddJobToEmployee.disabled = true;
+        btnAddJobToEmployee.textContent = "Applying...";
+      }
+
       setStatus("Applying payroll correction…");
       let res = await payrollCorrection(currentPeriodId, basePayload);
 
@@ -948,32 +955,42 @@
       if (!res || !res.ok) throw new Error(res?.error || "payroll_correction failed");
 
       currentPeriodStatus = "OPEN";
+
       if (addJobSearch) addJobSearch.value = "";
       if (addJobNotes) addJobNotes.value = "";
-      if (correctionClockIn) correctionClockIn.value = "";
-      if (correctionClockOut) correctionClockOut.value = "";
+      if (addJobClockIn) addJobClockIn.value = "";
+      if (addJobClockOut) addJobClockOut.value = "";
+
       clearSelectedAddJob();
+
       await sleep(500);
       await showPastPayrollPicker();
       await loadPeriod(currentPeriodId);
+
       setStatus(`Correction applied for ${res.jobName || "job"} / ${res.employeeName || employeeId} ✅`, "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = false; btnAddJobToEmployee.textContent = "Apply Correction"; }
+      if (btnAddJobToEmployee) {
+        btnAddJobToEmployee.disabled = false;
+        btnAddJobToEmployee.textContent = "Apply Correction";
+      }
     }
   }
 
   function wireAddJobControls() {
     setAddJobDateDefault();
+
     if (addJobSearch) {
       addJobSearch.addEventListener("input", () => {
         clearSelectedAddJob();
         renderAddJobSuggestions(addJobSearch.value);
       });
+
       addJobSearch.addEventListener("focus", () => renderAddJobSuggestions(addJobSearch.value));
       addJobSearch.addEventListener("blur", () => setTimeout(hideAddJobSuggestions, 180));
     }
+
     if (btnAddJobToEmployee) btnAddJobToEmployee.onclick = () => addJobToEmployee();
   }
 
@@ -990,7 +1007,14 @@
       const reference = paymentsBody.querySelector(`.check-ref[data-emp="${empId}"]`)?.value || "";
       const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${empId}"]`)?.value || "";
 
-      rows.push({ employeeId: empId, taxAdjustments, netPay, finalPaidMethod: method, finalReference: reference, finalPaymentNotes: notes });
+      rows.push({
+        employeeId: empId,
+        taxAdjustments,
+        netPay,
+        finalPaidMethod: method,
+        finalReference: reference,
+        finalPaymentNotes: notes
+      });
     });
 
     return rows;
@@ -998,6 +1022,7 @@
 
   async function finalizeEnteredInQuickBooks() {
     if (!currentPeriodId) return;
+
     const rows = collectFinalPaymentRows();
 
     if (!rows.length) return setStatus("No open payment rows found. This period may already be finalized.", "err");
@@ -1016,18 +1041,28 @@
     if (!ok) return;
 
     try {
-      if (btnFinalizeQB) { btnFinalizeQB.disabled = true; btnFinalizeQB.textContent = "Finalizing..."; }
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = true;
+        btnFinalizeQB.textContent = "Finalizing...";
+      }
+
       setStatus(`Finalizing payroll for ${currentPeriodId}…`);
+
       const res = await payrollFinalizeQB(currentPeriodId, rows);
       if (!res || !res.ok) throw new Error(res?.error || "payroll_finalize_qb failed");
+
       currentPeriodStatus = "LOCKED";
       await sleep(400);
       await loadPeriod(currentPeriodId);
+
       setStatus("Payroll finalized, audit records updated, and period locked ✅", "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnFinalizeQB) { btnFinalizeQB.disabled = false; btnFinalizeQB.textContent = "▦ Finalize Payroll"; }
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = false;
+        btnFinalizeQB.textContent = "▦ Finalize Payroll";
+      }
     }
   }
 
@@ -1044,13 +1079,19 @@
     if (!ok) return;
 
     try {
-      if (btnUnlockPeriod) { btnUnlockPeriod.disabled = true; btnUnlockPeriod.textContent = "Unlocking..."; }
+      if (btnUnlockPeriod) {
+        btnUnlockPeriod.disabled = true;
+        btnUnlockPeriod.textContent = "Unlocking...";
+      }
+
       setStatus(`Unlocking ${periodId}…`);
+
       const res = await payrollUnlock(periodId, pin, reason);
       if (!res || !res.ok) throw new Error(res?.error || "payroll_unlock failed");
 
       if (unlockPin) unlockPin.value = "";
       if (unlockReason) unlockReason.value = "";
+
       currentPeriodId = periodId;
       currentPeriodStatus = "OPEN";
       renderPeriod({ periodId, status: "OPEN" });
@@ -1058,11 +1099,15 @@
       await sleep(650);
       await showPastPayrollPicker();
       await loadPeriod(periodId);
+
       setStatus(`${periodId} unlocked for corrections ✅`, "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnUnlockPeriod) { btnUnlockPeriod.disabled = false; btnUnlockPeriod.textContent = "Unlock Period"; }
+      if (btnUnlockPeriod) {
+        btnUnlockPeriod.disabled = false;
+        btnUnlockPeriod.textContent = "Unlock Period";
+      }
     }
   }
 
