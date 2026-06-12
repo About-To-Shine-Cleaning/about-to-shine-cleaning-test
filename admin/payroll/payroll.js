@@ -1,404 +1,1238 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ATS Payroll</title>
-  <meta name="robots" content="noindex,nofollow,noarchive" />
+/* =========================================================
+   FILE: /admin/payroll/payroll.js
+   ATS Payroll (Admin UI) — v3 Payroll Adjustments
+========================================================= */
 
-  <link rel="stylesheet" href="/admin/admin-layout.css?v=6004" />
-  <link rel="icon" type="image/png" href="/assets/images/logo-v2.png" />
-  <link rel="apple-touch-icon" href="/assets/images/logo-v2.png" />
-  <script defer src="/admin/admin-nav.js?v=8"></script>
+(() => {
+  const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
+  const DEVICE_KEY_STORAGE = "ats_device_key_v1";
+  const AUTH_STORAGE = "ats_admin_auth_v1";
+  const TOKEN_STORAGE = "ats_admin_token_v1";
 
-  <style>
-    :root{
-      --pr-bg:#060811;
-      --pr-panel:rgba(16,19,31,.94);
-      --pr-panel2:rgba(11,14,24,.94);
-      --pr-line:rgba(255,255,255,.12);
-      --pr-line2:rgba(255,230,0,.40);
-      --pr-yellow:#ffe600;
-      --pr-purple:#7a35ff;
-      --pr-green:#65ff7d;
-      --pr-red:#ff4d5e;
-      --pr-blue:#45b7ff;
-      --pr-muted:rgba(247,247,251,.68);
-      --pr-text:#f7f7fb;
-      --pr-shadow:0 24px 70px rgba(0,0,0,.40);
+  const pillWho = document.getElementById("pillWho");
+  const statusBox = document.getElementById("statusBox");
+  const debugEl = document.getElementById("debug");
+
+  const periodIdEl = document.getElementById("periodId");
+  const periodReadableEl = document.getElementById("periodReadable");
+  const periodStartEl = document.getElementById("periodStart");
+  const periodEndEl = document.getElementById("periodEnd");
+  const periodPaydayEl = document.getElementById("periodPayday");
+  const periodStatusEl = document.getElementById("periodStatus");
+
+  const btnOpenQB = document.getElementById("btnOpenQB");
+  const btnFinalizeQB = document.getElementById("btnFinalizeQB");
+  const pastPayrollSelect = document.getElementById("pastPayrollSelect");
+  const btnLoadPastPayroll = document.getElementById("btnLoadPastPayroll");
+  const pastPayrollHint = document.getElementById("pastPayrollHint");
+  const unlockPin = document.getElementById("unlockPin");
+  const unlockReason = document.getElementById("unlockReason");
+  const btnUnlockPeriod = document.getElementById("btnUnlockPeriod");
+
+  const addJobDate = document.getElementById("addJobDate");
+  const addJobEmployee = document.getElementById("addJobEmployee");
+  const addJobSearch = document.getElementById("addJobSearch");
+  const addJobSuggestions = document.getElementById("addJobSuggestions");
+  const addJobSelected = document.getElementById("addJobSelected");
+  const addJobNotes = document.getElementById("addJobNotes");
+  const addJobClockIn = document.getElementById("addJobClockIn");
+  const addJobClockOut = document.getElementById("addJobClockOut");
+  const btnAddJobToEmployee = document.getElementById("btnAddJobToEmployee");
+
+  const payoutCard = document.getElementById("payoutCard");
+  const payoutHint = document.getElementById("payoutHint");
+  const payoutBody = document.getElementById("payoutBody");
+  const payoutTotals = document.getElementById("payoutTotals");
+
+  const paymentsHint = document.getElementById("paymentsHint");
+  const paymentsBody = document.getElementById("paymentsBody");
+  const paymentsTotals = document.getElementById("paymentsTotals");
+
+  let currentPeriodId = "";
+  let currentPeriodStatus = "";
+  let currentPeriodStart = "";
+  let currentPeriodEnd = "";
+  let payrollEmployees = [];
+  let allJobs = [];
+  let selectedAddJob = null;
+  let employeeRouteLoaded = false;
+  let jobsRouteLoaded = false;
+  let addonPaySaving = false;
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function normalizeStatusLabel(status, qbStatus) {
+    const s = String(status || "").toUpperCase();
+    const qb = String(qbStatus || "").toUpperCase();
+
+    if (s === "LOCKED" || qb === "ENTERED_IN_QB") return "FINALIZED";
+    if (s === "NET_PAID" || s === "PAID") return "FINALIZED";
+    if (s === "REOPENED" || qb === "REOPENED") return "REOPENED";
+    if (s === "OPEN") return "OPEN";
+    return s || "OPEN";
+  }
+
+  function setStatus(msg, kind) {
+    if (!statusBox) return;
+    statusBox.classList.remove("ok", "err");
+    if (kind === "ok") statusBox.classList.add("ok");
+    if (kind === "err") statusBox.classList.add("err");
+    statusBox.textContent = msg || "";
+  }
+
+  function setDebug(msg) {
+    if (debugEl) debugEl.textContent = msg || "";
+  }
+
+  function getDeviceKey() {
+    let key = localStorage.getItem(DEVICE_KEY_STORAGE);
+    if (!key) {
+      key = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(DEVICE_KEY_STORAGE, key);
+    }
+    return key;
+  }
+
+  function getTokenFromSession() {
+    try {
+      return (sessionStorage.getItem(TOKEN_STORAGE) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function saveTokenToSession(token) {
+    try {
+      sessionStorage.setItem(TOKEN_STORAGE, token);
+    } catch (e) {}
+  }
+
+  function captureTokenFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const t = (url.searchParams.get("t") || "").trim();
+      if (t) {
+        saveTokenToSession(t);
+        url.searchParams.delete("t");
+        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+      }
+    } catch (e) {}
+  }
+
+  function loadSessionAuth() {
+    try {
+      const raw = sessionStorage.getItem(AUTH_STORAGE);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (obj && obj.ok && obj.employeeId && obj.role) return obj;
+    } catch (e) {}
+    return null;
+  }
+
+  function requireAdmin(authObj) {
+    if (!authObj || !authObj.ok) return false;
+    const role = String(authObj.role || "").trim().toLowerCase();
+    return ["full_admin", "schedule_payroll", "payroll", "admin"].includes(role);
+  }
+
+  function setWho(authObj) {
+    if (!pillWho) return;
+    pillWho.textContent = `${authObj.employeeId} • ${authObj.employeeName || authObj.employeeId}`;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function cleanMoneyNumber(v) {
+    const raw = String(v ?? "").replace(/[$,]/g, "").trim();
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function money(v) {
+    return "$" + cleanMoneyNumber(v).toFixed(2);
+  }
+
+  function normalizeAssignmentType(value) {
+    const raw = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+    if (raw === "ADDON" || raw === "ADD_ON" || raw === "ADD_ON_JOB") return "ADD_ON";
+    if (raw === "HALF" || raw === ".5" || raw === "0.5" || raw === "HALF_CLEAN") return "HALF";
+    if (raw === "FULL" || raw === "FULL_CLEAN") return "FULL";
+    return "";
+  }
+
+  function isAddOnJob(job) {
+    return normalizeAssignmentType(
+      job?.assignmentType ||
+      job?.AssignmentType ||
+      job?.type ||
+      job?.jobType ||
+      job?.JobType ||
+      ""
+    ) === "ADD_ON";
+  }
+
+  function getAddOnType(job) {
+    return String(job?.addOnType || job?.AddOnType || job?.addonType || job?.AddonType || "Other").trim() || "Other";
+  }
+
+  function getAddOnNotes(job) {
+    return String(job?.addOnNotes || job?.AddOnNotes || job?.addonNotes || job?.AddonNotes || job?.notes || "").trim();
+  }
+
+  function getAddOnRowId(job) {
+    return String(
+      job?.rowId ||
+      job?.RowID ||
+      job?.weeklyAssignmentRowId ||
+      job?.assignmentRowId ||
+      job?.assignmentId ||
+      job?.id ||
+      ""
+    ).trim();
+  }
+
+  function getAddOnEnteredPay(job) {
+    return cleanMoneyNumber(
+      job?.payrollEnteredPay ??
+      job?.PayrollEnteredPay ??
+      job?.addonPay ??
+      job?.addOnPay ??
+      job?.jobPay ??
+      job?.pay ??
+      job?.amount ??
+      0
+    );
+  }
+
+  function jobPayForDisplay(job) {
+    if (isAddOnJob(job)) return getAddOnEnteredPay(job);
+    return cleanMoneyNumber(job?.jobPay ?? job?.pay ?? job?.amount ?? 0);
+  }
+
+  function dedupePayrollJobsForDisplay(jobs) {
+    const seen = {};
+    return (Array.isArray(jobs) ? jobs : []).filter(j => {
+      const date = String(j.date || j.serviceDate || "").trim();
+      const rawName = String(j.clientName || j.jobName || j.job || j.client || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+      const rawId = String(j.jobId || j.rowId || "").trim().toLowerCase();
+      const assignmentType = normalizeAssignmentType(j.assignmentType || j.AssignmentType || "");
+      const addOnType = String(j.addOnType || j.AddOnType || "").trim().toLowerCase();
+      const pay = jobPayForDisplay(j).toFixed(2);
+      const key = [date, rawId || rawName, assignmentType, addOnType, pay].join("|");
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function normalizePayrollEmployeesForDisplay(employees) {
+    return (Array.isArray(employees) ? employees : []).map(emp => {
+      const copy = { ...emp };
+      copy.jobs = dedupePayrollJobsForDisplay(copy.jobs || []);
+      copy.totalPay = copy.jobs.reduce((sum, j) => sum + jobPayForDisplay(j), 0);
+      copy.needsPayCount = copy.jobs.filter(j => isAddOnJob(j) && getAddOnEnteredPay(j) <= 0).length;
+      return copy;
+    });
+  }
+
+  function employeeInitials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    return parts.slice(0, 2).map(p => p.charAt(0).toUpperCase()).join("");
+  }
+
+  function formatDisplayDate(ymd) {
+    const s = String(ymd || "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s || "—";
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function formatDisplayRange(start, end) {
+    const s = String(start || "").trim();
+    const e = String(end || "").trim();
+    if (!s || !e) return "—";
+
+    const sm = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const em = e.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!sm || !em) return `${s} → ${e}`;
+
+    const sd = new Date(Number(sm[1]), Number(sm[2]) - 1, Number(sm[3]));
+    const ed = new Date(Number(em[1]), Number(em[2]) - 1, Number(em[3]));
+
+    if (sd.getFullYear() === ed.getFullYear() && sd.getMonth() === ed.getMonth()) {
+      return `${sd.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${ed.toLocaleDateString(undefined, { day: "numeric", year: "numeric" })}`;
     }
 
-    *{box-sizing:border-box}
-    html,body{max-width:100%;overflow-x:hidden}
-    body.ats-admin{background-color:var(--pr-bg)}
-    a{color:inherit;text-decoration:none}
-    .hidden{display:none!important}
-    .right{text-align:right}
+    return `${formatDisplayDate(s)} – ${formatDisplayDate(e)}`;
+  }
 
-    .payroll-page{max-width:1500px;margin:0 auto;padding:18px 16px 28px}
-    .payroll-shell{display:grid;gap:16px}
-    .payroll-topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:2px}
-    .payroll-title-block{display:flex;align-items:center;gap:12px;min-width:0}
-    .payroll-title-icon{width:48px;height:48px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,230,0,.10);border:1px solid rgba(255,230,0,.32);color:var(--pr-yellow);font-size:25px;box-shadow:0 0 28px rgba(255,230,0,.10)}
-    .payroll-title-text strong{display:block;font-size:28px;line-height:1;letter-spacing:-.035em}
-    .payroll-title-text span{display:block;margin-top:5px;color:var(--pr-muted);font-size:13px;font-weight:800}
-    .pill,#pillWho{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:9px 13px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);color:var(--pr-text);font-weight:900;box-shadow:none;max-width:100%}
-    .payroll-title-pill{display:none}
-    .muted{color:var(--pr-muted)}
-    .small{font-size:12px;color:var(--pr-muted);line-height:1.45}
+  function jsonp(url) {
+    return new Promise((resolve, reject) => {
+      const cb = "cb_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      script.async = true;
 
-    .payroll-card{position:relative;overflow:hidden;border:1px solid var(--pr-line);border-radius:24px;background:radial-gradient(650px 260px at 0% 0%, rgba(255,230,0,.08), transparent 58%),radial-gradient(640px 320px at 100% 0%, rgba(122,53,255,.15), transparent 62%),linear-gradient(180deg, rgba(18,22,36,.96), rgba(7,10,20,.96));box-shadow:var(--pr-shadow)}
-    .hero{padding:24px;min-height:210px}
-    .hero-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:28px;align-items:center}
-    .period-title{color:var(--pr-yellow);font-size:12px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;margin-bottom:9px}
-    .period-readable{font-size:clamp(38px,5vw,58px);font-weight:950;line-height:.92;letter-spacing:-.055em;margin:0 0 8px;word-break:break-word;overflow-wrap:anywhere}
-    .period-id{color:rgba(247,247,251,.70);font-size:14px;font-weight:800;margin:0 0 14px;word-break:break-word;overflow-wrap:anywhere}
-    .period-meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px}
-    .meta-chip{display:inline-flex;align-items:center;gap:5px;min-height:34px;border:1px solid rgba(255,255,255,.13);background:rgba(0,0,0,.24);border-radius:999px;padding:8px 12px;font-size:13px;color:rgba(247,247,251,.82);font-weight:850}
-    .meta-chip strong{color:#fff;font-weight:950}
+      window[cb] = (data) => {
+        try {
+          resolve(data);
+        } finally {
+          try { delete window[cb]; } catch (e) {}
+          try { script.remove(); } catch (e) {}
+        }
+      };
 
-    .status{display:inline-flex;align-items:center;gap:8px;width:auto;max-width:100%;margin-top:18px;padding:12px 15px;border-radius:16px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.13);color:rgba(247,247,251,.86);font-size:14px;font-weight:850;white-space:normal;overflow-wrap:anywhere}
-    .status::before{content:"•";color:var(--pr-yellow);font-size:24px;line-height:0}
-    .status.ok{border-color:rgba(101,255,125,.45);background:rgba(101,255,125,.10);color:#dfffe5}
-    .status.ok::before{content:"✓";font-size:16px;color:var(--pr-green)}
-    .status.err{border-color:rgba(255,77,94,.52);background:rgba(255,77,94,.10);color:#ffd8dd}
-    .status.err::before{content:"!";font-size:16px;color:var(--pr-red)}
+      script.onerror = () => {
+        try { delete window[cb]; } catch (e) {}
+        try { script.remove(); } catch (e) {}
+        reject(new Error("JSONP failed to load: " + url));
+      };
 
-    .quick-actions{display:grid;gap:14px;align-content:center}
-    .btn,button,a.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;padding:14px 18px;border-radius:16px;border:1px solid rgba(255,230,0,.60);background:#000;color:var(--pr-yellow);font-weight:950;font-size:15px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.35),0 0 20px rgba(255,230,0,.07);transition:transform .16s ease,border-color .16s ease,background .16s ease}
-    .btn:hover,button:hover,a.btn:hover{transform:translateY(-1px);border-color:rgba(255,230,0,.88);background:#111}
-    .btn.secondary{border-color:rgba(255,255,255,.16);color:#fff;background:rgba(0,0,0,.28);box-shadow:none}
-    .btn.danger{border-color:rgba(255,77,94,.46);background:rgba(255,77,94,.10);color:#ffd2d8}
-    .btn.wide{width:100%}
+      script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+      document.body.appendChild(script);
+    });
+  }
 
-    .step-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:0;width:100%;max-width:100%}
-    .card,details.card,.section-toggle-card{width:100%;max-width:100%;background:radial-gradient(620px 220px at 0% 0%, rgba(122,53,255,.10), transparent 58%),linear-gradient(180deg, rgba(18,22,36,.96), rgba(7,10,20,.96));border:1px solid rgba(255,255,255,.12);border-radius:24px;box-shadow:var(--pr-shadow);color:var(--pr-text);min-height:0;height:auto}
-    .card.full{grid-column:1/-1}
-    .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:0;min-width:0}
-    .card h2,.card h3{margin:0;color:#fff}
-    .card h2{font-size:26px;line-height:1.05;letter-spacing:-.025em}
-    .card h3{font-size:18px}
-    .section-toggle-card{padding:0;overflow:hidden}
-    .section-toggle-card>summary{list-style:none;cursor:pointer;padding:24px;border-radius:24px;display:block}
-    .section-toggle-card>summary::-webkit-details-marker{display:none}
-    .section-toggle-card .section-body{padding:0 24px 24px}
-    .section-toggle-card:not([open]) .section-body{display:none}
-    .toggle-title{display:flex;align-items:center;gap:14px}
-    .toggle-icon{width:58px;height:58px;flex:0 0 58px;border-radius:22px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,230,0,.09);border:1px solid rgba(255,230,0,.25);color:var(--pr-yellow);font-size:0;font-weight:950;line-height:1;transition:transform .16s ease}
-    .toggle-icon::before{content:"⌄";font-size:24px}
-    .section-toggle-card[open] .toggle-icon::before{content:"⌃"}
-    #payoutCard{border-color:rgba(122,53,255,.55)}
-    #payoutCard .toggle-icon{background:rgba(122,53,255,.20);border-color:rgba(122,53,255,.44);color:#d8c5ff}
-    #finalizationCard{border-color:rgba(101,255,125,.34)}
-    #finalizationCard .toggle-icon{background:rgba(101,255,125,.14);border-color:rgba(101,255,125,.34);color:var(--pr-green)}
-    .toggle-help{font-size:13px;color:#b987ff;margin-top:12px;font-weight:850}
-    #finalizationCard .toggle-help{color:var(--pr-green)}
-    #payoutTotals,#paymentsTotals{font-size:14px;color:#fff;font-weight:950;padding:10px 13px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);white-space:normal;max-width:100%}
+  function secureUrl(action, extraQs = "") {
+    const t = getTokenFromSession();
+    const d = getDeviceKey();
+    const base = `${API_URL}?action=${encodeURIComponent(action)}&t=${encodeURIComponent(t)}&d=${encodeURIComponent(d)}`;
+    return extraQs ? base + "&" + extraQs : base;
+  }
 
-    .payroll-card-grid,.finalization-list{display:grid;grid-template-columns:1fr;gap:14px;margin-top:0}
-    .payroll-employee-card,.final-employee-card{background:linear-gradient(180deg, rgba(18,22,35,.92), rgba(9,12,20,.94));border:1px solid rgba(255,255,255,.12);border-radius:20px;overflow:hidden;min-width:0;box-shadow:none}
-    .payroll-employee-card summary{list-style:none;cursor:pointer}
-    .payroll-employee-card summary::-webkit-details-marker{display:none}
-    .payroll-card-main{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(90deg, rgba(122,53,255,.22), rgba(69,183,255,.08));border-bottom:1px solid rgba(255,255,255,.08)}
-    .payroll-person,.final-name-block{display:flex;align-items:center;gap:13px;min-width:0}
-    .payroll-avatar{width:46px;height:46px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,230,0,.12);border:1px solid rgba(255,230,0,.30);color:var(--pr-yellow);font-weight:950;flex:0 0 auto}
-    .payroll-name,.final-name{font-size:18px;font-weight:950;color:#fff;line-height:1.15;overflow:hidden;text-overflow:ellipsis}
-    .payroll-sub,.final-period{font-size:12px;color:var(--pr-muted);margin-top:4px;overflow-wrap:anywhere}
-    .payroll-total{text-align:right;flex:0 0 auto}
-    .payroll-total-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:var(--pr-muted);margin:0 0 4px}
-    .payroll-total-amount{font-size:24px;font-weight:950;color:var(--pr-yellow);line-height:1}
-    .payroll-expand-note{font-size:11px;color:rgba(247,247,251,.55);margin-top:4px}
-    .payroll-card-body{padding:12px 18px 16px}
+  async function ping() { return jsonp(`${API_URL}?action=ping`); }
+  async function payrollCurrent() { return jsonp(secureUrl("payroll_current")); }
+  async function payrollSummary(periodId) { return jsonp(secureUrl("payroll_summary", `period_id=${encodeURIComponent(periodId)}`)); }
+  async function payrollGenerate(periodId) { return jsonp(secureUrl("payroll_generate", `period_id=${encodeURIComponent(periodId)}`)); }
+  async function payrollPayouts(periodId) { return jsonp(secureUrl("payroll_payouts", `period_id=${encodeURIComponent(periodId)}`)); }
+  async function payrollPayments(periodId) { return jsonp(secureUrl("payroll_payments", `period_id=${encodeURIComponent(periodId)}`)); }
+  async function payrollPeriods() { return jsonp(secureUrl("payroll_periods")); }
+  async function payrollEmployeesList() { return jsonp(secureUrl("payroll_employees")); }
+  async function clockJobsList() { return jsonp(secureUrl("clock_jobs_list")); }
 
-    .job-line{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}
-    .job-line:last-child{border-bottom:0}
-    .job-date{font-size:12px;color:var(--pr-muted);margin:0;font-weight:850}
-    .job-name{font-size:14px;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850}
-    .job-pay{font-size:14px;font-weight:950;color:#fff;text-align:right}
-    .empty-card{padding:15px;color:var(--pr-muted)}
-    .job-line.addon-line{grid-template-columns:110px minmax(0,1fr) minmax(190px,260px);align-items:start;border-bottom-color:rgba(255,230,0,.18);background:rgba(255,230,0,.035);margin:0 -8px;padding:12px 8px;border-radius:14px}
+  async function payrollCorrection(periodId, payload) {
+    const qs = new URLSearchParams();
+    qs.set("periodId", periodId || "");
+    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
+    return jsonp(secureUrl("payroll_correction", qs.toString()));
+  }
 
-    .addon-badge,.needs-pay-badge,.pay-entered-badge{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:950;line-height:1;white-space:nowrap}
-    .addon-badge{margin-top:6px;color:var(--pr-yellow);border:1px solid rgba(255,230,0,.35);background:rgba(255,230,0,.10)}
-    .needs-pay-badge{color:#ffd8dd;border:1px solid rgba(255,77,94,.42);background:rgba(255,77,94,.12)}
-    .pay-entered-badge{color:#dfffe5;border:1px solid rgba(101,255,125,.38);background:rgba(101,255,125,.10)}
-    .addon-notes{display:block;margin-top:6px;color:rgba(247,247,251,.70);font-size:12px;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
-    .addon-pay-box{display:grid;gap:7px;justify-items:end;min-width:0}
-    .addon-pay-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;width:100%}
-    .addon-pay-input{width:120px;max-width:100%;min-height:38px;padding:9px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.28);color:var(--pr-text);outline:none;font-weight:900;text-align:right}
-    .addon-save-btn{width:auto;min-height:38px;padding:9px 11px;border-radius:12px;font-size:12px;box-shadow:none}
+  async function payrollSaveAddonPay(periodId, payload) {
+    const qs = new URLSearchParams();
+    qs.set("periodId", periodId || "");
+    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
+    return jsonp(secureUrl("payroll_addon_pay", qs.toString()));
+  }
 
-    .final-top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:linear-gradient(90deg, rgba(101,255,125,.13), rgba(122,53,255,.08));border-bottom:1px solid rgba(255,255,255,.08)}
-    .final-status{font-size:12px;font-weight:950;color:#dfffe5;border:1px solid rgba(101,255,125,.34);background:rgba(101,255,125,.10);padding:7px 11px;border-radius:999px;white-space:nowrap}
-    .final-body{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px;padding:16px 18px 18px;align-items:end}
-    .final-field{min-width:0}
-    .final-field.wide{grid-column:span 2}
-    .final-field.full{grid-column:1/-1}
-    .final-field label,.add-job-field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:var(--pr-muted);margin:0 0 7px}
-    .final-value{font-size:15px;font-weight:900;color:#fff;min-height:39px;display:flex;align-items:center}
-    .final-value.gold{color:var(--pr-yellow)}
-    .final-value.adjusted-gross-display{color:var(--pr-yellow)}
-    .final-value.adjustment-negative{color:#ffd8dd}
-    .final-value.adjustment-positive{color:#dfffe5}
+  async function payrollFinalizeQB(periodId, rows) {
+    const payload = encodeURIComponent(JSON.stringify({ rows: rows || [] }));
+    return jsonp(secureUrl("payroll_finalize_qb", `periodId=${encodeURIComponent(periodId)}&payload=${payload}`));
+  }
 
-    select.payroll-select,.pay-input,.pay-method,.admin-input,.admin-textarea{width:100%;min-width:0;padding:12px 13px;border-radius:13px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.28);color:var(--pr-text);outline:none;font-weight:850}
-    input:focus,select:focus,textarea:focus{border-color:rgba(255,230,0,.70);box-shadow:0 0 0 3px rgba(255,230,0,.14)}
-    select.payroll-select option,.pay-method option{color:#111827;background:#fff}
-    .net-pay-input,.tax-adjustment-input,.gross-adjustment-input{text-align:right}
-    .gross-adjustment-input{border-color:rgba(255,230,0,.28)}
-    .gross-adjustment-reason{min-width:0}
-    .admin-textarea{min-height:74px;resize:vertical}
+  async function payrollUnlock(periodId, pin, reason) {
+    return jsonp(secureUrl(
+      "payroll_unlock",
+      `periodId=${encodeURIComponent(periodId)}&pin=${encodeURIComponent(pin)}&reason=${encodeURIComponent(reason)}`
+    ));
+  }
 
-    .payroll-admin-card{padding:24px;border-color:rgba(255,230,0,.42)}
-    #adminTools{border:1px solid rgba(255,230,0,.22);border-radius:22px;background:rgba(0,0,0,.16);padding:0;overflow:hidden}
-    #adminTools>summary{cursor:pointer;padding:18px;color:var(--pr-yellow);font-weight:950;font-size:18px;list-style:none}
-    #adminTools>summary::-webkit-details-marker{display:none}
-    #adminTools>summary::before{content:"⌄ ";color:var(--pr-yellow)}
+  function openQuickBooksPopup(e) {
+    if (e) e.preventDefault();
 
-    .add-job-box{margin:0 18px 14px;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;background:rgba(0,0,0,.18)}
-    .add-job-grid{display:grid;grid-template-columns:150px 220px minmax(260px,1fr) 140px 140px;gap:12px;align-items:end;margin-top:12px}
-    .add-job-field{position:relative;min-width:0}
-    .add-job-field.notes-field{grid-column:1/-2}
-    #btnAddJobToEmployee{grid-column:auto}
+    const screenW = window.screen.availWidth || 1920;
+    const screenH = window.screen.availHeight || 1080;
+    const qbWidth = Math.floor(screenW * 0.52);
+    const qbHeight = Math.floor(screenH * 0.95);
+    const left = screenW - qbWidth;
+    const top = 20;
 
-    .job-suggestions{position:absolute;left:0;right:auto;top:100%;z-index:9999;width:min(520px, calc(100vw - 48px));max-height:240px;overflow:auto;border:1px solid rgba(255,255,255,.20);border-radius:14px;background:#111827;box-shadow:0 18px 40px rgba(0,0,0,.35);margin-top:6px}
-    .job-suggestion{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.10);cursor:pointer}
-    .job-suggestion:hover{background:rgba(255,230,0,.14)}
-    .job-suggestion strong{display:block;color:var(--pr-text)}
-    .job-suggestion span{display:block;color:var(--pr-muted);font-size:12px;margin-top:2px}
-    .selected-job-pill{margin-top:7px;font-size:12px;color:var(--pr-yellow);border:1px solid rgba(255,230,0,.35);background:rgba(255,230,0,.10);border-radius:999px;padding:6px 9px;display:inline-flex;font-weight:900}
+    const qbWindow = window.open(
+      "https://www.quickbooks.com",
+      "ATSQuickBooksPayroll",
+      [`width=${qbWidth}`, `height=${qbHeight}`, `left=${left}`, `top=${top}`, "resizable=yes", "scrollbars=yes"].join(",")
+    );
 
-    .past-row,.admin-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 18px}
-    .payroll-select.compact{max-width:420px}
-    .admin-input{max-width:220px}
-    .admin-input.full{max-width:none}
-    .admin-textarea{min-width:280px;flex:1}
-    .payroll-divider{border:0;border-top:1px solid rgba(255,255,255,.12);margin:14px 18px}
-    #pastPayrollHint{margin:0 18px 14px}
-    #debug{display:none}
-    .confidential-note{text-align:center;color:rgba(247,247,251,.55);font-size:13px;margin:14px 0 0}
-
-    @media(max-width:1280px){
-      .final-body{grid-template-columns:repeat(4,minmax(0,1fr))}
-      .final-field.wide{grid-column:span 2}
+    if (qbWindow) {
+      try { qbWindow.focus(); } catch (err) {}
     }
 
-    @media(max-width:1180px){
-      .hero-grid{grid-template-columns:1fr}
-      .add-job-grid{grid-template-columns:1fr 1fr}
-      .add-job-field.notes-field{grid-column:1/-1}
-      #btnAddJobToEmployee{grid-column:1/-1}
+    try {
+      window.moveTo(0, 0);
+      window.resizeTo(screenW - qbWidth, screenH);
+    } catch (err) {
+      console.log("Browser blocked window resize:", err);
+    }
+  }
+
+  function renderPeriod(p) {
+    currentPeriodId = p?.periodId || p?.period || p?.id || currentPeriodId || "";
+    currentPeriodStatus = p?.status || currentPeriodStatus || "";
+    currentPeriodStart = p?.startDate || p?.start || currentPeriodStart || "";
+    currentPeriodEnd = p?.endDate || p?.end || currentPeriodEnd || "";
+
+    if (periodReadableEl) periodReadableEl.textContent = formatDisplayRange(currentPeriodStart, currentPeriodEnd);
+    if (periodIdEl) periodIdEl.textContent = currentPeriodId || "—";
+    if (periodStartEl) periodStartEl.textContent = formatDisplayDate(currentPeriodStart);
+    if (periodEndEl) periodEndEl.textContent = formatDisplayDate(currentPeriodEnd);
+    if (periodPaydayEl) periodPaydayEl.textContent = p?.payday || "—";
+    if (periodStatusEl) periodStatusEl.textContent = normalizeStatusLabel(currentPeriodStatus);
+  }
+
+  function normalizeEmployeeList(list) {
+    const seen = {};
+    const placeholderPattern = /^employee\s+(one|two|three|four|five|six|seven|eight|nine|ten)$/i;
+
+    return (Array.isArray(list) ? list : [])
+      .map(e => ({
+        employeeId: String(e.employeeId || e.id || e.EmployeeID || e["Employee ID"] || "").trim().toUpperCase(),
+        employeeName: String(e.employeeName || e.name || e.EmployeeName || e["Employee Name"] || "").trim(),
+        active: e.active
+      }))
+      .filter(e =>
+        e.employeeId &&
+        e.employeeName &&
+        !placeholderPattern.test(e.employeeName) &&
+        !seen[e.employeeId] &&
+        (seen[e.employeeId] = true)
+      );
+  }
+
+  function renderAddJobEmployees(rows) {
+    const fallback = normalizeEmployeeList(rows);
+    if (!payrollEmployees.length && fallback.length) payrollEmployees = fallback;
+
+    if (!addJobEmployee) return;
+    const current = addJobEmployee.value;
+
+    addJobEmployee.innerHTML = `<option value="">Choose employee…</option>` + payrollEmployees.map(e =>
+      `<option value="${escapeHtml(e.employeeId)}">${escapeHtml(e.employeeId)} • ${escapeHtml(e.employeeName)}</option>`
+    ).join("");
+
+    if (current && payrollEmployees.some(e => e.employeeId === current)) addJobEmployee.value = current;
+  }
+
+  async function loadPayrollEmployeesList() {
+    const res = await payrollEmployeesList();
+    if (!res || !res.ok) throw new Error(res?.error || "payroll_employees failed");
+
+    const list = res.employees || res.rows || res.employeeRows || [];
+    payrollEmployees = normalizeEmployeeList(list);
+    employeeRouteLoaded = true;
+    renderAddJobEmployees([]);
+  }
+
+  function normalizeJobList(list) {
+    const seen = {};
+    return (Array.isArray(list) ? list : [])
+      .map(j => {
+        const clientName = String(j.clientName || j.client || j.name || j.jobName || "").trim();
+        const name = String(j.name || j.jobName || clientName || "").trim();
+        const id = String(j.id || j.jobId || j.clientId || name.replace(/\s+/g, "_")).trim();
+        const pay = cleanMoneyNumber(j.pay ?? j.jobPay ?? j.amount ?? j.fullPay ?? j.halfPay ?? 0);
+        return { id, name, clientName, pay, address: String(j.address || "").trim() };
+      })
+      .filter(j => j.id && j.name && j.pay > 0 && !seen[j.id] && (seen[j.id] = true));
+  }
+
+  async function loadClockJobsList() {
+    const res = await clockJobsList();
+    if (!res || !res.ok) throw new Error(res?.error || "clock_jobs_list failed");
+    allJobs = normalizeJobList(res.jobs || res.rows || res.clientRows || []);
+    jobsRouteLoaded = true;
+  }
+
+  function adjustedGross(gross, adjustment) {
+    return cleanMoneyNumber(gross) + cleanMoneyNumber(adjustment);
+  }
+
+  function updateAdjustedGrossForEmployee(empId) {
+    if (!paymentsBody || !empId) return;
+
+    const grossEl = paymentsBody.querySelector(`.gross-base-value[data-emp="${CSS.escape(empId)}"]`);
+    const adjustmentInput = paymentsBody.querySelector(`.gross-adjustment-input[data-emp="${CSS.escape(empId)}"]`);
+    const adjustedEl = paymentsBody.querySelector(`.adjusted-gross-display[data-emp="${CSS.escape(empId)}"]`);
+
+    if (!grossEl || !adjustedEl) return;
+
+    const gross = cleanMoneyNumber(grossEl.dataset.gross || "0");
+    const adjustment = cleanMoneyNumber(adjustmentInput?.value || "");
+    const finalGross = adjustedGross(gross, adjustment);
+
+    adjustedEl.textContent = money(finalGross);
+    adjustedEl.classList.toggle("adjustment-negative", adjustment < 0);
+    adjustedEl.classList.toggle("adjustment-positive", adjustment > 0);
+  }
+
+  function wireGrossAdjustmentInputs() {
+    if (!paymentsBody) return;
+
+    paymentsBody.querySelectorAll(".gross-adjustment-input").forEach(input => {
+      input.addEventListener("input", () => {
+        updateAdjustedGrossForEmployee(input.dataset.emp || "");
+      });
+      updateAdjustedGrossForEmployee(input.dataset.emp || "");
+    });
+  }
+
+  function renderPayments(rows, period) {
+    if (!paymentsBody) return;
+
+    const data = Array.isArray(rows) ? rows : [];
+    const start = period?.startDate || data[0]?.startDate || currentPeriodStart || "";
+    const end = period?.endDate || data[0]?.endDate || currentPeriodEnd || "";
+
+    if (paymentsHint) {
+      paymentsHint.textContent = start && end
+        ? `Enter payroll adjustments, taxes/adjustments, and final net pay for ${formatDisplayRange(start, end)}.`
+        : "Enter payroll adjustments, taxes/adjustments, and final net pay.";
     }
 
-    @media(max-width:820px){
-      .payroll-page{padding:12px 10px 24px}
-      .payroll-topbar{align-items:stretch}
-      #pillWho{width:100%}
-      .hero{padding:18px;border-radius:22px}
-      .period-readable{font-size:36px;line-height:.98}
-      .period-meta{gap:8px}
-      .meta-chip{width:100%;justify-content:space-between}
-      .quick-actions{gap:10px}
-      .section-toggle-card>summary{padding:18px}
-      .section-toggle-card .section-body{padding:0 18px 18px}
-      .toggle-title{align-items:flex-start}
-      .toggle-icon{width:46px;height:46px;flex-basis:46px;border-radius:17px}
-      .card-head{display:block}
-      #payoutTotals,#paymentsTotals{margin-top:14px;display:inline-flex}
-      .payroll-card-main,.final-top{align-items:flex-start}
-      .job-line{grid-template-columns:82px 1fr auto}
-      .job-line.addon-line{grid-template-columns:1fr}
-      .addon-pay-box{justify-items:start}
-      .addon-pay-row{justify-content:flex-start}
-      .final-body{grid-template-columns:1fr}
-      .final-field.wide,.final-field.full{grid-column:auto}
-      .add-job-grid{grid-template-columns:1fr}
-      .payroll-admin-card{padding:18px}
-      .past-row,.admin-row{display:block}
-      .past-row>*,.admin-row>*{margin-top:10px;max-width:none;width:100%}
-      .admin-textarea{min-width:0;width:100%}
-      .job-suggestions{width:calc(100vw - 48px)}
+    renderAddJobEmployees(data);
+
+    if (!data.length) {
+      paymentsBody.innerHTML = `<div class="empty-card">No payment rows yet.</div>`;
+      if (paymentsTotals) paymentsTotals.textContent = "";
+      return;
     }
 
-    @media(max-width:560px){
-      .payroll-title-text strong{font-size:24px}
-      .payroll-card-main{grid-template-columns:1fr}
-      .payroll-total{text-align:left}
-      .final-top{display:block}
-      .final-status{display:inline-flex;margin-top:12px}
-      .job-line{grid-template-columns:1fr;gap:4px}
-      .job-line.addon-line{grid-template-columns:1fr}
-      .job-pay{text-align:left;color:var(--pr-yellow)}
-      .addon-pay-row{display:grid;grid-template-columns:1fr;align-items:stretch}
-      .addon-pay-input,.addon-save-btn{width:100%}
+    const grossTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.totalPay || r.grossPay || r.total || 0), 0);
+    const adjustmentTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.grossAdjustment || r.payrollAdjustment || 0), 0);
+    const adjustedGrossTotal = grossTotal + adjustmentTotal;
+    const taxTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || 0), 0);
+    const netTotal = data.reduce((sum, r) => sum + cleanMoneyNumber(r.netPay || r.finalNetPay || 0), 0);
+
+    if (paymentsTotals) {
+      paymentsTotals.textContent =
+        `Gross: ${money(grossTotal)} • Payroll Adj: ${money(adjustmentTotal)} • Adjusted Gross: ${money(adjustedGrossTotal)} • Taxes/Adj: ${money(taxTotal)}${netTotal ? ` • Net: ${money(netTotal)}` : ""}`;
     }
-  </style>
-</head>
 
-<body class="ats-admin payroll-admin-page">
-  <header class="ats-header">
-    <div class="ats-header-inner">
-      <a class="ats-brand" href="/admin/" aria-label="Go to Admin Home">
-        <img src="/assets/images/logo-v2.png" alt="About To Shine Cleaning Logo" />
-      </a>
-      <div class="ats-header-actions">
-        <a class="ats-live-btn" href="https://abouttoshinecleaning.com" target="_blank" rel="noopener">Go to Live Website</a>
-        <button class="ats-burger" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-controls="atsNavDrawer" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
-      </div>
-    </div>
-  </header>
+    paymentsBody.innerHTML = data.map(r => {
+      const empName = r.employeeName || r.employeeId || "—";
+      const employeeId = r.employeeId || "";
+      const startDate = r.startDate || start;
+      const endDate = r.endDate || end;
+      const periodText = `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`;
+      const gross = cleanMoneyNumber(r.totalPay || r.grossPay || r.total || 0);
+      const grossAdjustment = r.grossAdjustment ?? r.payrollAdjustment ?? "";
+      const grossAdjustmentReason = r.grossAdjustmentReason ?? r.payrollAdjustmentReason ?? "";
+      const adjusted = adjustedGross(gross, grossAdjustment);
+      const taxAdjustments = r.taxAdjustments || r.taxesAdjustments || r.taxAdjustment || "";
+      const netPay = r.netPay || r.finalNetPay || "";
+      const finalMethod = r.finalPaidMethod || r.paidMethod || "Check";
+      const finalRef = r.finalReference || r.reference || "";
+      const finalNotes = r.finalPaymentNotes || r.paymentNotes || "";
+      const statusText = String(r.status || "").toUpperCase();
+      const qbStatus = String(r.qbStatus || "").toUpperCase();
+      const periodUnlocked = String(currentPeriodStatus || "").toUpperCase() === "OPEN";
+      const isReopened = qbStatus === "REOPENED" || statusText === "OPEN" || statusText === "REOPENED";
+      const isFinalPaid = !periodUnlocked && !isReopened && (r.finalPaid || statusText === "NET_PAID" || statusText === "PAID" || qbStatus === "ENTERED_IN_QB");
+      const cleanStatus = normalizeStatusLabel(statusText, qbStatus);
 
-  <main class="ats-main">
-    <div class="payroll-page">
-      <div class="payroll-shell">
-        <div class="payroll-topbar">
-          <div class="payroll-title-block">
-            <div class="payroll-title-icon">$</div>
-            <div class="payroll-title-text">
-              <strong>Payroll</strong>
-              <span>Review payroll, finalize net pay, and manage pay periods.</span>
+      if (isFinalPaid) {
+        return `
+          <div class="final-employee-card">
+            <div class="final-top">
+              <div class="final-name-block">
+                <div class="payroll-avatar">${escapeHtml(employeeInitials(empName))}</div>
+                <div>
+                  <div class="final-name">${escapeHtml(empName)}</div>
+                  <div class="final-period">${escapeHtml(periodText)}</div>
+                </div>
+              </div>
+              <div class="final-status">✔ ${escapeHtml(cleanStatus)}</div>
+            </div>
+            <div class="final-body">
+              <div class="final-field"><label>Job Gross</label><div class="final-value">$${escapeHtml(gross.toFixed(2))}</div></div>
+              <div class="final-field"><label>Payroll Adj</label><div class="final-value ${cleanMoneyNumber(grossAdjustment) < 0 ? "adjustment-negative" : cleanMoneyNumber(grossAdjustment) > 0 ? "adjustment-positive" : ""}">${money(grossAdjustment)}</div></div>
+              <div class="final-field"><label>Adjusted Gross</label><div class="final-value gold">${money(adjusted)}</div></div>
+              <div class="final-field"><label>Taxes / Adj</label><div class="final-value">${money(taxAdjustments)}</div></div>
+              <div class="final-field"><label>Net Paid</label><div class="final-value gold">${money(netPay)}</div></div>
+              <div class="final-field"><label>Method</label><div class="final-value">${escapeHtml(finalMethod || "Recorded")}</div></div>
+              <div class="final-field"><label>Reference</label><div class="final-value">${escapeHtml(finalRef || "")}</div></div>
+              <div class="final-field"><label>Notes</label><div class="final-value">${escapeHtml(finalNotes || "")}</div></div>
+              <div class="final-field full"><label>Payroll Adjustment Reason</label><div class="final-value">${escapeHtml(grossAdjustmentReason || "")}</div></div>
             </div>
           </div>
-          <div class="pill" id="pillWho">—</div>
+        `;
+      }
+
+      return `
+        <div class="final-employee-card">
+          <div class="final-top">
+            <div class="final-name-block">
+              <div class="payroll-avatar">${escapeHtml(employeeInitials(empName))}</div>
+              <div>
+                <div class="final-name">${escapeHtml(empName)}</div>
+                <div class="final-period">${escapeHtml(periodText)}</div>
+              </div>
+            </div>
+            <div class="final-status">${escapeHtml(cleanStatus === "FINALIZED" ? "READY" : cleanStatus)}</div>
+          </div>
+
+          <div class="final-body">
+            <div class="final-field">
+              <label>Job Gross</label>
+              <div class="final-value gross-base-value" data-emp="${escapeHtml(employeeId)}" data-gross="${escapeHtml(gross.toFixed(2))}">
+                $${escapeHtml(gross.toFixed(2))}
+              </div>
+            </div>
+
+            <div class="final-field">
+              <label>Payroll Adj +/-</label>
+              <input class="pay-input gross-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(grossAdjustment)}" />
+            </div>
+
+            <div class="final-field">
+              <label>Adjusted Gross</label>
+              <div class="final-value adjusted-gross-display" data-emp="${escapeHtml(employeeId)}">${money(adjusted)}</div>
+            </div>
+
+            <div class="final-field">
+              <label>Taxes / Adj</label>
+              <input class="pay-input tax-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(taxAdjustments)}" />
+            </div>
+
+            <div class="final-field">
+              <label>Net Paid</label>
+              <input class="pay-input net-pay-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(netPay)}" />
+            </div>
+
+            <div class="final-field">
+              <label>Method</label>
+              <select class="pay-method" data-emp="${escapeHtml(employeeId)}">
+                <option value="Check" ${finalMethod === "Check" ? "selected" : ""}>Check</option>
+                <option value="Zelle" ${finalMethod === "Zelle" ? "selected" : ""}>Zelle</option>
+                <option value="Venmo" ${finalMethod === "Venmo" ? "selected" : ""}>Venmo</option>
+                <option value="Cash App" ${finalMethod === "Cash App" ? "selected" : ""}>Cash App</option>
+                <option value="Cash" ${finalMethod === "Cash" ? "selected" : ""}>Cash</option>
+                <option value="Other" ${finalMethod === "Other" ? "selected" : ""}>Other</option>
+              </select>
+            </div>
+
+            <div class="final-field">
+              <label>Reference</label>
+              <input class="pay-input check-ref" data-emp="${escapeHtml(employeeId)}" placeholder="Check # / Ref" value="${escapeHtml(finalRef)}" />
+            </div>
+
+            <div class="final-field">
+              <label>Notes</label>
+              <input class="pay-input pay-notes" data-emp="${escapeHtml(employeeId)}" placeholder="Notes" value="${escapeHtml(finalNotes)}" />
+              <div class="small qb-row-status" data-emp="${escapeHtml(employeeId)}">${escapeHtml(cleanStatus)}</div>
+            </div>
+
+            <div class="final-field full">
+              <label>Payroll Adjustment Reason</label>
+              <input class="pay-input gross-adjustment-reason" data-emp="${escapeHtml(employeeId)}" placeholder="Required if Payroll Adj is not 0" value="${escapeHtml(grossAdjustmentReason)}" />
+            </div>
+          </div>
         </div>
+      `;
+    }).join("");
 
-        <section class="hero payroll-card">
-          <div class="hero-grid">
-            <div>
-              <div class="period-title">Current Payroll Week</div>
-              <div class="period-readable" id="periodReadable">—</div>
-              <div class="period-id" id="periodId">—</div>
-              <div class="period-meta">
-                <span class="meta-chip">Start: <strong id="periodStart">—</strong></span>
-                <span class="meta-chip">End: <strong id="periodEnd">—</strong></span>
-                <span class="meta-chip">Payday: <strong id="periodPayday">—</strong></span>
-                <span class="meta-chip">Status: <strong id="periodStatus">—</strong></span>
-              </div>
-              <div class="status" id="statusBox">Loading current payroll…</div>
-            </div>
-            <div class="quick-actions" aria-label="Primary payroll actions">
-              <button class="btn secondary" id="btnOpenQB" type="button">▣ Open QuickBooks</button>
-              <button class="btn" id="btnFinalizeQB" type="button">▦ Finalize Payroll</button>
-            </div>
-          </div>
-        </section>
+    paymentsBody.querySelectorAll(".pay-method").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const emp = sel.dataset.emp;
+        const refInput = paymentsBody.querySelector(`.check-ref[data-emp="${CSS.escape(emp)}"]`);
+        if (!refInput) return;
+        refInput.placeholder = sel.value === "Check" ? "Check #" : "Ref # optional";
+      });
+      sel.dispatchEvent(new Event("change"));
+    });
 
-        <section class="step-grid">
-          <details class="card full section-toggle-card" id="payoutCard" open>
-            <summary>
-              <div class="card-head">
-                <div>
-                  <div class="toggle-title"><span class="toggle-icon">›</span><h2>Payroll Review</h2></div>
-                  <p class="muted" id="payoutHint">Review each job and employee total before entering gross payroll into QuickBooks.</p>
-                  <div class="toggle-help">Tap to minimize / expand</div>
-                </div>
-                <div class="small" id="payoutTotals"></div>
-              </div>
-            </summary>
-            <div class="section-body">
-              <div class="payroll-card-grid" id="payoutBody"></div>
-            </div>
-          </details>
+    wireGrossAdjustmentInputs();
+  }
 
-          <details class="card full section-toggle-card" id="finalizationCard" open>
-            <summary>
-              <div class="card-head">
-                <div>
-                  <div class="toggle-title"><span class="toggle-icon">›</span><h2>Payroll Finalization</h2></div>
-                  <p class="muted" id="paymentsHint">Enter payroll adjustments, taxes/adjustments, and final net pay before finalizing.</p>
-                  <div class="toggle-help">Tap to minimize / expand</div>
-                </div>
-                <div class="small" id="paymentsTotals"></div>
-              </div>
-            </summary>
-            <div class="section-body">
-              <div class="finalization-list" id="paymentsBody"></div>
-            </div>
-          </details>
+  function renderNormalJobLine(j) {
+    const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
+    const rawPay = j.jobPay ?? j.pay ?? j.amount ?? 0;
 
-          <div class="card full payroll-admin-card">
-            <details id="adminTools" open>
-              <summary>Payroll Corrections</summary>
-              <div class="small" style="margin:0 18px 14px;">Use this when a completed job needs to be fixed for payroll.</div>
-
-              <div class="add-job-box" id="addJobBox">
-                <div class="small">
-                  <strong style="color:#fff;">Fix Completed Job</strong>
-                  — add a missing completed job, add/fix clock times, or correct payroll history before finalizing.
-                </div>
-
-                <div class="add-job-grid">
-                  <div class="add-job-field">
-                    <label for="addJobDate">Date</label>
-                    <input class="admin-input full" id="addJobDate" type="date" />
-                  </div>
-
-                  <div class="add-job-field">
-                    <label for="addJobEmployee">Employee</label>
-                    <select class="payroll-select compact" id="addJobEmployee">
-                      <option value="">Choose employee…</option>
-                    </select>
-                  </div>
-
-                  <div class="add-job-field">
-                    <label for="addJobSearch">Client / Job</label>
-                    <input class="admin-input full" id="addJobSearch" type="text" placeholder="Start typing client/job…" autocomplete="off" />
-                    <div class="job-suggestions hidden" id="addJobSuggestions"></div>
-                    <div class="selected-job-pill hidden" id="addJobSelected">No job selected</div>
-                  </div>
-
-                  <div class="add-job-field">
-                    <label for="addJobClockIn">Clock In</label>
-                    <input class="admin-input full" id="addJobClockIn" type="time" />
-                  </div>
-
-                  <div class="add-job-field">
-                    <label for="addJobClockOut">Clock Out</label>
-                    <input class="admin-input full" id="addJobClockOut" type="time" />
-                  </div>
-
-                  <div class="add-job-field notes-field">
-                    <label for="addJobNotes">Reason / Notes</label>
-                    <input class="admin-input full" id="addJobNotes" type="text" placeholder="Required: forgot to clock, phone died, correction…" />
-                  </div>
-
-                  <button class="btn secondary" id="btnAddJobToEmployee" type="button">Apply Correction</button>
-                </div>
-              </div>
-
-              <hr class="payroll-divider" />
-
-              <div class="past-row">
-                <select class="payroll-select compact" id="pastPayrollSelect">
-                  <option value="">Load past periods…</option>
-                </select>
-                <button class="btn secondary" id="btnLoadPastPayroll" type="button">Load Past Payroll</button>
-              </div>
-              <div class="small" id="pastPayrollHint">Past payroll loads here when needed.</div>
-
-              <hr class="payroll-divider" />
-
-              <div class="small" style="margin:0 18px;">
-                <strong style="color:#fff;">Unlock Payroll Period</strong> — requires employee PIN and a reason.
-              </div>
-              <div class="admin-row">
-                <input class="admin-input" id="unlockPin" type="password" inputmode="numeric" placeholder="Employee PIN" autocomplete="off" />
-                <textarea class="admin-textarea" id="unlockReason" placeholder="Reason for unlocking payroll"></textarea>
-                <button class="btn danger" id="btnUnlockPeriod" type="button">Unlock Period</button>
-              </div>
-            </details>
-          </div>
-
-          <div class="hidden" id="debug"></div>
-        </section>
-
-        <div class="confidential-note">🔒 Internal Use Only • Confidential</div>
+    return `
+      <div class="job-line">
+        <div class="job-date">${escapeHtml(formatDisplayDate(j.date || j.serviceDate || ""))}</div>
+        <div class="job-name">${escapeHtml(rawJob)}</div>
+        <div class="job-pay">${money(rawPay)}</div>
       </div>
-    </div>
-  </main>
+    `;
+  }
 
-  <script src="./payroll.js?v=119"></script>
-</body>
-</html>
+  function renderAddOnJobLine(j, emp) {
+    const rowId = getAddOnRowId(j);
+    const rawJob = j.clientName || j.jobName || j.job || j.client || j.jobId || "—";
+    const addOnType = getAddOnType(j);
+    const addOnNotes = getAddOnNotes(j);
+    const enteredPay = getAddOnEnteredPay(j);
+    const needsPay = enteredPay <= 0;
+    const employeeId = emp.employeeId || j.employeeId || "";
+    const safeKey = encodeURIComponent(rowId || `${employeeId}|${j.date || j.serviceDate || ""}|${rawJob}|${addOnType}`);
+
+    return `
+      <div class="job-line addon-line">
+        <div class="job-date">${escapeHtml(formatDisplayDate(j.date || j.serviceDate || ""))}</div>
+        <div class="job-name">
+          ${escapeHtml(rawJob)}
+          <span class="addon-badge">Add-On • ${escapeHtml(addOnType)}</span>
+          ${addOnNotes ? `<span class="addon-notes">${escapeHtml(addOnNotes)}</span>` : ""}
+        </div>
+        <div class="addon-pay-box">
+          ${needsPay ? `<span class="needs-pay-badge">Needs Pay</span>` : `<span class="pay-entered-badge">${money(enteredPay)} Entered</span>`}
+          <div class="addon-pay-row">
+            <input
+              class="addon-pay-input"
+              data-addon-key="${escapeHtml(safeKey)}"
+              data-row-id="${escapeHtml(rowId)}"
+              data-employee-id="${escapeHtml(employeeId)}"
+              data-service-date="${escapeHtml(j.date || j.serviceDate || "")}"
+              data-client-name="${escapeHtml(rawJob)}"
+              data-addon-type="${escapeHtml(addOnType)}"
+              inputmode="decimal"
+              placeholder="Pay"
+              value="${enteredPay > 0 ? escapeHtml(enteredPay.toFixed(2)) : ""}"
+            />
+            <button class="btn secondary addon-save-btn" type="button" data-save-addon-pay="${escapeHtml(safeKey)}">Save</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function wireAddonPayButtons() {
+    if (!payoutBody) return;
+
+    payoutBody.querySelectorAll("[data-save-addon-pay]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (addonPaySaving) return;
+
+        const key = btn.dataset.saveAddonPay || "";
+        const input = payoutBody.querySelector(`.addon-pay-input[data-addon-key="${CSS.escape(key)}"]`);
+        if (!input) return setStatus("Add-On pay input not found.", "err");
+
+        const pay = cleanMoneyNumber(input.value || "");
+        if (!pay || pay <= 0) return setStatus("Enter Add-On pay before saving.", "err");
+
+        const payload = {
+          rowId: input.dataset.rowId || "",
+          employeeId: input.dataset.employeeId || "",
+          serviceDate: input.dataset.serviceDate || "",
+          clientName: input.dataset.clientName || "",
+          addOnType: input.dataset.addonType || "",
+          payrollEnteredPay: pay.toFixed(2)
+        };
+
+        if (!payload.rowId && (!payload.employeeId || !payload.serviceDate || !payload.clientName)) {
+          return setStatus("Missing Add-On row details. Save failed.", "err");
+        }
+
+        try {
+          addonPaySaving = true;
+          btn.disabled = true;
+          btn.textContent = "Saving...";
+          setStatus("Saving Add-On pay…");
+
+          const res = await payrollSaveAddonPay(currentPeriodId, payload);
+          if (!res || !res.ok) throw new Error(res?.error || "payroll_addon_pay failed");
+
+          await sleep(300);
+          await loadPeriod(currentPeriodId);
+          setStatus("Add-On pay saved and payroll gross updated ✅", "ok");
+        } catch (err) {
+          setStatus(String(err?.message || err), "err");
+        } finally {
+          addonPaySaving = false;
+          btn.disabled = false;
+          btn.textContent = "Save";
+        }
+      });
+    });
+  }
+
+  function renderPayouts(payouts) {
+    if (!payoutCard || !payoutBody || !payoutHint || !payoutTotals) return;
+
+    const employees = normalizePayrollEmployeesForDisplay(payouts?.employees || []);
+    const grandTotal = employees.reduce((sum, emp) => sum + cleanMoneyNumber(emp.totalPay || 0), 0);
+    const needsPayTotal = employees.reduce((sum, emp) => sum + cleanMoneyNumber(emp.needsPayCount || 0), 0);
+
+    if (!employees.length) {
+      payoutBody.innerHTML = `<div class="empty-card">No job lines found for this period.</div>`;
+      payoutHint.textContent = currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—";
+      payoutTotals.textContent = `Grand Total: ${money(grandTotal)}`;
+      payoutCard.classList.remove("hidden");
+      return;
+    }
+
+    payoutBody.innerHTML = employees.map(emp => {
+      const jobs = Array.isArray(emp.jobs) ? emp.jobs : [];
+      const employeeTotal = Number(emp.totalPay || jobs.reduce((sum, j) => sum + jobPayForDisplay(j), 0));
+      const hasManyJobs = jobs.length > 2;
+      const needsPayCount = jobs.filter(j => isAddOnJob(j) && getAddOnEnteredPay(j) <= 0).length;
+
+      return `
+        <details class="payroll-employee-card" ${hasManyJobs ? "" : "open"}>
+          <summary>
+            <div class="payroll-card-main">
+              <div class="payroll-person">
+                <div class="payroll-avatar">${escapeHtml(employeeInitials(emp.employeeName || emp.employeeId))}</div>
+                <div>
+                  <div class="payroll-name">${escapeHtml(emp.employeeName || emp.employeeId || "—")}</div>
+                  <div class="payroll-sub">
+                    ${jobs.length} job${jobs.length === 1 ? "" : "s"}${hasManyJobs ? " • click to expand" : ""}
+                    ${needsPayCount ? ` • ${needsPayCount} Add-On Needs Pay` : ""}
+                  </div>
+                </div>
+              </div>
+              <div class="payroll-total">
+                <div class="payroll-total-label">Total</div>
+                <div class="payroll-total-amount">${money(employeeTotal)}</div>
+                <div class="payroll-expand-note">${hasManyJobs ? "View jobs" : ""}</div>
+              </div>
+            </div>
+          </summary>
+          <div class="payroll-card-body">
+            ${jobs.length ? jobs.map(j => isAddOnJob(j) ? renderAddOnJobLine(j, emp) : renderNormalJobLine(j)).join("") : `<div class="empty-card">No job lines found.</div>`}
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    payoutHint.textContent = currentPeriodStart && currentPeriodEnd
+      ? `Payroll review for ${formatDisplayRange(currentPeriodStart, currentPeriodEnd)}`
+      : (currentPeriodId ? `Payroll review for ${currentPeriodId}` : "—");
+
+    payoutTotals.textContent = `Grand Total: ${money(grandTotal)}${needsPayTotal ? ` • Add-Ons Need Pay: ${needsPayTotal}` : ""}`;
+    payoutCard.classList.remove("hidden");
+    wireAddonPayButtons();
+  }
+
+  async function loadPeriod(periodId) {
+    if (!periodId) return;
+    currentPeriodId = periodId;
+
+    setStatus(`Loading payroll period ${periodId}…`);
+    const sum = await payrollSummary(periodId);
+    if (!sum || !sum.ok) throw new Error(sum?.error || "payroll_summary failed");
+
+    const periodStatus = sum.status || sum.periodStatus || currentPeriodStatus || "OPEN";
+    renderPeriod({ periodId, startDate: sum.startDate || "", endDate: sum.endDate || "", status: periodStatus, payday: "" });
+    setAddJobDateDefault();
+
+    const payoutRes = await payrollPayouts(periodId);
+    if (payoutRes && payoutRes.ok) renderPayouts(payoutRes.payouts);
+
+    const pay = await payrollPayments(periodId);
+    if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
+    if (pay.period && (pay.period.status || pay.periodStatus)) currentPeriodStatus = pay.period.status || pay.periodStatus;
+    renderPayments(pay.rows, pay.period);
+
+    setStatus(`${periodId} loaded ✅`, "ok");
+  }
+
+  async function autoloadCurrentPayroll() {
+    setStatus("Loading…");
+    const cur = await payrollCurrent();
+    if (!cur || !cur.ok) throw new Error(cur?.error || "payroll_current failed");
+    renderPeriod(cur);
+
+    if (!currentPeriodId) {
+      setStatus("No current period id returned.", "err");
+      return;
+    }
+
+    if (String(cur.status || "").toUpperCase() !== "LOCKED") {
+      setStatus("Updating…");
+      const gen = await payrollGenerate(currentPeriodId);
+      if (!gen || !gen.ok) {
+        if (String(gen?.error || "") !== "period_locked") throw new Error(gen?.message || gen?.error || "payroll_generate failed");
+      }
+    }
+
+    await loadPeriod(currentPeriodId);
+  }
+
+  async function showPastPayrollPicker() {
+    if (!pastPayrollSelect) return;
+    const res = await payrollPeriods();
+    if (!res || !res.ok) throw new Error(res?.error || "payroll_periods failed");
+
+    const periods = Array.isArray(res.periods) ? res.periods : [];
+    if (!periods.length) {
+      pastPayrollSelect.innerHTML = `<option value="">No saved periods found</option>`;
+      if (pastPayrollHint) pastPayrollHint.textContent = "No past payroll periods found yet.";
+      return;
+    }
+
+    pastPayrollSelect.innerHTML = periods.map(p => {
+      const id = p.periodId || p.period || "";
+      const label = `${id} • ${normalizeStatusLabel(p.status || "OPEN")}`;
+      return `<option value="${escapeHtml(id)}" ${id === currentPeriodId ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    }).join("");
+
+    if (pastPayrollHint) pastPayrollHint.textContent = `${periods.length} saved payroll period(s).`;
+  }
+
+  function todayYmd() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function setAddJobDateDefault() {
+    if (!addJobDate) return;
+    if (!addJobDate.value) addJobDate.value = currentPeriodStart || todayYmd();
+    if (currentPeriodStart) addJobDate.min = currentPeriodStart;
+    if (currentPeriodEnd) addJobDate.max = currentPeriodEnd;
+  }
+
+  function clearSelectedAddJob() {
+    selectedAddJob = null;
+    if (addJobSelected) {
+      addJobSelected.textContent = "No job selected";
+      addJobSelected.classList.add("hidden");
+    }
+  }
+
+  function chooseAddJob(job) {
+    selectedAddJob = job || null;
+    if (addJobSearch && job) addJobSearch.value = job.name || job.clientName || "";
+    if (addJobSelected && job) {
+      addJobSelected.textContent = `${job.name || job.clientName || "Selected job"} • ${money(job.pay || 0)}`;
+      addJobSelected.classList.remove("hidden");
+    }
+    hideAddJobSuggestions();
+  }
+
+  function hideAddJobSuggestions() {
+    if (!addJobSuggestions) return;
+    addJobSuggestions.innerHTML = "";
+    addJobSuggestions.classList.add("hidden");
+  }
+
+  function renderAddJobSuggestions(query) {
+    if (!addJobSuggestions) return;
+    const q = String(query || "").trim().toLowerCase();
+
+    if (!q) {
+      hideAddJobSuggestions();
+      return;
+    }
+
+    if (!jobsRouteLoaded) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>Job list still loading</strong><span>Wait a second, then type again.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
+    if (!allJobs.length) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No jobs loaded</strong><span>Check Master_Schedule has active clients with pay.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
+    const matches = allJobs
+      .filter(job => String(`${job.name || ""} ${job.clientName || ""}`).toLowerCase().includes(q))
+      .slice(0, 10);
+
+    if (!matches.length) {
+      addJobSuggestions.innerHTML = `<div class="job-suggestion"><strong>No matching job found</strong><span>Try a shorter search.</span></div>`;
+      addJobSuggestions.classList.remove("hidden");
+      return;
+    }
+
+    addJobSuggestions.innerHTML = matches.map((job, idx) => `
+      <div class="job-suggestion" data-idx="${idx}">
+        <strong>${escapeHtml(job.name || job.clientName || "Job")}</strong>
+        <span>${money(job.pay || 0)}${job.address ? " • " + escapeHtml(job.address) : ""}</span>
+      </div>
+    `).join("");
+
+    addJobSuggestions.querySelectorAll(".job-suggestion").forEach(el => {
+      el.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        const idx = Number(el.dataset.idx || 0);
+        chooseAddJob(matches[idx]);
+      });
+    });
+
+    addJobSuggestions.classList.remove("hidden");
+  }
+
+  function promptUnlockForAddJob() {
+    const pin = window.prompt("This payroll period is locked. Enter employee PIN to unlock and apply this correction:");
+    if (!pin) return null;
+    const reason = window.prompt("Reason for unlocking payroll:", "Payroll Correction");
+    if (!reason) return null;
+    return { pin, reason };
+  }
+
+  async function addJobToEmployee() {
+    if (!currentPeriodId) return setStatus("No payroll period loaded.", "err");
+
+    const serviceDate = addJobDate?.value || "";
+    const employeeId = addJobEmployee?.value || "";
+    const notes = addJobNotes?.value || "";
+    const clockIn = addJobClockIn?.value || "";
+    const clockOut = addJobClockOut?.value || "";
+
+    if (!serviceDate) return setStatus("Choose a date for the correction.", "err");
+    if (!employeeId) return setStatus("Choose an employee.", "err");
+    if (!selectedAddJob || !selectedAddJob.id) return setStatus("Start typing and select a client/job first.", "err");
+    if (!String(notes || "").trim()) return setStatus("Enter a reason before applying a payroll correction.", "err");
+
+    const basePayload = {
+      serviceDate,
+      employeeId,
+      jobId: selectedAddJob.id,
+      clockIn,
+      clockOut,
+      notes
+    };
+
+    try {
+      if (btnAddJobToEmployee) {
+        btnAddJobToEmployee.disabled = true;
+        btnAddJobToEmployee.textContent = "Applying...";
+      }
+
+      setStatus("Applying payroll correction…");
+      let res = await payrollCorrection(currentPeriodId, basePayload);
+
+      if (res && !res.ok && res.error === "period_locked_pin_required") {
+        const unlock = promptUnlockForAddJob();
+        if (!unlock) {
+          setStatus("Correction cancelled. Payroll period is still locked.", "err");
+          return;
+        }
+        res = await payrollCorrection(currentPeriodId, { ...basePayload, pin: unlock.pin, reason: unlock.reason });
+      }
+
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_correction failed");
+
+      currentPeriodStatus = "OPEN";
+
+      if (addJobSearch) addJobSearch.value = "";
+      if (addJobNotes) addJobNotes.value = "";
+      if (addJobClockIn) addJobClockIn.value = "";
+      if (addJobClockOut) addJobClockOut.value = "";
+
+      clearSelectedAddJob();
+
+      await sleep(500);
+      await showPastPayrollPicker();
+      await loadPeriod(currentPeriodId);
+
+      setStatus(`Correction applied for ${res.jobName || "job"} / ${res.employeeName || employeeId} ✅`, "ok");
+    } catch (err) {
+      setStatus(String(err?.message || err), "err");
+    } finally {
+      if (btnAddJobToEmployee) {
+        btnAddJobToEmployee.disabled = false;
+        btnAddJobToEmployee.textContent = "Apply Correction";
+      }
+    }
+  }
+
+  function wireAddJobControls() {
+    setAddJobDateDefault();
+
+    if (addJobSearch) {
+      addJobSearch.addEventListener("input", () => {
+        clearSelectedAddJob();
+        renderAddJobSuggestions(addJobSearch.value);
+      });
+
+      addJobSearch.addEventListener("focus", () => renderAddJobSuggestions(addJobSearch.value));
+      addJobSearch.addEventListener("blur", () => setTimeout(hideAddJobSuggestions, 180));
+    }
+
+    if (btnAddJobToEmployee) btnAddJobToEmployee.onclick = () => addJobToEmployee();
+  }
+
+  function collectFinalPaymentRows() {
+    if (!paymentsBody) return [];
+    const rows = [];
+
+    paymentsBody.querySelectorAll(".net-pay-input").forEach(input => {
+      const empId = input.dataset.emp || "";
+      const taxInput = paymentsBody.querySelector(`.tax-adjustment-input[data-emp="${CSS.escape(empId)}"]`);
+      const grossAdjInput = paymentsBody.querySelector(`.gross-adjustment-input[data-emp="${CSS.escape(empId)}"]`);
+      const grossAdjReasonInput = paymentsBody.querySelector(`.gross-adjustment-reason[data-emp="${CSS.escape(empId)}"]`);
+
+      const netPay = cleanMoneyNumber(input.value || "");
+      const taxAdjustments = cleanMoneyNumber((taxInput && taxInput.value) || "");
+      const grossAdjustment = cleanMoneyNumber((grossAdjInput && grossAdjInput.value) || "");
+      const grossAdjustmentReason = String((grossAdjReasonInput && grossAdjReasonInput.value) || "").trim();
+
+      const method = paymentsBody.querySelector(`.pay-method[data-emp="${CSS.escape(empId)}"]`)?.value || "";
+      const reference = paymentsBody.querySelector(`.check-ref[data-emp="${CSS.escape(empId)}"]`)?.value || "";
+      const notes = paymentsBody.querySelector(`.pay-notes[data-emp="${CSS.escape(empId)}"]`)?.value || "";
+
+      rows.push({
+        employeeId: empId,
+        grossAdjustment,
+        grossAdjustmentReason,
+        taxAdjustments,
+        netPay,
+        finalPaidMethod: method,
+        finalReference: reference,
+        finalPaymentNotes: notes
+      });
+    });
+
+    return rows;
+  }
+
+  async function finalizeEnteredInQuickBooks() {
+    if (!currentPeriodId) return;
+
+    const rows = collectFinalPaymentRows();
+
+    if (!rows.length) return setStatus("No open payment rows found. This period may already be finalized.", "err");
+
+    for (const row of rows) {
+      if (!row.employeeId) return setStatus("Missing employee ID in one payment row.", "err");
+      if (row.grossAdjustment !== 0 && !String(row.grossAdjustmentReason || "").trim()) {
+        return setStatus(`Enter a reason for the payroll adjustment for ${row.employeeId}.`, "err");
+      }
+      if (!row.netPay || row.netPay <= 0) return setStatus(`Enter net pay for ${row.employeeId} before clicking Finalize Payroll.`, "err");
+      if (row.taxAdjustments < 0 || Number.isNaN(row.taxAdjustments)) return setStatus(`Enter valid Taxes/Adjustments for ${row.employeeId}.`, "err");
+      if (row.finalPaidMethod === "Check" && !String(row.finalReference || "").trim()) return setStatus(`Enter a check number for ${row.employeeId}.`, "err");
+    }
+
+    const ok = confirm(
+      `Confirm payroll finalization for ${currentPeriodId}?\n\n` +
+      "This saves payroll adjustments, Taxes/Adjustments, net payment details, updates audit records, and locks the period."
+    );
+    if (!ok) return;
+
+    try {
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = true;
+        btnFinalizeQB.textContent = "Finalizing...";
+      }
+
+      setStatus(`Finalizing payroll for ${currentPeriodId}…`);
+
+      const res = await payrollFinalizeQB(currentPeriodId, rows);
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_finalize_qb failed");
+
+      currentPeriodStatus = "LOCKED";
+      await sleep(400);
+      await loadPeriod(currentPeriodId);
+
+      setStatus("Payroll finalized, audit records updated, and period locked ✅", "ok");
+    } catch (err) {
+      setStatus(String(err?.message || err), "err");
+    } finally {
+      if (btnFinalizeQB) {
+        btnFinalizeQB.disabled = false;
+        btnFinalizeQB.textContent = "▦ Finalize Payroll";
+      }
+    }
+  }
+
+  async function unlockCurrentPeriod() {
+    const periodId = pastPayrollSelect?.value || currentPeriodId;
+    const pin = unlockPin?.value || "";
+    const reason = unlockReason?.value || "";
+
+    if (!periodId) return setStatus("Choose a payroll period to unlock.", "err");
+    if (!pin.trim()) return setStatus("Enter employee PIN before unlocking.", "err");
+    if (!reason.trim()) return setStatus("Enter a reason before unlocking.", "err");
+
+    const ok = confirm(`Unlock payroll period ${periodId}?\n\nThis will be logged with your employee ID and reason.`);
+    if (!ok) return;
+
+    try {
+      if (btnUnlockPeriod) {
+        btnUnlockPeriod.disabled = true;
+        btnUnlockPeriod.textContent = "Unlocking...";
+      }
+
+      setStatus(`Unlocking ${periodId}…`);
+
+      const res = await payrollUnlock(periodId, pin, reason);
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_unlock failed");
+
+      if (unlockPin) unlockPin.value = "";
+      if (unlockReason) unlockReason.value = "";
+
+      currentPeriodId = periodId;
+      currentPeriodStatus = "OPEN";
+      renderPeriod({ periodId, status: "OPEN" });
+
+      await sleep(650);
+      await showPastPayrollPicker();
+      await loadPeriod(periodId);
+
+      setStatus(`${periodId} unlocked for corrections ✅`, "ok");
+    } catch (err) {
+      setStatus(String(err?.message || err), "err");
+    } finally {
+      if (btnUnlockPeriod) {
+        btnUnlockPeriod.disabled = false;
+        btnUnlockPeriod.textContent = "Unlock Period";
+      }
+    }
+  }
+
+  async function boot() {
+    setDebug(`API_URL: ${API_URL}`);
+    captureTokenFromUrl();
+
+    const authObj = loadSessionAuth();
+    if (!requireAdmin(authObj)) {
+      setStatus("Denied: admin access required.\n\nOpen this from the Admin Panel.", "err");
+      if (pillWho) pillWho.textContent = "Denied";
+      return;
+    }
+
+    setWho(authObj);
+
+    if (!getTokenFromSession()) {
+      setStatus("Denied: missing token.\n\nOpen from Admin Panel or use a link with ?t=TOKEN once.", "err");
+      return;
+    }
+
+    const p = await ping();
+    if (!p || !p.ok) throw new Error("Ping did not return ok");
+
+    await Promise.allSettled([loadPayrollEmployeesList(), loadClockJobsList()]);
+
+    await autoloadCurrentPayroll();
+    renderAddJobEmployees(payrollEmployees);
+    wireAddJobControls();
+    showPastPayrollPicker().catch(err => setStatus(String(err?.message || err), "err"));
+
+    setDebug(`employees=${payrollEmployees.length}; jobs=${allJobs.length}; employeeRouteLoaded=${employeeRouteLoaded}; jobsRouteLoaded=${jobsRouteLoaded}`);
+
+    if (btnOpenQB) btnOpenQB.onclick = openQuickBooksPopup;
+
+    if (btnLoadPastPayroll) {
+      btnLoadPastPayroll.onclick = () =>
+        loadPeriod(pastPayrollSelect?.value || "").catch(err => setStatus(String(err?.message || err), "err"));
+    }
+
+    if (btnFinalizeQB) btnFinalizeQB.onclick = () => finalizeEnteredInQuickBooks();
+    if (btnUnlockPeriod) btnUnlockPeriod.onclick = () => unlockCurrentPeriod();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => boot().catch(err => setStatus(String(err?.message || err), "err")));
+  } else {
+    boot().catch(err => setStatus(String(err?.message || err), "err"));
+  }
+})();
