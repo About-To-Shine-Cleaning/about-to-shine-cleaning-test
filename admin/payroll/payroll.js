@@ -58,6 +58,9 @@
   let employeeRouteLoaded = false;
   let jobsRouteLoaded = false;
   let addonPaySaving = false;
+  let payrollPaymentRowsByEmployee = {};
+
+
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -487,6 +490,83 @@
     });
   }
 
+
+  function indexPayrollPaymentRows(rows) {
+    payrollPaymentRowsByEmployee = {};
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+      const empId = String(row.employeeId || row.EmployeeID || row.id || "").trim();
+      if (!empId) return;
+      payrollPaymentRowsByEmployee[empId] = row;
+    });
+  }
+
+  function getIndexedPaymentRow(empId) {
+    return payrollPaymentRowsByEmployee[String(empId || "").trim()] || {};
+  }
+
+  function updatePayrollReviewAdjustedTotal(empId) {
+    if (!payoutBody || !empId) return;
+
+    const grossEl = payoutBody.querySelector(`.review-gross-base-value[data-emp="${CSS.escape(empId)}"]`);
+    const adjustmentInput = payoutBody.querySelector(`.payroll-review-gross-adjustment-input[data-emp="${CSS.escape(empId)}"]`);
+    const adjustedEl = payoutBody.querySelector(`.payroll-review-adjusted-total[data-emp="${CSS.escape(empId)}"]`);
+
+    if (!grossEl || !adjustedEl) return;
+
+    const gross = cleanMoneyNumber(grossEl.dataset.gross || "0");
+    const adjustment = cleanMoneyNumber(adjustmentInput?.value || "");
+    const finalGross = adjustedGross(gross, adjustment);
+
+    adjustedEl.textContent = money(finalGross);
+    adjustedEl.classList.toggle("adjustment-negative", adjustment < 0);
+    adjustedEl.classList.toggle("adjustment-positive", adjustment > 0);
+  }
+
+  function syncPayrollAdjustmentInputs(empId, value, sourceClass) {
+    const safeEmp = CSS.escape(empId || "");
+    const targets = [];
+    if (paymentsBody) targets.push(...paymentsBody.querySelectorAll(`.gross-adjustment-input[data-emp="${safeEmp}"]`));
+    if (payoutBody) targets.push(...payoutBody.querySelectorAll(`.payroll-review-gross-adjustment-input[data-emp="${safeEmp}"]`));
+
+    targets.forEach(el => {
+      if (sourceClass && el.classList.contains(sourceClass)) return;
+      el.value = value;
+    });
+
+    updateAdjustedGrossForEmployee(empId);
+    updatePayrollReviewAdjustedTotal(empId);
+  }
+
+  function syncPayrollAdjustmentReasonInputs(empId, value, sourceClass) {
+    const safeEmp = CSS.escape(empId || "");
+    const targets = [];
+    if (paymentsBody) targets.push(...paymentsBody.querySelectorAll(`.gross-adjustment-reason[data-emp="${safeEmp}"]`));
+    if (payoutBody) targets.push(...payoutBody.querySelectorAll(`.payroll-review-gross-adjustment-reason[data-emp="${safeEmp}"]`));
+
+    targets.forEach(el => {
+      if (sourceClass && el.classList.contains(sourceClass)) return;
+      el.value = value;
+    });
+  }
+
+  function wirePayrollReviewAdjustmentInputs() {
+    if (!payoutBody) return;
+
+    payoutBody.querySelectorAll(".payroll-review-gross-adjustment-input").forEach(input => {
+      input.addEventListener("input", () => {
+        const empId = input.dataset.emp || "";
+        syncPayrollAdjustmentInputs(empId, input.value, "payroll-review-gross-adjustment-input");
+      });
+      updatePayrollReviewAdjustedTotal(input.dataset.emp || "");
+    });
+
+    payoutBody.querySelectorAll(".payroll-review-gross-adjustment-reason").forEach(input => {
+      input.addEventListener("input", () => {
+        syncPayrollAdjustmentReasonInputs(input.dataset.emp || "", input.value, "payroll-review-gross-adjustment-reason");
+      });
+    });
+  }
+
   function renderPayments(rows, period) {
     if (!paymentsBody) return;
 
@@ -778,6 +858,10 @@
       const employeeTotal = Number(emp.totalPay || jobs.reduce((sum, j) => sum + jobPayForDisplay(j), 0));
       const hasManyJobs = jobs.length > 2;
       const needsPayCount = jobs.filter(j => isAddOnJob(j) && getAddOnEnteredPay(j) <= 0).length;
+      const paymentRow = getIndexedPaymentRow(emp.employeeId || "");
+      const grossAdjustment = paymentRow.grossAdjustment ?? paymentRow.payrollAdjustment ?? "";
+      const grossAdjustmentReason = paymentRow.grossAdjustmentReason ?? paymentRow.payrollAdjustmentReason ?? "";
+      const adjustedTotal = adjustedGross(employeeTotal, grossAdjustment);
 
       return `
         <details class="payroll-employee-card" ${hasManyJobs ? "" : "open"}>
@@ -802,6 +886,38 @@
           </summary>
           <div class="payroll-card-body">
             ${jobs.length ? jobs.map(j => isAddOnJob(j) ? renderAddOnJobLine(j, emp) : renderNormalJobLine(j)).join("") : `<div class="empty-card">No job lines found.</div>`}
+
+            <div class="payroll-review-adjustment-box">
+              <div class="payroll-review-adjustment-row">
+                <div>
+                  <div class="small">Payroll Adjustment</div>
+                  <input
+                    class="pay-input payroll-review-gross-adjustment-input"
+                    data-emp="${escapeHtml(emp.employeeId || "")}"
+                    placeholder="0.00"
+                    inputmode="decimal"
+                    value="${escapeHtml(grossAdjustment)}"
+                  />
+                </div>
+                <div>
+                  <div class="small">Reason</div>
+                  <input
+                    class="pay-input payroll-review-gross-adjustment-reason"
+                    data-emp="${escapeHtml(emp.employeeId || "")}"
+                    placeholder="Required if adjustment is not 0"
+                    value="${escapeHtml(grossAdjustmentReason)}"
+                  />
+                </div>
+                <div>
+                  <div class="small">Adjusted Total</div>
+                  <div
+                    class="payroll-review-adjusted-total review-gross-base-value"
+                    data-emp="${escapeHtml(emp.employeeId || "")}"
+                    data-gross="${escapeHtml(employeeTotal.toFixed(2))}"
+                  >${money(adjustedTotal)}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </details>
       `;
@@ -814,6 +930,7 @@
     payoutTotals.textContent = `Grand Total: ${money(grandTotal)}${needsPayTotal ? ` • Add-Ons Need Pay: ${needsPayTotal}` : ""}`;
     payoutCard.classList.remove("hidden");
     wireAddonPayButtons();
+    wirePayrollReviewAdjustmentInputs();
   }
 
   async function loadPeriod(periodId) {
@@ -828,12 +945,14 @@
     renderPeriod({ periodId, startDate: sum.startDate || "", endDate: sum.endDate || "", status: periodStatus, payday: "" });
     setAddJobDateDefault();
 
-    const payoutRes = await payrollPayouts(periodId);
-    if (payoutRes && payoutRes.ok) renderPayouts(payoutRes.payouts);
-
     const pay = await payrollPayments(periodId);
     if (!pay || !pay.ok) throw new Error(pay?.error || "payroll_payments failed");
     if (pay.period && (pay.period.status || pay.periodStatus)) currentPeriodStatus = pay.period.status || pay.periodStatus;
+    indexPayrollPaymentRows(pay.rows);
+
+    const payoutRes = await payrollPayouts(periodId);
+    if (payoutRes && payoutRes.ok) renderPayouts(payoutRes.payouts);
+
     renderPayments(pay.rows, pay.period);
 
     setStatus(`${periodId} loaded ✅`, "ok");
@@ -1073,8 +1192,18 @@
 
       const netPay = cleanMoneyNumber(input.value || "");
       const taxAdjustments = cleanMoneyNumber((taxInput && taxInput.value) || "");
-      const grossAdjustment = cleanMoneyNumber((grossAdjInput && grossAdjInput.value) || "");
-      const grossAdjustmentReason = String((grossAdjReasonInput && grossAdjReasonInput.value) || "").trim();
+      let grossAdjustmentRaw = (grossAdjInput && grossAdjInput.value) || "";
+      let grossAdjustmentReasonRaw = (grossAdjReasonInput && grossAdjReasonInput.value) || "";
+
+      if (!grossAdjustmentRaw && payoutBody) {
+        grossAdjustmentRaw = payoutBody.querySelector(`.payroll-review-gross-adjustment-input[data-emp="${CSS.escape(empId)}"]`)?.value || "";
+      }
+      if (!grossAdjustmentReasonRaw && payoutBody) {
+        grossAdjustmentReasonRaw = payoutBody.querySelector(`.payroll-review-gross-adjustment-reason[data-emp="${CSS.escape(empId)}"]`)?.value || "";
+      }
+
+      const grossAdjustment = cleanMoneyNumber(grossAdjustmentRaw);
+      const grossAdjustmentReason = String(grossAdjustmentReasonRaw || "").trim();
 
       const method = paymentsBody.querySelector(`.pay-method[data-emp="${CSS.escape(empId)}"]`)?.value || "";
       const reference = paymentsBody.querySelector(`.check-ref[data-emp="${CSS.escape(empId)}"]`)?.value || "";
