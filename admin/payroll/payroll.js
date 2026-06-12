@@ -672,7 +672,7 @@
 
             <div class="final-field">
               <label>Payroll Adj +/-</label>
-              <input class="pay-input gross-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="decimal" value="${escapeHtml(grossAdjustment)}" />
+              <input class="pay-input gross-adjustment-input" data-emp="${escapeHtml(employeeId)}" placeholder="0.00" inputmode="text" value="${escapeHtml(grossAdjustment)}" />
             </div>
 
             <div class="final-field">
@@ -895,7 +895,7 @@
                     class="pay-input payroll-review-gross-adjustment-input"
                     data-emp="${escapeHtml(emp.employeeId || "")}"
                     placeholder="0.00"
-                    inputmode="decimal"
+                    inputmode="text"
                     value="${escapeHtml(grossAdjustment)}"
                   />
                 </div>
