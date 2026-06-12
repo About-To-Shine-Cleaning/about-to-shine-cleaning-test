@@ -1,6 +1,6 @@
 /* =========================================================
    FILE: /admin/payroll/payroll.js
-   ATS Payroll (Admin UI) — v2 Preserve Functions
+   ATS Payroll (Admin UI) — v2 Preserve Functions + Payroll Corrections
    Add-On pre-split patch:
    - Same working backend/routes/functions preserved
    - Keeps Add Job to Employee, Past Payroll, Unlock, QB popup, and finalize routes working
@@ -42,6 +42,8 @@
   const addJobSuggestions = document.getElementById("addJobSuggestions");
   const addJobSelected = document.getElementById("addJobSelected");
   const addJobNotes = document.getElementById("addJobNotes");
+  const correctionClockIn = document.getElementById("correctionClockIn");
+  const correctionClockOut = document.getElementById("correctionClockOut");
   const btnAddJobToEmployee = document.getElementById("btnAddJobToEmployee");
 
   const payoutCard = document.getElementById("payoutCard");
@@ -330,6 +332,13 @@
     qs.set("periodId", periodId || "");
     Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
     return jsonp(secureUrl("payroll_add_job", qs.toString()));
+  }
+
+  async function payrollCorrection(periodId, payload) {
+    const qs = new URLSearchParams();
+    qs.set("periodId", periodId || "");
+    Object.entries(payload || {}).forEach(([key, value]) => qs.set(key, value == null ? "" : String(value)));
+    return jsonp(secureUrl("payroll_correction", qs.toString()));
   }
 
   async function payrollSaveAddonPay(periodId, payload) {
@@ -893,9 +902,9 @@
   }
 
   function promptUnlockForAddJob() {
-    const pin = window.prompt("This payroll period is locked. Enter employee PIN to unlock and add this job:");
+    const pin = window.prompt("This payroll period is locked. Enter employee PIN to unlock and apply this correction:");
     if (!pin) return null;
-    const reason = window.prompt("Reason for unlocking payroll:", "Add Job to Employee");
+    const reason = window.prompt("Reason for unlocking payroll:", "Payroll Correction");
     if (!reason) return null;
     return { pin, reason };
   }
@@ -905,41 +914,53 @@
     const serviceDate = addJobDate?.value || "";
     const employeeId = addJobEmployee?.value || "";
     const notes = addJobNotes?.value || "";
+    const clockIn = correctionClockIn?.value || "";
+    const clockOut = correctionClockOut?.value || "";
 
-    if (!serviceDate) return setStatus("Choose a date for the job.", "err");
+    if (!serviceDate) return setStatus("Choose a date for the correction.", "err");
     if (!employeeId) return setStatus("Choose an employee.", "err");
     if (!selectedAddJob || !selectedAddJob.id) return setStatus("Start typing and select a client/job first.", "err");
+    if (!String(notes || "").trim()) return setStatus("Enter a reason before applying a payroll correction.", "err");
 
-    const basePayload = { serviceDate, employeeId, jobId: selectedAddJob.id, notes };
+    const basePayload = {
+      serviceDate,
+      employeeId,
+      jobId: selectedAddJob.id,
+      clockIn,
+      clockOut,
+      notes
+    };
 
     try {
-      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = true; btnAddJobToEmployee.textContent = "Adding..."; }
-      setStatus("Adding job to employee…");
-      let res = await payrollAddJob(currentPeriodId, basePayload);
+      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = true; btnAddJobToEmployee.textContent = "Applying..."; }
+      setStatus("Applying payroll correction…");
+      let res = await payrollCorrection(currentPeriodId, basePayload);
 
       if (res && !res.ok && res.error === "period_locked_pin_required") {
         const unlock = promptUnlockForAddJob();
         if (!unlock) {
-          setStatus("Add job cancelled. Payroll period is still locked.", "err");
+          setStatus("Correction cancelled. Payroll period is still locked.", "err");
           return;
         }
-        res = await payrollAddJob(currentPeriodId, { ...basePayload, pin: unlock.pin, reason: unlock.reason });
+        res = await payrollCorrection(currentPeriodId, { ...basePayload, pin: unlock.pin, reason: unlock.reason });
       }
 
-      if (!res || !res.ok) throw new Error(res?.error || "payroll_add_job failed");
+      if (!res || !res.ok) throw new Error(res?.error || "payroll_correction failed");
 
       currentPeriodStatus = "OPEN";
       if (addJobSearch) addJobSearch.value = "";
       if (addJobNotes) addJobNotes.value = "";
+      if (correctionClockIn) correctionClockIn.value = "";
+      if (correctionClockOut) correctionClockOut.value = "";
       clearSelectedAddJob();
       await sleep(500);
       await showPastPayrollPicker();
       await loadPeriod(currentPeriodId);
-      setStatus(`Added ${res.jobName || "job"} to ${res.employeeName || employeeId} ✅`, "ok");
+      setStatus(`Correction applied for ${res.jobName || "job"} / ${res.employeeName || employeeId} ✅`, "ok");
     } catch (err) {
       setStatus(String(err?.message || err), "err");
     } finally {
-      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = false; btnAddJobToEmployee.textContent = "Add Job"; }
+      if (btnAddJobToEmployee) { btnAddJobToEmployee.disabled = false; btnAddJobToEmployee.textContent = "Apply Correction"; }
     }
   }
 
