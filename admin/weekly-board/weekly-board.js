@@ -537,27 +537,6 @@ function findBoardClientForGhost(ghost) {
   };
 }
 
-  if (!matches.length) {
-    return {
-      clientId: ghost.clientId || "",
-      clientName: ghost.clientName || "",
-      baseClientName: ghost.baseClientName || ghost.clientName || "",
-      address: ghost.address || "",
-      frequency: ghost.frequency || "",
-      jobType: ghostJobType || ""
-    };
-  }
-
-  if (ghostJobType) {
-    const typed = matches.find(c => String(c.jobType || "").toUpperCase() === ghostJobType);
-    if (typed) return typed;
-  }
-
-  return matches.find(c => String(c.jobType || "").toUpperCase() === "JOB") ||
-    matches.find(c => String(c.jobType || "").toUpperCase() === "FULL") ||
-    matches[0];
-}
-
 function renderGhostSchedulerPanel() {
   const panel = ensureGhostPanel();
   if (!panel) return;
