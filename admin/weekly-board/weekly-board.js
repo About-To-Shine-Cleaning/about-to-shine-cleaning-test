@@ -1091,6 +1091,92 @@ function updateSaveAllButtonState() {
   }
 }
 
+function getAllRowsPayloadForWeek() {
+  const weekDates = new Set(DAYS.map((day, index) => addDaysToYMD(currentWeekStart, index)));
+
+  return assignments
+    .filter(row => weekDates.has(String(row.serviceDate || "").trim()))
+    .filter(row => String(row.active || "YES").toUpperCase() !== "NO")
+    .map((row, index) => {
+      const serviceDate = String(row.serviceDate || "").trim();
+      const payload = rowPayload(row, index);
+
+      payload.weekStart = currentWeekStart;
+      payload.serviceDate = serviceDate;
+      payload.dayName = getDayNameFromYMD(serviceDate);
+      payload.sortOrder = payload.sortOrder || index + 1;
+
+      payload.assignmentType = normalizeAssignmentType(payload.assignmentType);
+
+      if (payload.assignmentType !== "ADD_ON") {
+        payload.addOnType = "";
+        payload.addOnNotes = "";
+        payload.payrollEnteredPay = "";
+        payload.payrollEnteredBy = "";
+        payload.payrollEnteredAt = "";
+      } else {
+        payload.addOnType = addOnTypeLabel(payload.addOnType);
+      }
+
+      return payload;
+    })
+    .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName);
+}
+
+function makeWeeklyBoardSaveId() {
+  return "wb_save_" +
+    String(currentWeekStart || "week").replace(/[^0-9A-Za-z_-]+/g, "_") + "_" +
+    Date.now().toString(36) + "_" +
+    Math.random().toString(36).slice(2, 10);
+}
+
+function splitTextIntoChunks(text, chunkSize) {
+  const raw = String(text || "");
+  const size = Math.max(500, Number(chunkSize || 7000));
+  const chunks = [];
+
+  for (let i = 0; i < raw.length; i += size) {
+    chunks.push(raw.slice(i, i + size));
+  }
+
+  return chunks.length ? chunks : [""];
+}
+
+async function saveWeeklyBoardBatchPayload(payload) {
+  const saveId = makeWeeklyBoardSaveId();
+  const rawPayload = JSON.stringify(payload || { assignments: [] });
+  const chunks = splitTextIntoChunks(rawPayload, 7000);
+
+  const startRes = await jsonp("weekly_board_save_start", {
+    weekStart: currentWeekStart,
+    saveId: saveId
+  });
+
+  if (!startRes || !startRes.ok) throw new Error(startRes?.error || "weekly_board_save_start failed");
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkRes = await jsonp("weekly_board_save_chunk", {
+      weekStart: currentWeekStart,
+      saveId: saveId,
+      index: String(i),
+      chunk: chunks[i]
+    });
+
+    if (!chunkRes || !chunkRes.ok) throw new Error(chunkRes?.error || `weekly_board_save_chunk failed at chunk ${i + 1}`);
+  }
+
+  const finishRes = await jsonp("weekly_board_save_finish", {
+    weekStart: currentWeekStart,
+    saveId: saveId,
+    totalChunks: String(chunks.length)
+  });
+
+  if (!finishRes || !finishRes.ok) throw new Error(finishRes?.error || "weekly_board_save_finish failed");
+
+  console.log("Weekly board Save All batch finish result:", finishRes);
+  return finishRes;
+}
+
 async function saveAllChangedDays() {
   if (isSavingChange) return;
 
@@ -1102,29 +1188,15 @@ async function saveAllChangedDays() {
   try {
     setBusy("Saving all changes...");
 
-    const savedByDate = new Map();
+    const rows = getAllRowsPayloadForWeek();
+    const payload = {
+      weekStart: currentWeekStart,
+      changedDates: datesToSave.slice(),
+      assignments: rows
+    };
 
-    for (const serviceDate of datesToSave) {
-      const result = await saveOneBoardDay(serviceDate, true);
-      savedByDate.set(serviceDate, result.rows.slice());
-      console.log("Weekly board Save All result:", result.res);
-    }
-
-    try {
-      await loadBoard(currentWeekStart);
-
-      savedByDate.forEach((localRows, serviceDate) => {
-        const stillHasDate = assignments.some(row => row.serviceDate === serviceDate && String(row.active || "YES").toUpperCase() !== "NO");
-        if (localRows.length && !stillHasDate) {
-          assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
-        }
-      });
-    } catch (reloadErr) {
-      console.warn("weekly_board_get reload failed after Save All; keeping local rows", reloadErr);
-      savedByDate.forEach((localRows, serviceDate) => {
-        assignments = assignments.filter(row => row.serviceDate !== serviceDate).concat(localRows);
-      });
-    }
+    await saveWeeklyBoardBatchPayload(payload);
+    await loadBoard(currentWeekStart);
 
     datesToSave.forEach(date => dirtyDates.delete(date));
     movedDayDates.clear();
