@@ -474,7 +474,7 @@ function ensureGhostPanel() {
 function dateOptionsHtml(selectedDate) {
   return DAYS.map((day, index) => {
     const date = addDaysToYMD(currentWeekStart, index);
-    const label = `${day} � ${date}`;
+    const label = `${day} • ${date}`;
     return `<option value="${escapeHtml(date)}" ${date === selectedDate ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
 }
@@ -483,7 +483,7 @@ function employeeOptionsHtml(selectedEmployeeName) {
   const targetName = String(selectedEmployeeName || "").trim().toLowerCase();
   return employees.map(emp => {
     const selected = targetName && String(emp.employeeName || "").trim().toLowerCase() === targetName ? "selected" : "";
-    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>`;
+    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>`;
   }).join("");
 }
 
@@ -556,7 +556,7 @@ function renderGhostSchedulerPanel() {
       <div class="ats-ghost-count">${escapeHtml(count)} open</div>
     </div>
     <div class="ats-ghost-subtitle" style="margin-bottom:10px;">
-      ${escapeHtml(dueCount)} due � ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` � M${escapeHtml(rotationWeek)}` : ""}<br>
+      ${escapeHtml(dueCount)} due • ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` • M${escapeHtml(rotationWeek)}` : ""}<br>
       Assign as many as needed, then click Save All Changes.
     </div>
     <div class="ats-ghost-list">
@@ -564,7 +564,7 @@ function renderGhostSchedulerPanel() {
         const suggestedDate = ghost.suggestedServiceDate || currentWeekStart;
         const pill = frequencyPillHtml(ghost.frequencyBadge || ghost.frequency || "");
         const preferred = ghost.preferredDay && ghost.suggestedServiceDate
-          ? `${ghost.preferredDay} � ${ghost.suggestedServiceDate}`
+          ? `${ghost.preferredDay} • ${ghost.suggestedServiceDate}`
           : "Needs day picked";
         const availabilityNote = ghost.needsAvailability ? `<div class="ats-ghost-meta">Monthly availability needed later.</div>` : "";
         return `
@@ -813,7 +813,7 @@ function addOnTypeLabel(value) {
 function rowAssignmentMeta(row) {
   if (!isAddOnRow(row)) return "";
   const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
-  return `Add-On � ${addOnType}`;
+  return `Add-On • ${addOnType}`;
 }
 
 function setMessage(msg, isError) {
@@ -912,7 +912,7 @@ function setWeekSourceLabel(source, count) {
 
   const src = String(source || "").toUpperCase();
   if (src === "SAVED") {
-    weekSourceLabel.textContent = `Saved assignments loaded � ${count || 0} row(s)`;
+    weekSourceLabel.textContent = `Saved assignments loaded • ${count || 0} row(s)`;
   } else {
     weekSourceLabel.textContent = "No saved assignments for this week yet.";
   }
@@ -1290,7 +1290,7 @@ function ensureUpdateDayButton() {
   btnUpdateDay.id = "btnUpdateDay";
   btnUpdateDay.type = "button";
   btnUpdateDay.className = "button";
-  btnUpdateDay.textContent = "Day Saved ?";
+  btnUpdateDay.textContent = "Day Saved ✓";
   btnUpdateDay.style.marginTop = "12px";
   btnUpdateDay.addEventListener("click", saveCurrentDay);
 
@@ -1312,7 +1312,7 @@ function markDayDirty(isDirty = true) {
 function updateDayButtonState() {
   if (!btnUpdateDay) return;
   btnUpdateDay.disabled = isSavingChange || !dayDirty;
-  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ?";
+  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ✓";
   btnUpdateDay.style.opacity = dayDirty ? "1" : ".55";
 }
 
@@ -1487,7 +1487,7 @@ async function loadEmployees() {
 
   if (employeeSelect) {
     employeeSelect.innerHTML = employees.map(emp => `
-      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>
+      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>
     `).join("");
   }
 }
@@ -1536,7 +1536,7 @@ function buildWeekBoard() {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
 
-  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} ? ${prettyDate(formatDate(end))}`;
+  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
 
   DAYS.forEach((day, index) => {
     const current = new Date(start);
@@ -1581,7 +1581,7 @@ function openDay(dateStr, day) {
   resetAssignmentEntryFields();
   ensureUpdateDayButton();
   markDayDirty(false);
-  if (modalTitle) modalTitle.textContent = `${day} � ${dateStr}`;
+  if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
 }
@@ -1641,7 +1641,7 @@ function renderAssignments(dateStr) {
 function renderEmployeeEditPanel(row, realIndex) {
   const options = employees.map(emp => `
     <option value="${escapeHtml(emp.employeeId)}" ${String(emp.employeeId) === String(row.employeeId) ? "selected" : ""}>
-      ${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}
+      ${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}
     </option>
   `).join("");
 
@@ -1673,7 +1673,7 @@ function renderJobEditPanel(row, realIndex) {
 }
 
 function renderDayEditPanel(row, realIndex) {
-  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " � " + row.employeeName : ""}`.trim();
+  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " • " + row.employeeName : ""}`.trim();
   const currentDate = row.serviceDate || currentDay;
   const meta = rowAssignmentMeta(row);
 
