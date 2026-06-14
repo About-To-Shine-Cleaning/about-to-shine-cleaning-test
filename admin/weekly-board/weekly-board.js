@@ -3,19 +3,19 @@
 // TYPE: .js
 // ATS Weekly Assignment Board EDITOR
 // v3029 Ghost Scheduler + Save All + Mobile Tab Duplicate Fix
-// ✅ Preserves current week navigation
-// ✅ Preserves current board save behavior
-// ✅ Keeps Change Day
-// ✅ Normal jobs no longer display "Full Clean" / "Half Clean"
-// ✅ Only Add-On jobs display Add-On label
-// ✅ Supports Add-On checkbox + typed Add-On Job Name
-// ✅ Adds Misc only to Add-On client picker
-// ✅ Requires notes when Misc is selected
-// ✅ Prevents Add-On from accidentally keeping/creating same employee/client regular cleaning row
-// ✅ Adds Ghost Scheduler side panel using weekly_board_ghost
-// ✅ Adds Save All Changes button for one-click multi-day saving
-// ✅ Ghost assignments stay local until Save All Changes or Update This Day
-// ✅ Fixes duplicate mobile Board / Ghost Scheduler tabs
+// ? Preserves current week navigation
+// ? Preserves current board save behavior
+// ? Keeps Change Day
+// ? Normal jobs no longer display "Full Clean" / "Half Clean"
+// ? Only Add-On jobs display Add-On label
+// ? Supports Add-On checkbox + typed Add-On Job Name
+// ? Adds Misc only to Add-On client picker
+// ? Requires notes when Misc is selected
+// ? Prevents Add-On from accidentally keeping/creating same employee/client regular cleaning row
+// ? Adds Ghost Scheduler side panel using weekly_board_ghost
+// ? Adds Save All Changes button for one-click multi-day saving
+// ? Ghost assignments stay local until Save All Changes or Update This Day
+// ? Fixes duplicate mobile Board / Ghost Scheduler tabs
 // =========================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbx2bQ-SSeUHoihjbkYmkJ5-0Dw8JPqH8bhBQR3fbvLsOhDhbuPv0MdVeTdMW6zoVTsWsw/exec";
@@ -490,22 +490,36 @@ function employeeOptionsHtml(selectedEmployeeName) {
 function findBoardClientForGhost(ghost) {
   ghost = ghost || {};
   const ghostId = String(ghost.clientId || "").trim().toLowerCase();
-  const ghostName = clientKey(ghost.clientName || "");
+  const ghostBaseId = String(ghost.baseClientId || baseClientIdFromJobId(ghost.clientId || "") || "").trim().toLowerCase();
+  const ghostName = clientKey(ghost.baseClientName || ghost.clientName || "");
+  const ghostJobType = normalizeAssignmentType(ghost.jobType || ghost.assignmentType || "");
+
+  const exact = clients.find(c => String(c.clientId || "").trim().toLowerCase() === ghostId);
+  if (exact) return exact;
 
   const matches = clients.filter(c => {
+    const cId = String(c.clientId || "").trim().toLowerCase();
     const cBaseId = String(c.baseClientId || baseClientIdFromJobId(c.clientId || "") || "").trim().toLowerCase();
     const cName = clientKey(c.baseClientName || c.clientName || c.name || "");
-    return (ghostId && cBaseId && ghostId === cBaseId) || (ghostName && cName && ghostName === cName);
+    return (ghostId && cId && ghostId === cId) ||
+      (ghostBaseId && cBaseId && ghostBaseId === cBaseId) ||
+      (ghostName && cName && ghostName === cName);
   });
 
   if (!matches.length) {
     return {
       clientId: ghost.clientId || "",
       clientName: ghost.clientName || "",
-      baseClientName: ghost.clientName || "",
+      baseClientName: ghost.baseClientName || ghost.clientName || "",
       address: ghost.address || "",
-      frequency: ghost.frequency || ""
+      frequency: ghost.frequency || "",
+      jobType: ghostJobType || ""
     };
+  }
+
+  if (ghostJobType) {
+    const typed = matches.find(c => String(c.jobType || "").toUpperCase() === ghostJobType);
+    if (typed) return typed;
   }
 
   return matches.find(c => String(c.jobType || "").toUpperCase() === "JOB") ||
@@ -571,14 +585,22 @@ function renderGhostSchedulerPanel() {
 }
 
 function removeGhostFromPanelByClient(ghost) {
+  const targetGhostKey = String(ghost?.ghostKey || "").trim();
   const targetId = String(ghost?.clientId || "").trim().toLowerCase();
   const targetName = clientKey(ghost?.clientName || "");
+  const targetJobType = normalizeAssignmentType(ghost?.jobType || ghost?.assignmentType || "");
 
   ghostScheduler.ghosts = (ghostScheduler.ghosts || []).filter(item => {
+    const itemGhostKey = String(item.ghostKey || "").trim();
+    if (targetGhostKey && itemGhostKey && itemGhostKey === targetGhostKey) return false;
+
     const itemId = String(item.clientId || "").trim().toLowerCase();
     const itemName = clientKey(item.clientName || "");
+    const itemJobType = normalizeAssignmentType(item.jobType || item.assignmentType || "");
+
     if (targetId && itemId && targetId === itemId) return false;
-    if (targetName && itemName && targetName === itemName) return false;
+    if (targetName && itemName && targetName === itemName && (!targetJobType || targetJobType === itemJobType)) return false;
+
     return true;
   });
 
@@ -624,7 +646,7 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
     clientName: newClientName,
     address: boardClient.address || ghost.address || "",
     notes: ghost.notes || "",
-    assignmentType: "",
+    assignmentType: normalizeAssignmentType(ghost.jobType || ghost.assignmentType || boardClient.jobType || ""),
     addOnType: "",
     addOnNotes: "",
     payrollEnteredPay: "",
@@ -1106,6 +1128,19 @@ function getAllRowsPayloadForWeek() {
       payload.dayName = getDayNameFromYMD(serviceDate);
       payload.sortOrder = payload.sortOrder || index + 1;
 
+      if (payload.employeeId && !payload.employeeName) {
+        const emp = getEmployeeById(payload.employeeId);
+        if (emp) payload.employeeName = emp.employeeName || "";
+      }
+
+      if (payload.clientName) {
+        const match = clients.find(c => clientKey(c.clientName) === clientKey(payload.clientName));
+        if (match) {
+          if (!payload.clientId) payload.clientId = match.clientId || "";
+          if (!payload.address) payload.address = match.address || "";
+        }
+      }
+
       payload.assignmentType = normalizeAssignmentType(payload.assignmentType);
 
       if (payload.assignmentType !== "ADD_ON") {
@@ -1120,7 +1155,13 @@ function getAllRowsPayloadForWeek() {
 
       return payload;
     })
-    .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName);
+    .filter(row => row.weekStart && row.serviceDate && row.employeeId && row.employeeName && row.clientName)
+    .sort((a, b) => {
+      return String(a.serviceDate || "").localeCompare(String(b.serviceDate || "")) ||
+        Number(a.sortOrder || 9999) - Number(b.sortOrder || 9999) ||
+        String(a.employeeName || "").localeCompare(String(b.employeeName || "")) ||
+        String(a.clientName || "").localeCompare(String(b.clientName || ""));
+    });
 }
 
 function makeWeeklyBoardSaveId() {
@@ -1153,6 +1194,7 @@ async function saveWeeklyBoardBatchPayload(payload) {
   });
 
   if (!startRes || !startRes.ok) throw new Error(startRes?.error || "weekly_board_save_start failed");
+  console.log("Weekly board Save All batch start result:", startRes);
 
   for (let i = 0; i < chunks.length; i++) {
     const chunkRes = await jsonp("weekly_board_save_chunk", {
@@ -1163,6 +1205,7 @@ async function saveWeeklyBoardBatchPayload(payload) {
     });
 
     if (!chunkRes || !chunkRes.ok) throw new Error(chunkRes?.error || `weekly_board_save_chunk failed at chunk ${i + 1}`);
+    console.log("Weekly board Save All batch chunk result:", chunkRes);
   }
 
   const finishRes = await jsonp("weekly_board_save_finish", {
@@ -1172,8 +1215,8 @@ async function saveWeeklyBoardBatchPayload(payload) {
   });
 
   if (!finishRes || !finishRes.ok) throw new Error(finishRes?.error || "weekly_board_save_finish failed");
-
   console.log("Weekly board Save All batch finish result:", finishRes);
+
   return finishRes;
 }
 
@@ -1196,7 +1239,13 @@ async function saveAllChangedDays() {
     };
 
     await saveWeeklyBoardBatchPayload(payload);
-    await loadBoard(currentWeekStart);
+
+    try {
+      await loadBoard(currentWeekStart);
+    } catch (reloadErr) {
+      console.warn("weekly_board_get reload failed after Save All batch; keeping local rows", reloadErr);
+      assignments = rows.slice();
+    }
 
     datesToSave.forEach(date => dirtyDates.delete(date));
     movedDayDates.clear();
@@ -1224,7 +1273,7 @@ function ensureUpdateDayButton() {
   btnUpdateDay.id = "btnUpdateDay";
   btnUpdateDay.type = "button";
   btnUpdateDay.className = "button";
-  btnUpdateDay.textContent = "Day Saved ✓";
+  btnUpdateDay.textContent = "Day Saved ?";
   btnUpdateDay.style.marginTop = "12px";
   btnUpdateDay.addEventListener("click", saveCurrentDay);
 
@@ -1246,7 +1295,7 @@ function markDayDirty(isDirty = true) {
 function updateDayButtonState() {
   if (!btnUpdateDay) return;
   btnUpdateDay.disabled = isSavingChange || !dayDirty;
-  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ✓";
+  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ?";
   btnUpdateDay.style.opacity = dayDirty ? "1" : ".55";
 }
 
@@ -1470,7 +1519,7 @@ function buildWeekBoard() {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
 
-  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
+  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} ? ${prettyDate(formatDate(end))}`;
 
   DAYS.forEach((day, index) => {
     const current = new Date(start);
