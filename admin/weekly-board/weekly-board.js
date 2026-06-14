@@ -474,7 +474,7 @@ function ensureGhostPanel() {
 function dateOptionsHtml(selectedDate) {
   return DAYS.map((day, index) => {
     const date = addDaysToYMD(currentWeekStart, index);
-    const label = `${day} • ${date}`;
+    const label = `${day} � ${date}`;
     return `<option value="${escapeHtml(date)}" ${date === selectedDate ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
 }
@@ -483,7 +483,7 @@ function employeeOptionsHtml(selectedEmployeeName) {
   const targetName = String(selectedEmployeeName || "").trim().toLowerCase();
   return employees.map(emp => {
     const selected = targetName && String(emp.employeeName || "").trim().toLowerCase() === targetName ? "selected" : "";
-    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>`;
+    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>`;
   }).join("");
 }
 
@@ -546,7 +546,7 @@ function renderGhostSchedulerPanel() {
       <div class="ats-ghost-count">${escapeHtml(count)} open</div>
     </div>
     <div class="ats-ghost-subtitle" style="margin-bottom:10px;">
-      ${escapeHtml(dueCount)} due • ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` • M${escapeHtml(rotationWeek)}` : ""}<br>
+      ${escapeHtml(dueCount)} due � ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` � M${escapeHtml(rotationWeek)}` : ""}<br>
       Assign as many as needed, then click Save All Changes.
     </div>
     <div class="ats-ghost-list">
@@ -554,7 +554,7 @@ function renderGhostSchedulerPanel() {
         const suggestedDate = ghost.suggestedServiceDate || currentWeekStart;
         const pill = frequencyPillHtml(ghost.frequencyBadge || ghost.frequency || "");
         const preferred = ghost.preferredDay && ghost.suggestedServiceDate
-          ? `${ghost.preferredDay} • ${ghost.suggestedServiceDate}`
+          ? `${ghost.preferredDay} � ${ghost.suggestedServiceDate}`
           : "Needs day picked";
         const availabilityNote = ghost.needsAvailability ? `<div class="ats-ghost-meta">Monthly availability needed later.</div>` : "";
         return `
@@ -653,6 +653,7 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
     payrollEnteredBy: "",
     payrollEnteredAt: "",
     frequency: ghost.frequency || ghost.frequencyBadge || "",
+    ghostSource: { ...ghost },
     sortOrder: getRowsPayloadForDate(targetDate).length + 1,
     active: "YES"
   };
@@ -802,7 +803,7 @@ function addOnTypeLabel(value) {
 function rowAssignmentMeta(row) {
   if (!isAddOnRow(row)) return "";
   const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
-  return `Add-On • ${addOnType}`;
+  return `Add-On � ${addOnType}`;
 }
 
 function setMessage(msg, isError) {
@@ -901,7 +902,7 @@ function setWeekSourceLabel(source, count) {
 
   const src = String(source || "").toUpperCase();
   if (src === "SAVED") {
-    weekSourceLabel.textContent = `Saved assignments loaded • ${count || 0} row(s)`;
+    weekSourceLabel.textContent = `Saved assignments loaded � ${count || 0} row(s)`;
   } else {
     weekSourceLabel.textContent = "No saved assignments for this week yet.";
   }
@@ -1476,7 +1477,7 @@ async function loadEmployees() {
 
   if (employeeSelect) {
     employeeSelect.innerHTML = employees.map(emp => `
-      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>
+      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>
     `).join("");
   }
 }
@@ -1570,7 +1571,7 @@ function openDay(dateStr, day) {
   resetAssignmentEntryFields();
   ensureUpdateDayButton();
   markDayDirty(false);
-  if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
+  if (modalTitle) modalTitle.textContent = `${day} � ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
 }
@@ -1614,7 +1615,7 @@ function renderAssignments(dateStr) {
           const meta = rowAssignmentMeta(item);
           return `
             <div class="assignment-client">
-              <span>• ${makePillForRow(item)} ${escapeHtml(item.clientName)}</span>
+              <span>� ${makePillForRow(item)} ${escapeHtml(item.clientName)}</span>
               ${meta ? `<span class="assignment-meta">${escapeHtml(meta)}</span>` : ""}
               ${isAddOnRow(item) && (item.addOnNotes || item.AddOnNotes)
                 ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
@@ -1630,7 +1631,7 @@ function renderAssignments(dateStr) {
 function renderEmployeeEditPanel(row, realIndex) {
   const options = employees.map(emp => `
     <option value="${escapeHtml(emp.employeeId)}" ${String(emp.employeeId) === String(row.employeeId) ? "selected" : ""}>
-      ${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}
+      ${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}
     </option>
   `).join("");
 
@@ -1662,7 +1663,7 @@ function renderJobEditPanel(row, realIndex) {
 }
 
 function renderDayEditPanel(row, realIndex) {
-  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " • " + row.employeeName : ""}`.trim();
+  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " � " + row.employeeName : ""}`.trim();
   const currentDate = row.serviceDate || currentDay;
   const meta = rowAssignmentMeta(row);
 
@@ -2065,6 +2066,53 @@ function addAssignment() {
   renderAssignments(currentDay);
 }
 
+function ghostKeyFromRow(row) {
+  row = row || {};
+  const type = normalizeAssignmentType(row.assignmentType || row.AssignmentType || row.jobType || "");
+  const id = String(row.clientId || "").trim().toLowerCase();
+  const name = clientKey(row.clientName || "");
+  return `${id}|${name}|${type}`;
+}
+
+function restoreGhostFromRemovedAssignment(row) {
+  row = row || {};
+  if (isAddOnRow(row)) return;
+
+  const source = row.ghostSource || row.GhostSource || null;
+  if (!source) return;
+
+  const restore = { ...source };
+  restore.scheduled = false;
+  restore.scheduledRows = [];
+
+  const restoreKey = String(restore.ghostKey || "").trim();
+  const restoreCompareKey = ghostKeyFromRow({
+    clientId: restore.clientId || row.clientId || "",
+    clientName: restore.clientName || row.clientName || "",
+    assignmentType: restore.jobType || restore.assignmentType || row.assignmentType || ""
+  });
+
+  const alreadyOpen = (ghostScheduler.ghosts || []).some(item => {
+    const itemKey = String(item.ghostKey || "").trim();
+    if (restoreKey && itemKey && restoreKey === itemKey) return true;
+
+    const itemCompareKey = ghostKeyFromRow({
+      clientId: item.clientId || "",
+      clientName: item.clientName || "",
+      assignmentType: item.jobType || item.assignmentType || ""
+    });
+
+    return restoreCompareKey && itemCompareKey && restoreCompareKey === itemCompareKey;
+  });
+
+  if (alreadyOpen) return;
+
+  ghostScheduler.ghosts = [restore].concat(ghostScheduler.ghosts || []);
+  ghostScheduler.ghostCount = ghostScheduler.ghosts.length;
+  ghostScheduler.scheduledCount = Math.max(0, Number(ghostScheduler.scheduledCount || 0) - 1);
+  ghostScheduler.dueCount = Math.max(Number(ghostScheduler.dueCount || 0), ghostScheduler.ghostCount + Number(ghostScheduler.scheduledCount || 0));
+}
+
 function removeAssignment(index) {
   if (isSavingChange) return;
 
@@ -2072,12 +2120,19 @@ function removeAssignment(index) {
   if (!row) return;
   if (!confirm("Remove this assignment from this day? Click Update This Day to save changes.")) return;
 
+  const removedRow = { ...row };
   assignments.splice(index, 1);
+
+  restoreGhostFromRemovedAssignment(removedRow);
+
   allowEmptyCurrentDaySave = true;
   markDayDirty(true);
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
+  renderGhostSchedulerPanel();
+  buildWeekBoard();
+  updateSaveAllButtonState();
 }
 
 if (document.readyState === "loading") {
