@@ -705,7 +705,35 @@ function ghostWithJobType(baseGhost, jobType) {
 }
 
 function buildGhostCardModels() {
-  const ghosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
+  const rawGhosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
+  const assignedBaseKeys = new Set();
+
+  (assignments || []).forEach(row => {
+    if (!row || isAddOnRow(row)) return;
+    if (String(row.active || "YES").toUpperCase() === "NO") return;
+
+    const rowKey = getBaseKeyFromAssignmentLike(row);
+    if (rowKey) assignedBaseKeys.add(String(rowKey || "").trim().toLowerCase());
+
+    const rowBaseId = baseClientIdFromJobId(row.clientId || row.ClientID || "").trim().toLowerCase();
+    if (rowBaseId) assignedBaseKeys.add(rowBaseId);
+
+    const rowBaseName = clientKey(baseClientNameFromDisplayName(row.baseClientName || row.clientName || row.ClientName || row.name || ""));
+    if (rowBaseName) assignedBaseKeys.add(rowBaseName);
+  });
+
+  const ghosts = rawGhosts.filter(ghost => {
+    const ghostKey = String(ghostBaseKeyForCard(ghost) || "").trim().toLowerCase();
+    const ghostBaseId = String(ghostBaseIdForCard(ghost) || "").trim().toLowerCase();
+    const ghostBaseName = clientKey(ghost.baseClientName || baseClientNameFromDisplayName(ghost.clientName || ""));
+
+    return !(
+      (ghostKey && assignedBaseKeys.has(ghostKey)) ||
+      (ghostBaseId && assignedBaseKeys.has(ghostBaseId)) ||
+      (ghostBaseName && assignedBaseKeys.has(ghostBaseName))
+    );
+  });
+
   const groups = new Map();
 
   ghosts.forEach((ghost, originalIndex) => {
@@ -2404,34 +2432,37 @@ function restoreGhostFromRemovedAssignment(row) {
   const source = row.ghostSource || row.GhostSource || null;
   if (!source) return;
 
-  const restore = { ...source };
-  restore.scheduled = false;
-  restore.scheduledRows = [];
-
-  const restoreKey = String(restore.ghostKey || "").trim();
-  const restoreCompareKey = ghostKeyFromRow({
-    clientId: restore.clientId || row.clientId || "",
-    clientName: restore.clientName || row.clientName || "",
-    assignmentType: restore.jobType || restore.assignmentType || row.assignmentType || ""
+  const removedBaseKey = getBaseKeyFromAssignmentLike(row);
+  const stillAssigned = (assignments || []).some(existing => {
+    if (!existing || existing === row || isAddOnRow(existing)) return false;
+    if (String(existing.active || "YES").toUpperCase() === "NO") return false;
+    return removedBaseKey && getBaseKeyFromAssignmentLike(existing) === removedBaseKey;
   });
 
-  const alreadyOpen = (ghostScheduler.ghosts || []).some(item => {
-    const itemKey = String(item.ghostKey || "").trim();
-    if (restoreKey && itemKey && restoreKey === itemKey) return true;
+  if (stillAssigned) return;
 
-    const itemCompareKey = ghostKeyFromRow({
-      clientId: item.clientId || "",
-      clientName: item.clientName || "",
-      assignmentType: item.jobType || item.assignmentType || ""
-    });
+  const restoreList = [];
+  const sourceType = normalizeAssignmentType(source.jobType || source.assignmentType || row.assignmentType || "");
 
-    return restoreCompareKey && itemCompareKey && restoreCompareKey === itemCompareKey;
+  if (sourceType === "HALF") {
+    restoreList.push(ghostWithJobType(source, "FULL"));
+  }
+
+  restoreList.push({ ...source });
+
+  restoreList.forEach(item => {
+    item.scheduled = false;
+    item.scheduledRows = [];
   });
 
-  if (alreadyOpen) return;
+  const alreadyOpenForBase = (ghostScheduler.ghosts || []).some(item => {
+    return removedBaseKey && ghostBaseKeyForCard(item) === removedBaseKey;
+  });
 
-  ghostScheduler.ghosts = [restore].concat(ghostScheduler.ghosts || []);
-  ghostScheduler.ghostCount = ghostScheduler.ghosts.length;
+  if (alreadyOpenForBase) return;
+
+  ghostScheduler.ghosts = restoreList.concat(ghostScheduler.ghosts || []);
+  ghostScheduler.ghostCount = buildGhostCardModels().length;
   ghostScheduler.scheduledCount = Math.max(0, Number(ghostScheduler.scheduledCount || 0) - 1);
   ghostScheduler.dueCount = Math.max(Number(ghostScheduler.dueCount || 0), ghostScheduler.ghostCount + Number(ghostScheduler.scheduledCount || 0));
 }
