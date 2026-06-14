@@ -1186,7 +1186,7 @@ function splitTextIntoChunks(text, chunkSize) {
 async function saveWeeklyBoardBatchPayload(payload) {
   const saveId = makeWeeklyBoardSaveId();
   const rawPayload = JSON.stringify(payload || { assignments: [] });
-  const chunks = splitTextIntoChunks(rawPayload, 7000);
+  const chunks = splitTextIntoChunks(rawPayload, 1200);
 
   const startRes = await jsonp("weekly_board_save_start", {
     weekStart: currentWeekStart,
