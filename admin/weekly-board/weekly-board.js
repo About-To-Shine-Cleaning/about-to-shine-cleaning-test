@@ -489,22 +489,53 @@ function employeeOptionsHtml(selectedEmployeeName) {
 
 function findBoardClientForGhost(ghost) {
   ghost = ghost || {};
+
   const ghostId = String(ghost.clientId || "").trim().toLowerCase();
-  const ghostBaseId = String(ghost.baseClientId || baseClientIdFromJobId(ghost.clientId || "") || "").trim().toLowerCase();
+  const ghostBaseId = String(
+    ghost.baseClientId ||
+    baseClientIdFromJobId(ghost.clientId || "") ||
+    ""
+  ).trim().toLowerCase();
+
   const ghostName = clientKey(ghost.baseClientName || ghost.clientName || "");
   const ghostJobType = normalizeAssignmentType(ghost.jobType || ghost.assignmentType || "");
 
-  const exact = clients.find(c => String(c.clientId || "").trim().toLowerCase() === ghostId);
-  if (exact) return exact;
-
   const matches = clients.filter(c => {
     const cId = String(c.clientId || "").trim().toLowerCase();
-    const cBaseId = String(c.baseClientId || baseClientIdFromJobId(c.clientId || "") || "").trim().toLowerCase();
+    const cBaseId = String(
+      c.baseClientId ||
+      baseClientIdFromJobId(c.clientId || "") ||
+      ""
+    ).trim().toLowerCase();
+
     const cName = clientKey(c.baseClientName || c.clientName || c.name || "");
-    return (ghostId && cId && ghostId === cId) ||
+    const cJobType = normalizeAssignmentType(c.jobType || "");
+
+    const sameClient =
+      (ghostId && cId && ghostId === cId) ||
       (ghostBaseId && cBaseId && ghostBaseId === cBaseId) ||
       (ghostName && cName && ghostName === cName);
+
+    if (!sameClient) return false;
+
+    if (ghostJobType) {
+      return cJobType === ghostJobType;
+    }
+
+    return true;
   });
+
+  if (matches.length) return matches[0];
+
+  return {
+    clientId: ghost.clientId || "",
+    clientName: ghost.clientName || "",
+    baseClientName: ghost.baseClientName || ghost.clientName || "",
+    address: ghost.address || "",
+    frequency: ghost.frequency || "",
+    jobType: ghostJobType || ""
+  };
+}
 
   if (!matches.length) {
     return {
