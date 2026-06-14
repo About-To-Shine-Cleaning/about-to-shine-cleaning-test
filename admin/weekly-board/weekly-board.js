@@ -474,7 +474,7 @@ function ensureGhostPanel() {
 function dateOptionsHtml(selectedDate) {
   return DAYS.map((day, index) => {
     const date = addDaysToYMD(currentWeekStart, index);
-    const label = `${day} • ${date}`;
+    const label = `${day} � ${date}`;
     return `<option value="${escapeHtml(date)}" ${date === selectedDate ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
 }
@@ -483,7 +483,7 @@ function employeeOptionsHtml(selectedEmployeeName) {
   const targetName = String(selectedEmployeeName || "").trim().toLowerCase();
   return employees.map(emp => {
     const selected = targetName && String(emp.employeeName || "").trim().toLowerCase() === targetName ? "selected" : "";
-    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>`;
+    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>`;
   }).join("");
 }
 
@@ -537,12 +537,149 @@ function findBoardClientForGhost(ghost) {
   };
 }
 
+
+function ghostBaseIdForCard(ghost) {
+  ghost = ghost || {};
+  return String(
+    ghost.baseClientId ||
+    baseClientIdFromJobId(ghost.clientId || "") ||
+    ghost.clientId ||
+    ""
+  ).trim();
+}
+
+function ghostBaseKeyForCard(ghost) {
+  ghost = ghost || {};
+  const baseId = ghostBaseIdForCard(ghost).toLowerCase();
+  const baseName = clientKey(ghost.baseClientName || ghost.clientName || "");
+  return baseId || baseName;
+}
+
+function ghostVariantType(ghost) {
+  return normalizeAssignmentType(ghost?.jobType || ghost?.assignmentType || "") || "FULL";
+}
+
+function boardClientForBaseAndType(baseGhost, jobType) {
+  const targetType = normalizeAssignmentType(jobType || "");
+  const baseId = ghostBaseIdForCard(baseGhost).toLowerCase();
+  const baseName = clientKey(baseGhost?.baseClientName || baseGhost?.clientName || "");
+
+  const matches = clients.filter(c => {
+    const cType = normalizeAssignmentType(c.jobType || "");
+    if (targetType && cType !== targetType) return false;
+
+    const cBaseId = String(
+      c.baseClientId ||
+      baseClientIdFromJobId(c.clientId || "") ||
+      ""
+    ).trim().toLowerCase();
+
+    const cName = clientKey(c.baseClientName || c.clientName || c.name || "");
+
+    return (baseId && cBaseId && baseId === cBaseId) ||
+      (baseName && cName && baseName === cName);
+  });
+
+  if (matches.length) return matches[0];
+
+  const baseClientId = ghostBaseIdForCard(baseGhost);
+  const suffix = targetType === "HALF" ? "_HALF" : (targetType === "JOB" ? "_JOB" : "_FULL");
+
+  return {
+    clientId: baseClientId ? `${baseClientId}${suffix}` : (baseGhost?.clientId || ""),
+    clientName: baseGhost?.baseClientName || baseGhost?.clientName || "",
+    baseClientName: baseGhost?.baseClientName || baseGhost?.clientName || "",
+    address: baseGhost?.address || "",
+    frequency: baseGhost?.frequency || "",
+    jobType: targetType || "FULL"
+  };
+}
+
+function ghostWithJobType(baseGhost, jobType) {
+  baseGhost = baseGhost || {};
+  const targetType = normalizeAssignmentType(jobType || "") || "FULL";
+  const boardClient = boardClientForBaseAndType(baseGhost, targetType);
+
+  return {
+    ...baseGhost,
+    clientId: boardClient.clientId || baseGhost.clientId || "",
+    clientName: boardClient.baseClientName || baseGhost.baseClientName || baseGhost.clientName || boardClient.clientName || "",
+    baseClientId: boardClient.baseClientId || ghostBaseIdForCard(baseGhost),
+    baseClientName: boardClient.baseClientName || baseGhost.baseClientName || baseGhost.clientName || "",
+    address: boardClient.address || baseGhost.address || "",
+    jobType: targetType,
+    assignmentType: targetType,
+    ghostKey: `${boardClient.clientId || baseGhost.clientId || ""}|${targetType}`
+  };
+}
+
+function buildGhostCardModels() {
+  const ghosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
+  const groups = new Map();
+
+  ghosts.forEach((ghost, originalIndex) => {
+    const key = ghostBaseKeyForCard(ghost) || `ghost_${originalIndex}`;
+    const type = ghostVariantType(ghost);
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        ghosts: [],
+        variants: {},
+        originalIndex,
+        mainGhost: ghost,
+        hasHalfOption: false
+      });
+    }
+
+    const group = groups.get(key);
+    group.ghosts.push(ghost);
+    group.variants[type] = ghost;
+
+    if (type === "HALF") group.hasHalfOption = true;
+
+    const currentMainType = ghostVariantType(group.mainGhost);
+    const rank = { FULL: 1, JOB: 2, HALF: 3 };
+    if ((rank[type] || 9) < (rank[currentMainType] || 9)) {
+      group.mainGhost = ghost;
+    }
+  });
+
+  return Array.from(groups.values()).map(group => {
+    const mainGhost = group.variants.FULL || group.variants.JOB || group.variants.HALF || group.mainGhost || {};
+    return {
+      ...group,
+      mainGhost,
+      fullGhost: group.variants.FULL || ghostWithJobType(mainGhost, "FULL"),
+      halfGhost: group.variants.HALF || ghostWithJobType(mainGhost, "HALF"),
+      assignType: group.variants.FULL ? "FULL" : (group.variants.JOB ? "JOB" : ghostVariantType(mainGhost))
+    };
+  });
+}
+
+function removeGhostGroupFromPanelByCard(card) {
+  const groupKey = String(card?.key || ghostBaseKeyForCard(card?.mainGhost || card || "") || "").trim();
+  const idsToRemove = new Set((card?.ghosts || [card?.mainGhost || card || {}]).map(g => String(g?.clientId || "").trim().toLowerCase()).filter(Boolean));
+
+  ghostScheduler.ghosts = (ghostScheduler.ghosts || []).filter(item => {
+    const itemGroupKey = String(ghostBaseKeyForCard(item) || "").trim();
+    const itemId = String(item.clientId || "").trim().toLowerCase();
+
+    if (groupKey && itemGroupKey && groupKey === itemGroupKey) return false;
+    if (itemId && idsToRemove.has(itemId)) return false;
+
+    return true;
+  });
+
+  ghostScheduler.ghostCount = buildGhostCardModels().length;
+}
+
 function renderGhostSchedulerPanel() {
   const panel = ensureGhostPanel();
   if (!panel) return;
 
-  const ghosts = Array.isArray(ghostScheduler.ghosts) ? ghostScheduler.ghosts : [];
-  const count = Number(ghostScheduler.ghostCount ?? ghosts.length ?? 0);
+  const ghostCards = buildGhostCardModels();
+  const count = ghostCards.length;
   const scheduledCount = Number(ghostScheduler.scheduledCount || 0);
   const dueCount = Number(ghostScheduler.dueCount || count + scheduledCount || 0);
   const rotationWeek = ghostScheduler.rotationWeek || "";
@@ -560,7 +697,8 @@ function renderGhostSchedulerPanel() {
       Assign as many as needed, then click Save All Changes.
     </div>
     <div class="ats-ghost-list">
-      ${ghosts.length ? ghosts.map((ghost, index) => {
+      ${ghostCards.length ? ghostCards.map((card, index) => {
+        const ghost = card.mainGhost || {};
         const suggestedDate = ghost.suggestedServiceDate || currentWeekStart;
         const pill = frequencyPillHtml(ghost.frequencyBadge || ghost.frequency || "");
         const preferred = ghost.preferredDay && ghost.suggestedServiceDate
@@ -569,14 +707,19 @@ function renderGhostSchedulerPanel() {
         const availabilityNote = ghost.needsAvailability ? `<div class="ats-ghost-meta">Monthly availability needed later.</div>` : "";
         return `
           <div class="ats-ghost-card" data-ghost-card="${index}">
-            <div class="ats-ghost-name">${pill}${escapeHtml(ghost.clientName || "Unnamed client")}</div>
+            <div class="ats-ghost-name">${pill}${escapeHtml(ghost.baseClientName || ghost.clientName || "Unnamed client")}</div>
             <div class="ats-ghost-meta">Suggested: ${escapeHtml(preferred)}</div>
             ${ghost.cleaner ? `<div class="ats-ghost-meta">Usual cleaner: ${escapeHtml(ghost.cleaner)}</div>` : ""}
             ${availabilityNote}
-            <div class="ats-ghost-controls">
+            <label class="ats-ghost-meta" style="display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:900;opacity:.95;">
+              <input type="checkbox" data-ghost-second-toggle="${index}">
+              Needs 2nd cleaner
+            </label>
+            <div class="ats-ghost-controls" data-ghost-controls="${index}">
               <select data-ghost-employee="${index}">${employeeOptionsHtml(ghost.cleaner)}</select>
               <select data-ghost-date="${index}">${dateOptionsHtml(suggestedDate)}</select>
-              <button class="button button-secondary" type="button" data-ghost-assign="${index}">Assign to Board</button>
+              <select data-ghost-second-employee="${index}" style="display:none;">${employeeOptionsHtml("")}</select>
+              <button class="button button-secondary" type="button" data-ghost-assign="${index}">Assign</button>
             </div>
           </div>
         `;
@@ -584,12 +727,32 @@ function renderGhostSchedulerPanel() {
     </div>
   `;
 
+  panel.querySelectorAll("[data-ghost-second-toggle]").forEach(toggle => {
+    toggle.addEventListener("change", () => {
+      const index = Number(toggle.dataset.ghostSecondToggle);
+      const secondSel = panel.querySelector(`[data-ghost-second-employee="${index}"]`);
+      const assignBtn = panel.querySelector(`[data-ghost-assign="${index}"]`);
+      const isTwoCleaner = !!toggle.checked;
+
+      if (secondSel) secondSel.style.display = isTwoCleaner ? "" : "none";
+      if (assignBtn) assignBtn.textContent = isTwoCleaner ? "Assign Both" : "Assign";
+    });
+  });
+
   panel.querySelectorAll("[data-ghost-assign]").forEach(btn => {
     btn.addEventListener("click", () => {
       const index = Number(btn.dataset.ghostAssign);
       const empSel = panel.querySelector(`[data-ghost-employee="${index}"]`);
       const dateSel = panel.querySelector(`[data-ghost-date="${index}"]`);
-      assignGhostToBoard(index, empSel?.value || "", dateSel?.value || "");
+      const secondToggle = panel.querySelector(`[data-ghost-second-toggle="${index}"]`);
+      const secondSel = panel.querySelector(`[data-ghost-second-employee="${index}"]`);
+
+      assignGhostToBoard(
+        index,
+        empSel?.value || "",
+        dateSel?.value || "",
+        secondToggle?.checked ? (secondSel?.value || "") : ""
+      );
     });
   });
 }
@@ -617,35 +780,12 @@ function removeGhostFromPanelByClient(ghost) {
   ghostScheduler.ghostCount = ghostScheduler.ghosts.length;
 }
 
-function assignGhostToBoard(index, employeeId, serviceDate) {
-  if (isSavingChange) return;
-
-  const ghost = (ghostScheduler.ghosts || [])[index];
-  if (!ghost) return alert("Ghost suggestion not found. Reload the week and try again.");
-
-  const employee = getEmployeeById(employeeId);
-  if (!employee) return alert("Choose an employee first.");
-
-  const targetDate = String(serviceDate || ghost.suggestedServiceDate || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return alert("Choose a valid day for this ghost job.");
-
+function makeGhostAssignmentRow(ghost, employee, targetDate, sortOrder) {
   const boardClient = findBoardClientForGhost(ghost);
   const newClientId = boardClient.clientId || ghost.clientId || "";
   const newClientName = boardClient.clientName || boardClient.name || ghost.clientName || "";
 
-  const duplicateExists = assignments.some(row => {
-    if (String(row.active || "YES").toUpperCase() === "NO") return false;
-    return String(row.serviceDate || "") === targetDate
-      && String(row.employeeId || "").trim().toUpperCase() === String(employee.employeeId || "").trim().toUpperCase()
-      && clientKey(row.clientName || "") === clientKey(newClientName || ghost.clientName || "")
-      && normalizeAssignmentType(row.assignmentType || row.AssignmentType || "") !== "ADD_ON";
-  });
-
-  if (duplicateExists) {
-    return alert("That employee/client assignment already exists on the selected day.");
-  }
-
-  const newRow = {
+  return {
     rowId: "",
     weekStart: currentWeekStart,
     serviceDate: targetDate,
@@ -664,12 +804,69 @@ function assignGhostToBoard(index, employeeId, serviceDate) {
     payrollEnteredAt: "",
     frequency: ghost.frequency || ghost.frequencyBadge || "",
     ghostSource: { ...ghost },
-    sortOrder: getRowsPayloadForDate(targetDate).length + 1,
+    sortOrder: sortOrder,
     active: "YES"
   };
+}
 
-  assignments.push(newRow);
-  removeGhostFromPanelByClient(ghost);
+function ghostAssignmentDuplicateExists(targetDate, employee, ghost) {
+  const boardClient = findBoardClientForGhost(ghost);
+  const newClientName = boardClient.clientName || boardClient.name || ghost.clientName || "";
+  const newClientId = boardClient.clientId || ghost.clientId || "";
+  const newType = normalizeAssignmentType(ghost.jobType || ghost.assignmentType || boardClient.jobType || "");
+
+  return assignments.some(row => {
+    if (String(row.active || "YES").toUpperCase() === "NO") return false;
+    return String(row.serviceDate || "") === targetDate
+      && String(row.employeeId || "").trim().toUpperCase() === String(employee.employeeId || "").trim().toUpperCase()
+      && (
+        String(row.clientId || "").trim().toLowerCase() === String(newClientId || "").trim().toLowerCase() ||
+        clientKey(row.clientName || "") === clientKey(newClientName || ghost.clientName || "")
+      )
+      && normalizeAssignmentType(row.assignmentType || row.AssignmentType || "") === newType;
+  });
+}
+
+function assignGhostToBoard(index, employeeId, serviceDate, secondEmployeeId = "") {
+  if (isSavingChange) return;
+
+  const card = buildGhostCardModels()[index];
+  if (!card || !card.mainGhost) return alert("Ghost suggestion not found. Reload the week and try again.");
+
+  const mainGhost = ghostWithJobType(card.mainGhost, card.assignType || "FULL");
+  const halfGhost = ghostWithJobType(card.halfGhost || card.mainGhost, "HALF");
+
+  const employee = getEmployeeById(employeeId);
+  if (!employee) return alert("Choose an employee first.");
+
+  const targetDate = String(serviceDate || mainGhost.suggestedServiceDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return alert("Choose a valid day for this ghost job.");
+
+  const secondEmployee = secondEmployeeId ? getEmployeeById(secondEmployeeId) : null;
+  if (secondEmployeeId && !secondEmployee) return alert("Choose a valid second cleaner.");
+  if (secondEmployee && String(secondEmployee.employeeId || "").trim().toUpperCase() === String(employee.employeeId || "").trim().toUpperCase()) {
+    return alert("Choose a different employee for the 2nd cleaner.");
+  }
+
+  if (ghostAssignmentDuplicateExists(targetDate, employee, mainGhost)) {
+    return alert("That main cleaner assignment already exists on the selected day.");
+  }
+
+  if (secondEmployee && ghostAssignmentDuplicateExists(targetDate, secondEmployee, halfGhost)) {
+    return alert("That 2nd cleaner assignment already exists on the selected day.");
+  }
+
+  const startSort = getRowsPayloadForDate(targetDate).length + 1;
+  const newRows = [
+    makeGhostAssignmentRow(mainGhost, employee, targetDate, startSort)
+  ];
+
+  if (secondEmployee) {
+    newRows.push(makeGhostAssignmentRow(halfGhost, secondEmployee, targetDate, startSort + 1));
+  }
+
+  assignments.push(...newRows);
+  removeGhostGroupFromPanelByCard(card);
   markDateDirty(targetDate, true);
 
   if (currentDay === targetDate) {
@@ -813,7 +1010,7 @@ function addOnTypeLabel(value) {
 function rowAssignmentMeta(row) {
   if (!isAddOnRow(row)) return "";
   const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
-  return `Add-On • ${addOnType}`;
+  return `Add-On � ${addOnType}`;
 }
 
 function setMessage(msg, isError) {
@@ -912,7 +1109,7 @@ function setWeekSourceLabel(source, count) {
 
   const src = String(source || "").toUpperCase();
   if (src === "SAVED") {
-    weekSourceLabel.textContent = `Saved assignments loaded • ${count || 0} row(s)`;
+    weekSourceLabel.textContent = `Saved assignments loaded � ${count || 0} row(s)`;
   } else {
     weekSourceLabel.textContent = "No saved assignments for this week yet.";
   }
@@ -1290,7 +1487,7 @@ function ensureUpdateDayButton() {
   btnUpdateDay.id = "btnUpdateDay";
   btnUpdateDay.type = "button";
   btnUpdateDay.className = "button";
-  btnUpdateDay.textContent = "Day Saved ✓";
+  btnUpdateDay.textContent = "Day Saved ?";
   btnUpdateDay.style.marginTop = "12px";
   btnUpdateDay.addEventListener("click", saveCurrentDay);
 
@@ -1312,7 +1509,7 @@ function markDayDirty(isDirty = true) {
 function updateDayButtonState() {
   if (!btnUpdateDay) return;
   btnUpdateDay.disabled = isSavingChange || !dayDirty;
-  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ✓";
+  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ?";
   btnUpdateDay.style.opacity = dayDirty ? "1" : ".55";
 }
 
@@ -1487,7 +1684,7 @@ async function loadEmployees() {
 
   if (employeeSelect) {
     employeeSelect.innerHTML = employees.map(emp => `
-      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}</option>
+      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>
     `).join("");
   }
 }
@@ -1536,7 +1733,7 @@ function buildWeekBoard() {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
 
-  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} → ${prettyDate(formatDate(end))}`;
+  if (weekLabel) weekLabel.textContent = `Week of ${prettyDate(currentWeekStart)} ? ${prettyDate(formatDate(end))}`;
 
   DAYS.forEach((day, index) => {
     const current = new Date(start);
@@ -1581,7 +1778,7 @@ function openDay(dateStr, day) {
   resetAssignmentEntryFields();
   ensureUpdateDayButton();
   markDayDirty(false);
-  if (modalTitle) modalTitle.textContent = `${day} • ${dateStr}`;
+  if (modalTitle) modalTitle.textContent = `${day} � ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
 }
@@ -1625,7 +1822,7 @@ function renderAssignments(dateStr) {
           const meta = rowAssignmentMeta(item);
           return `
             <div class="assignment-client">
-              <span>� ${makePillForRow(item)} ${escapeHtml(item.clientName)}</span>
+              <span>? ${makePillForRow(item)} ${escapeHtml(item.clientName)}</span>
               ${meta ? `<span class="assignment-meta">${escapeHtml(meta)}</span>` : ""}
               ${isAddOnRow(item) && (item.addOnNotes || item.AddOnNotes)
                 ? `<span class="assignment-notes">${escapeHtml(item.addOnNotes || item.AddOnNotes)}</span>`
@@ -1641,7 +1838,7 @@ function renderAssignments(dateStr) {
 function renderEmployeeEditPanel(row, realIndex) {
   const options = employees.map(emp => `
     <option value="${escapeHtml(emp.employeeId)}" ${String(emp.employeeId) === String(row.employeeId) ? "selected" : ""}>
-      ${escapeHtml(emp.employeeId)} • ${escapeHtml(emp.employeeName)}
+      ${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}
     </option>
   `).join("");
 
@@ -1673,7 +1870,7 @@ function renderJobEditPanel(row, realIndex) {
 }
 
 function renderDayEditPanel(row, realIndex) {
-  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " • " + row.employeeName : ""}`.trim();
+  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " � " + row.employeeName : ""}`.trim();
   const currentDate = row.serviceDate || currentDay;
   const meta = rowAssignmentMeta(row);
 
