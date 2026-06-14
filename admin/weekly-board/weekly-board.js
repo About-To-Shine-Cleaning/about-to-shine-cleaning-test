@@ -1238,7 +1238,13 @@ async function saveAllChangedDays() {
       assignments: rows
     };
 
-    await saveWeeklyBoardBatchPayload(payload);
+    const savedByDate = new Map();
+
+for (const serviceDate of datesToSave) {
+  const result = await saveOneBoardDay(serviceDate, true);
+  savedByDate.set(serviceDate, result.rows.slice());
+  console.log("Weekly board Save All result:", result.res);
+}
 
     try {
       await loadBoard(currentWeekStart);
