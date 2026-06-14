@@ -474,7 +474,7 @@ function ensureGhostPanel() {
 function dateOptionsHtml(selectedDate) {
   return DAYS.map((day, index) => {
     const date = addDaysToYMD(currentWeekStart, index);
-    const label = `${day} � ${date}`;
+    const label = `${day} ? ${date}`;
     return `<option value="${escapeHtml(date)}" ${date === selectedDate ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
 }
@@ -483,7 +483,7 @@ function employeeOptionsHtml(selectedEmployeeName) {
   const targetName = String(selectedEmployeeName || "").trim().toLowerCase();
   return employees.map(emp => {
     const selected = targetName && String(emp.employeeName || "").trim().toLowerCase() === targetName ? "selected" : "";
-    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>`;
+    return `<option value="${escapeHtml(emp.employeeId)}" ${selected}>${escapeHtml(emp.employeeId)} ? ${escapeHtml(emp.employeeName)}</option>`;
   }).join("");
 }
 
@@ -535,6 +535,97 @@ function findBoardClientForGhost(ghost) {
     frequency: ghost.frequency || "",
     jobType: ghostJobType || ""
   };
+}
+
+
+function baseClientNameFromDisplayName(value) {
+  return String(value || "")
+    .replace(/\s+Full$/i, "")
+    .replace(/\s+\.5$/i, "")
+    .trim();
+}
+
+function getClientJobTypeFromClientId(clientId) {
+  const id = String(clientId || "").trim().toUpperCase();
+  if (/_HALF$/.test(id) || /_\.5$/.test(id)) return "HALF";
+  if (/_FULL$/.test(id)) return "FULL";
+  if (/_JOB$/.test(id)) return "JOB";
+  return "";
+}
+
+function getAssignmentTypeForBoardClient(client, fallbackValue) {
+  const direct = normalizeAssignmentType(client?.jobType || client?.assignmentType || "");
+  if (direct) return direct;
+
+  const fromId = getClientJobTypeFromClientId(client?.clientId || client?.id || client?.jobId || "");
+  if (fromId) return fromId;
+
+  return normalizeAssignmentType(fallbackValue || "");
+}
+
+function getBaseKeyFromAssignmentLike(row) {
+  row = row || {};
+  const rowClientId = String(row.clientId || row.ClientID || "").trim();
+  const rowBaseId = baseClientIdFromJobId(rowClientId).toLowerCase();
+
+  const clientMatch = clients.find(c => {
+    const cId = String(c.clientId || "").trim().toLowerCase();
+    return cId && cId === rowClientId.toLowerCase();
+  });
+
+  const rowName = clientKey(
+    clientMatch?.baseClientName ||
+    row.baseClientName ||
+    baseClientNameFromDisplayName(row.clientName || row.ClientName || row.name || "")
+  );
+
+  return rowBaseId || rowName;
+}
+
+function findGhostCardForAssignmentRow(row) {
+  if (!row || isAddOnRow(row)) return null;
+
+  const rowKey = getBaseKeyFromAssignmentLike(row);
+  if (!rowKey) return null;
+
+  const cards = buildGhostCardModels();
+  return cards.find(card => {
+    const cardKey = String(card?.key || "").trim().toLowerCase();
+    const cardGhost = card?.mainGhost || {};
+    const cardBaseId = ghostBaseIdForCard(cardGhost).toLowerCase();
+    const cardName = clientKey(cardGhost.baseClientName || cardGhost.clientName || "");
+
+    return (cardKey && cardKey === rowKey) ||
+      (cardBaseId && cardBaseId === rowKey) ||
+      (cardName && cardName === rowKey);
+  }) || null;
+}
+
+function attachGhostSourceAndRemoveForRow(row) {
+  if (!row || isAddOnRow(row)) return;
+
+  const card = findGhostCardForAssignmentRow(row);
+  if (!card) return;
+
+  const rowType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
+  const sourceGhost =
+    (rowType === "HALF" && card.halfGhost) ||
+    (rowType === "FULL" && card.fullGhost) ||
+    (rowType === "JOB" && card.variants?.JOB) ||
+    card.mainGhost ||
+    card.fullGhost ||
+    card.halfGhost;
+
+  if (sourceGhost) {
+    row.ghostSource = { ...sourceGhost };
+  }
+
+  removeGhostGroupFromPanelByCard(card);
+}
+
+function refreshGhostPanelAfterLocalBoardChange() {
+  ghostScheduler.ghostCount = buildGhostCardModels().length;
+  renderGhostSchedulerPanel();
 }
 
 
@@ -693,7 +784,7 @@ function renderGhostSchedulerPanel() {
       <div class="ats-ghost-count">${escapeHtml(count)} open</div>
     </div>
     <div class="ats-ghost-subtitle" style="margin-bottom:10px;">
-      ${escapeHtml(dueCount)} due • ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` • M${escapeHtml(rotationWeek)}` : ""}<br>
+      ${escapeHtml(dueCount)} due � ${escapeHtml(scheduledCount)} scheduled${rotationWeek ? ` � M${escapeHtml(rotationWeek)}` : ""}<br>
       Assign as many as needed, then click Save All Changes.
     </div>
     <div class="ats-ghost-list">
@@ -702,7 +793,7 @@ function renderGhostSchedulerPanel() {
         const suggestedDate = ghost.suggestedServiceDate || currentWeekStart;
         const pill = frequencyPillHtml(ghost.frequencyBadge || ghost.frequency || "");
         const preferred = ghost.preferredDay && ghost.suggestedServiceDate
-          ? `${ghost.preferredDay} • ${ghost.suggestedServiceDate}`
+          ? `${ghost.preferredDay} � ${ghost.suggestedServiceDate}`
           : "Needs day picked";
         const availabilityNote = ghost.needsAvailability ? `<div class="ats-ghost-meta">Monthly availability needed later.</div>` : "";
         return `
@@ -1010,7 +1101,7 @@ function addOnTypeLabel(value) {
 function rowAssignmentMeta(row) {
   if (!isAddOnRow(row)) return "";
   const addOnType = addOnTypeLabel(row.addOnType || row.AddOnType || "");
-  return `Add-On � ${addOnType}`;
+  return `Add-On ? ${addOnType}`;
 }
 
 function setMessage(msg, isError) {
@@ -1109,7 +1200,7 @@ function setWeekSourceLabel(source, count) {
 
   const src = String(source || "").toUpperCase();
   if (src === "SAVED") {
-    weekSourceLabel.textContent = `Saved assignments loaded � ${count || 0} row(s)`;
+    weekSourceLabel.textContent = `Saved assignments loaded ? ${count || 0} row(s)`;
   } else {
     weekSourceLabel.textContent = "No saved assignments for this week yet.";
   }
@@ -1487,7 +1578,7 @@ function ensureUpdateDayButton() {
   btnUpdateDay.id = "btnUpdateDay";
   btnUpdateDay.type = "button";
   btnUpdateDay.className = "button";
-  btnUpdateDay.textContent = "Day Saved ?";
+  btnUpdateDay.textContent = "Day Saved";
   btnUpdateDay.style.marginTop = "12px";
   btnUpdateDay.addEventListener("click", saveCurrentDay);
 
@@ -1509,7 +1600,7 @@ function markDayDirty(isDirty = true) {
 function updateDayButtonState() {
   if (!btnUpdateDay) return;
   btnUpdateDay.disabled = isSavingChange || !dayDirty;
-  btnUpdateDay.textContent = dayDirty ? "Update This Day" : "Day Saved ?";
+  btnUpdateDay.textContent = dayDirty ? "Save This Day" : "Day Saved";
   btnUpdateDay.style.opacity = dayDirty ? "1" : ".55";
 }
 
@@ -1562,7 +1653,7 @@ async function saveCurrentDay() {
   const hasMoveSave = datesToSave.length > 1 || movedDayDates.has(currentDay);
 
   if (!currentRowsBeforeSave.length && !allowEmptyCurrentDaySave && !hasMoveSave) {
-    return alert("No assignments were added. Pick a client from the search results, click Add Assignment, then click Update This Day.");
+    return alert("No assignments were added. Pick a client from the search results, click Add Assignment, then click Save This Day or Save All Changes.");
   }
 
   try {
@@ -1684,7 +1775,7 @@ async function loadEmployees() {
 
   if (employeeSelect) {
     employeeSelect.innerHTML = employees.map(emp => `
-      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}</option>
+      <option value="${escapeHtml(emp.employeeId)}">${escapeHtml(emp.employeeId)} ? ${escapeHtml(emp.employeeName)}</option>
     `).join("");
   }
 }
@@ -1778,7 +1869,7 @@ function openDay(dateStr, day) {
   resetAssignmentEntryFields();
   ensureUpdateDayButton();
   markDayDirty(false);
-  if (modalTitle) modalTitle.textContent = `${day} � ${dateStr}`;
+  if (modalTitle) modalTitle.textContent = `${day} ? ${dateStr}`;
   renderModalAssignments();
   modal?.classList.add("open");
 }
@@ -1838,7 +1929,7 @@ function renderAssignments(dateStr) {
 function renderEmployeeEditPanel(row, realIndex) {
   const options = employees.map(emp => `
     <option value="${escapeHtml(emp.employeeId)}" ${String(emp.employeeId) === String(row.employeeId) ? "selected" : ""}>
-      ${escapeHtml(emp.employeeId)} � ${escapeHtml(emp.employeeName)}
+      ${escapeHtml(emp.employeeId)} ? ${escapeHtml(emp.employeeName)}
     </option>
   `).join("");
 
@@ -1870,7 +1961,7 @@ function renderJobEditPanel(row, realIndex) {
 }
 
 function renderDayEditPanel(row, realIndex) {
-  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " � " + row.employeeName : ""}`.trim();
+  const employeeLabel = `${row.employeeId || ""}${row.employeeName ? " ? " + row.employeeName : ""}`.trim();
   const currentDate = row.serviceDate || currentDay;
   const meta = rowAssignmentMeta(row);
 
@@ -1884,7 +1975,7 @@ function renderDayEditPanel(row, realIndex) {
       </div>
       <input type="date" data-day-picker-index="${realIndex}" value="${escapeHtml(currentDate)}" style="width:100%;margin-top:10px;padding:12px;border-radius:12px;">
       <div style="margin-top:8px;font-size:13px;opacity:.72;">
-        This moves the assignment locally. Click Update This Day to save the old day and the new day.
+        This moves the assignment locally. Save All Changes to commit the old day and the new day.
       </div>
       <div class="assignment-actions">
         <button class="button button-secondary" type="button" data-apply-day-index="${realIndex}">Apply Day</button>
@@ -2061,6 +2152,7 @@ function applyEmployeeChange(index, employeeId) {
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
+  refreshGhostPanelAfterLocalBoardChange();
 }
 
 function applyJobChange(index, client) {
@@ -2070,25 +2162,37 @@ function applyJobChange(index, client) {
   if (!row) return alert("Assignment not found.");
   if (!client) return alert("Client not found.");
 
+  const oldRow = { ...row };
+
   row.clientId = client.clientId || "";
   row.clientName = client.clientName || client.name || "";
   row.address = client.address || "";
   row.weekStart = currentWeekStart;
   row.serviceDate = currentDay;
   row.dayName = getDayNameFromYMD(currentDay);
-  row.assignmentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
+
+  const currentType = normalizeAssignmentType(row.assignmentType || row.AssignmentType || "");
+  row.assignmentType = currentType === "ADD_ON"
+    ? "ADD_ON"
+    : getAssignmentTypeForBoardClient(client, currentType || "FULL");
+
   if (row.assignmentType !== "ADD_ON") {
     row.addOnType = "";
     row.addOnNotes = "";
+    row.ghostSource = null;
   }
   row.active = row.active || "YES";
 
   if (!row.clientName) return alert("Selected client is missing a client name.");
 
+  if (!isAddOnRow(oldRow)) restoreGhostFromRemovedAssignment(oldRow);
+  if (!isAddOnRow(row)) attachGhostSourceAndRemoveForRow(row);
+
   markDayDirty(true);
   editMode = null;
   renderModalAssignments();
   renderAssignments(currentDay);
+  refreshGhostPanelAfterLocalBoardChange();
 }
 
 function applyDayChange(index, newDate) {
@@ -2147,6 +2251,7 @@ function applyDayChange(index, newDate) {
   renderModalAssignments();
   renderAssignments(oldDate);
   renderAssignments(targetDate);
+  refreshGhostPanelAfterLocalBoardChange();
 }
 
 function handleClientSearch() {
@@ -2223,7 +2328,11 @@ function addAssignment() {
   const employee = getEmployeeById(employeeId);
   if (!employee) return alert("Select an employee.");
 
-  const assignmentType = getCurrentAssignmentType();
+  const selectedAssignmentType = getCurrentAssignmentType();
+  const assignmentType = selectedAssignmentType === "ADD_ON"
+    ? "ADD_ON"
+    : getAssignmentTypeForBoardClient(client, "FULL");
+
   const addOnType = assignmentType === "ADD_ON" ? addOnTypeLabel(addOnTypeInput?.value || "") : "";
   const addOnNoteText = assignmentType === "ADD_ON" ? String(addOnNotes?.value || "").trim() : "";
 
@@ -2258,6 +2367,7 @@ function addAssignment() {
     payrollEnteredPay: "",
     payrollEnteredBy: "",
     payrollEnteredAt: "",
+    frequency: client.frequency || "",
     sortOrder: getActiveRowsForCurrentDay().length + 1,
     active: "YES"
   };
@@ -2265,12 +2375,18 @@ function addAssignment() {
   if (!newRow.clientName) return alert("Selected client is missing a client name.");
 
   assignments.push(newRow);
+
+  if (assignmentType !== "ADD_ON") {
+    attachGhostSourceAndRemoveForRow(newRow);
+  }
+
   allowEmptyCurrentDaySave = false;
   markDayDirty(true);
   clearClientSelection();
   resetAssignmentEntryFields();
   renderModalAssignments();
   renderAssignments(currentDay);
+  refreshGhostPanelAfterLocalBoardChange();
 }
 
 function ghostKeyFromRow(row) {
@@ -2325,7 +2441,7 @@ function removeAssignment(index) {
 
   const row = assignments[index];
   if (!row) return;
-  if (!confirm("Remove this assignment from this day? Click Update This Day to save changes.")) return;
+  if (!confirm("Remove this assignment from this day? Save All Changes to commit.")) return;
 
   const removedRow = { ...row };
   assignments.splice(index, 1);
@@ -2336,8 +2452,6 @@ function removeAssignment(index) {
   markDayDirty(true);
   editMode = null;
   renderModalAssignments();
-  renderAssignments(currentDay);
-  renderGhostSchedulerPanel();
   buildWeekBoard();
   updateSaveAllButtonState();
 }
