@@ -19,7 +19,7 @@ const EMPLOYEES = {
   E04: "Matthew Bari",
   E05: "Alison Walck",
   E06: "Laurie Litzenberger",
-  E07: "Employee Seven",
+  E07: "Jill",
   E08: "Employee Eight",
   E09: "Employee Nine",
   E10: "Employee Ten"
